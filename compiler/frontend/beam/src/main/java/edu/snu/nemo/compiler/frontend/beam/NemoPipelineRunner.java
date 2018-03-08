@@ -22,11 +22,15 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Runner class for BEAM programs.
  */
 public final class NemoPipelineRunner extends PipelineRunner<NemoPipelineResult> {
+  private static final Logger LOG = LoggerFactory.getLogger(NemoPipelineRunner.class.getName());
+
   private final NemoPipelineOptions nemoPipelineOptions;
 
   /**

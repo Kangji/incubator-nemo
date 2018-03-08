@@ -21,13 +21,49 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Sample MapReduce application.
  */
 public final class MapReduce {
+  /**
+   * Combiner implementation.
+   */
+  private static class Apple extends DoFn<String, KV<String, Long>> {
+
+    private final Map<String, Long> aggregates = new HashMap<>();
+
+    @ProcessElement
+    public void processElement(final ProcessContext c) {
+      // Maybe we should change this to use finishBundle?
+      final String[] words = c.element().split(" +");
+      final String documentId = words[0];
+      final Long count = Long.parseLong(words[2]);
+
+      final Long value = aggregates.get(documentId);
+      if (value == null) {
+        aggregates.put(documentId, count);
+      } else {
+        aggregates.put(documentId, value + count);
+      }
+    }
+
+    @FinishBundle
+    public void finishBundle(final FinishBundleContext c) throws Exception {
+      aggregates.entrySet().forEach(entry -> {
+        final String key = entry.getKey();
+        final Long value = entry.getValue();
+        c.output(KV.of(key, value), null, null);
+      });
+    }
+  }
+
   /**
    * Private Constructor.
    */
@@ -47,7 +83,7 @@ public final class MapReduce {
 
     final Pipeline p = Pipeline.create(options);
     final PCollection<String> result = GenericSourceSink.read(p, inputFilePath)
-        .apply(MapElements.<String, KV<String, Long>>via(new SimpleFunction<String, KV<String, Long>>() {
+/*        .apply(MapElements.<String, KV<String, Long>>via(new SimpleFunction<String, KV<String, Long>>() {
           @Override
           public KV<String, Long> apply(final String line) {
             final String[] words = line.split(" +");
@@ -56,8 +92,9 @@ public final class MapReduce {
             return KV.of(documentId, count);
           }
         }))
-        .apply(GroupByKey.<String, Long>create())
-        .apply(Combine.<String, Long, Long>groupedValues(Sum.ofLongs()))
+        .apply(Combine.<String, Long, Long>perKey(Sum.ofLongs()))
+*/      .apply(ParDo.of(new Apple()))
+        .apply(Sum.<String>longsPerKey())
         .apply(MapElements.<KV<String, Long>, String>via(new SimpleFunction<KV<String, Long>, String>() {
           @Override
           public String apply(final KV<String, Long> kv) {

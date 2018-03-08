@@ -39,6 +39,8 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.values.PCollectionViews;
 import org.apache.beam.sdk.values.PValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +51,8 @@ import java.util.Stack;
  * Visits every node in the beam dag to translate the BEAM program to the IR.
  */
 public final class NemoPipelineVisitor extends Pipeline.PipelineVisitor.Defaults {
+  private static final Logger LOG = LoggerFactory.getLogger(NemoPipelineVisitor.class.getName());
+
   private final DAGBuilder<IRVertex, IREdge> builder;
   private final Map<PValue, IRVertex> pValueToVertex;
   private final PipelineOptions options;
@@ -58,6 +62,7 @@ public final class NemoPipelineVisitor extends Pipeline.PipelineVisitor.Defaults
 
   /**
    * Constructor of the BEAM Visitor.
+   *
    * @param builder DAGBuilder to build the DAG with.
    * @param options Pipeline options.
    */
@@ -132,10 +137,19 @@ public final class NemoPipelineVisitor extends Pipeline.PipelineVisitor.Defaults
                                                  final Stack<LoopVertex> loopVertexStack) {
     final PTransform beamTransform = beamNode.getTransform();
     final IRVertex irVertex;
+    LOG.info("beamTransform instanceof {}", beamTransform);
     if (beamTransform instanceof Read.Bounded) {
       final Read.Bounded<O> read = (Read.Bounded) beamTransform;
       irVertex = new BeamBoundedSourceVertex<>(read.getSource());
       builder.addVertex(irVertex, loopVertexStack);
+    } else if (beamTransform instanceof Combine.PerKey) {
+      CombineFnBase.GlobalCombineFn fn = ((Combine.PerKey) beamTransform).getFn();
+      if (fn instanceof Combine.CombineFn) {
+        irVertex = new OperatorVertex(new CombineTransform((Combine.CombineFn) fn));
+        builder.addVertex(irVertex, loopVertexStack);
+      } else {
+        throw new UnsupportedOperationException(((Combine.PerKey) beamTransform).getFn().toString());
+      }
     } else if (beamTransform instanceof GroupByKey) {
       irVertex = new OperatorVertex(new GroupByKeyTransform());
       builder.addVertex(irVertex, loopVertexStack);
@@ -187,10 +201,11 @@ public final class NemoPipelineVisitor extends Pipeline.PipelineVisitor.Defaults
 
   /**
    * Connect side inputs to the vertex.
+   *
    * @param builder the DAG builder to add the vertex to.
    * @param sideInputs side inputs.
    * @param pValueToVertex PValue to Vertex map.
-   * @param pValueToCoder  PValue to Coder map.
+   * @param pValueToCoder PValue to Coder map.
    * @param irVertex wrapper for a user operation in the IR. (Where the side input is headed to)
    */
   private static void connectSideInputs(final DAGBuilder<IRVertex, IREdge> builder,
@@ -211,6 +226,7 @@ public final class NemoPipelineVisitor extends Pipeline.PipelineVisitor.Defaults
 
   /**
    * Get appropriate coder for {@link PCollectionView}.
+   *
    * @param viewFn {@link ViewFn} from the corresponding {@link View.CreatePCollectionView} transform
    * @param beamInputCoder Beam {@link Coder} for input value to {@link View.CreatePCollectionView}
    * @return appropriate {@link BeamCoder}
@@ -237,6 +253,7 @@ public final class NemoPipelineVisitor extends Pipeline.PipelineVisitor.Defaults
 
   /**
    * Get the edge type for the src, dst vertex.
+   *
    * @param src source vertex.
    * @param dst destination vertex.
    * @return the appropriate edge type.
