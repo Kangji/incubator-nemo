@@ -19,8 +19,6 @@ package edu.snu.nemo.examples.spark;
 import edu.snu.nemo.client.JobLauncher;
 import edu.snu.nemo.common.test.ArgBuilder;
 import edu.snu.nemo.compiler.optimizer.policy.DefaultPolicy;
-import edu.snu.nemo.examples.spark.sql.NemoBenchmark;
-import edu.snu.nemo.examples.spark.sql.SparkBenchmark;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -56,23 +54,23 @@ public final class SparkSQLPerfITCase {
         .build());
   }
 
-  @Test(timeout = TIMEOUT)
-  public void testSparkBenchmark() throws Exception {
-    JobLauncher.main(builder
-        .addJobId(SparkBenchmark.class.getSimpleName() + "_test")
-        .addUserMain(SparkBenchmark.class.getCanonicalName())
-        .addUserArgs("")
-        .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
-        .build());
-  }
-
-  @Test(timeout = TIMEOUT)
-  public void testNemoBenchmark() throws Exception {
-    JobLauncher.main(builder
-        .addJobId(NemoBenchmark.class.getSimpleName() + "_test")
-        .addUserMain(NemoBenchmark.class.getCanonicalName())
-        .addUserArgs("")
-        .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
-        .build());
-  }
+//  @Test(timeout = TIMEOUT)
+//  public void testSparkBenchmark() throws Exception {
+//    JobLauncher.main(builder
+//        .addJobId(SparkBenchmark.class.getSimpleName() + "_test")
+//        .addUserMain(SparkBenchmark.class.getCanonicalName())
+//        .addUserArgs("")
+//        .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+//        .build());
+//  }
+//
+//  @Test(timeout = TIMEOUT)
+//  public void testNemoBenchmark() throws Exception {
+//    JobLauncher.main(builder
+//        .addJobId(NemoBenchmark.class.getSimpleName() + "_test")
+//        .addUserMain(NemoBenchmark.class.getCanonicalName())
+//        .addUserArgs("")
+//        .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+//        .build());
+//  }
 }
