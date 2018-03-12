@@ -62,7 +62,7 @@ limitations under the License.
             <groupId>com.databricks</groupId>
             <artifactId>spark-sql-perf_2.10</artifactId>
             <version>0.5.0-SNAPSHOT</version>
-            <scope>system</scope>
+            <!--<scope>system</scope>-->
             <systemPath>${project.basedir}/src/resources/spark-sql-perf_2.11-0.5.0-SNAPSHOT.jar</systemPath>
         </dependency>
         <dependency>
