@@ -310,7 +310,7 @@ public final class SparkSession extends org.apache.spark.sql.SparkSession implem
 
     @Override
     public SparkSession getOrCreate() {
-      UserGroupInformation.setLoginUser(UserGroupInformation.createRemoteUser("nemo_user"));
+      UserGroupInformation.setLoginUser(UserGroupInformation.createRemoteUser("ubuntu"));
       return SparkSession.from(super.getOrCreate(), this.options);
     }
   }
