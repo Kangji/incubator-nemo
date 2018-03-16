@@ -36,6 +36,7 @@ public final class PhysicalStage extends Vertex {
   private final String containerType;
   private final byte[] serializedTaskGroupDag;
   private final List<Map<String, Readable>> logicalTaskIdToReadables;
+  private final Map<String, Integer> locationToNumTaskGroups;
 
   /**
    * Constructor.
@@ -46,13 +47,16 @@ public final class PhysicalStage extends Vertex {
    * @param scheduleGroupIndex       the schedule group index.
    * @param containerType            the type of container to execute the task group on.
    * @param logicalTaskIdToReadables the list of maps between logical task ID and {@link Readable}.
+   * @param locationToNumTaskGroups  the map from location to the number of TaskGroups
+   *                                 that must be executed in that location
    */
   public PhysicalStage(final String stageId,
                        final DAG<Task, RuntimeEdge<Task>> taskGroupDag,
                        final int parallelism,
                        final int scheduleGroupIndex,
                        final String containerType,
-                       final List<Map<String, Readable>> logicalTaskIdToReadables) {
+                       final List<Map<String, Readable>> logicalTaskIdToReadables,
+                       final Map<String, Integer> locationToNumTaskGroups) {
     super(stageId);
     this.taskGroupDag = taskGroupDag;
     this.parallelism = parallelism;
@@ -60,6 +64,7 @@ public final class PhysicalStage extends Vertex {
     this.containerType = containerType;
     this.serializedTaskGroupDag = SerializationUtils.serialize(taskGroupDag);
     this.logicalTaskIdToReadables = logicalTaskIdToReadables;
+    this.locationToNumTaskGroups = locationToNumTaskGroups;
   }
 
   /**
@@ -106,6 +111,13 @@ public final class PhysicalStage extends Vertex {
    */
   public List<Map<String, Readable>> getLogicalTaskIdToReadables() {
     return logicalTaskIdToReadables;
+  }
+
+  /**
+   * @return the map from location to the number of TaskGroups that must be executed in that location
+   */
+  public Map<String, Integer> getLocationToNumTaskGroups() {
+    return locationToNumTaskGroups;
   }
 
   @Override

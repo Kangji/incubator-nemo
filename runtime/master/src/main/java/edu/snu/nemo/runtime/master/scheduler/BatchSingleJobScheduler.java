@@ -372,14 +372,53 @@ public final class BatchSingleJobScheduler implements Scheduler {
     // each readable and source task will be bounded in executor.
     final List<Map<String, Readable>> logicalTaskIdToReadables = stageToSchedule.getLogicalTaskIdToReadables();
 
+    // Follow location restriction
+    final TreeMap<Integer, String> locationToNumTaskGroups = getTaskGroupIndexRangeToLocation(
+        stageToSchedule.getLocationToNumTaskGroups());
+
     taskGroupIdsToSchedule.forEach(taskGroupId -> {
-      blockManagerMaster.onProducerTaskGroupScheduled(taskGroupId);
       final int taskGroupIdx = RuntimeIdGenerator.getIndexFromTaskGroupId(taskGroupId);
+      final String location = getLocationFromRange(taskGroupIdx, locationToNumTaskGroups);
+      blockManagerMaster.onProducerTaskGroupScheduled(taskGroupId);
       LOG.debug("Enquing {}", taskGroupId);
       pendingTaskGroupQueue.enqueue(new ScheduledTaskGroup(physicalPlan.getId(),
           stageToSchedule.getSerializedTaskGroupDag(), taskGroupId, stageIncomingEdges, stageOutgoingEdges, attemptIdx,
-          stageToSchedule.getContainerType(), logicalTaskIdToReadables.get(taskGroupIdx)));
+          stageToSchedule.getContainerType(), logicalTaskIdToReadables.get(taskGroupIdx), location));
+
     });
+  }
+
+  /**
+   * @param locationToNumTaskGroups the map from location to the number of TaskGroups
+   *                                that must be executed in that location
+   * @return a map where each entry represents a range of TaskGroups, which the maximum index of TaskGroups in the range
+   *         is the key and the location where the TaskGroups are to be executed is the value
+   * @see RuntimeIdGenerator#generateTaskGroupId(int, String)
+   */
+  private static TreeMap<Integer, String> getTaskGroupIndexRangeToLocation(
+      final Map<String, Integer> locationToNumTaskGroups) {
+    int accumulatedIndex = 0;
+    final TreeMap<Integer, String> taskGroupIndexRangeToLocation = new TreeMap<>();
+    for (final Map.Entry<String, Integer> range : locationToNumTaskGroups.entrySet()) {
+      accumulatedIndex += range.getValue() - 1;
+      taskGroupIndexRangeToLocation.put(accumulatedIndex, range.getKey());
+    }
+    return taskGroupIndexRangeToLocation;
+  }
+
+  /**
+   * @param taskGroupIndex the index of the TaskGroup
+   * @param taskGroupIndexRangeToLocation provides range definition for locations
+   * @return appropriate location for the specified TaskGroup, or {@code null} if no location is defined
+   */
+  @Nullable
+  private static String getLocationFromRange(final int taskGroupIndex,
+                                             final TreeMap<Integer, String> taskGroupIndexRangeToLocation) {
+    final Map.Entry<Integer, String> range = taskGroupIndexRangeToLocation.ceilingEntry(taskGroupIndex);
+    if (range == null) {
+      return null;
+    }
+    return range.getValue();
   }
 
   /**

@@ -18,6 +18,7 @@ package edu.snu.nemo.runtime.common.plan.physical;
 import edu.snu.nemo.common.ir.Readable;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
 
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ public final class ScheduledTaskGroup implements Serializable {
   private final String containerType;
   private final byte[] serializedTaskGroupDag;
   private final Map<String, Readable> logicalTaskIdToReadable;
+  private final String location;
 
   /**
    * Constructor.
@@ -54,6 +56,7 @@ public final class ScheduledTaskGroup implements Serializable {
    * @param attemptIdx              the attempt index.
    * @param containerType           the type of container to execute the task group on.
    * @param logicalTaskIdToReadable the map between logical task ID and readable.
+   * @param location                the preferred location to execute the TaskGroup, or {@code null}
    */
   public ScheduledTaskGroup(final String jobId,
                             final byte[] serializedTaskGroupDag,
@@ -62,7 +65,8 @@ public final class ScheduledTaskGroup implements Serializable {
                             final List<PhysicalStageEdge> taskGroupOutgoingEdges,
                             final int attemptIdx,
                             final String containerType,
-                            final Map<String, Readable> logicalTaskIdToReadable) {
+                            final Map<String, Readable> logicalTaskIdToReadable,
+                            final String location) {
     this.jobId = jobId;
     this.taskGroupId = taskGroupId;
     this.taskGroupIdx = RuntimeIdGenerator.getIndexFromTaskGroupId(taskGroupId);
@@ -72,6 +76,7 @@ public final class ScheduledTaskGroup implements Serializable {
     this.containerType = containerType;
     this.serializedTaskGroupDag = serializedTaskGroupDag;
     this.logicalTaskIdToReadable = logicalTaskIdToReadable;
+    this.location = location;
   }
 
   /**
@@ -135,5 +140,13 @@ public final class ScheduledTaskGroup implements Serializable {
    */
   public Map<String, Readable> getLogicalTaskIdToReadable() {
     return logicalTaskIdToReadable;
+  }
+
+  /**
+   * @return the preferred location to execute the TaskGroup, or {@code null}
+   */
+  @Nullable
+  public String getLocation() {
+    return location;
   }
 }
