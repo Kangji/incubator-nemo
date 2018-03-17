@@ -227,6 +227,7 @@ public final class PhysicalPlanGenerator
       final ExecutionPropertyMap firstVertexProperties = stageVertices.iterator().next().getExecutionProperties();
       final int stageParallelism = firstVertexProperties.get(ExecutionProperty.Key.Parallelism);
       final String containerType = firstVertexProperties.get(ExecutionProperty.Key.ExecutorPlacement);
+      final Map<String, Integer> locationShares = firstVertexProperties.get(ExecutionProperty.Key.LocationShares);
 
       // Only one task group DAG will be created and reused.
       final DAGBuilder<Task, RuntimeEdge<Task>> stageInternalDAGBuilder = new DAGBuilder<>();
@@ -287,7 +288,7 @@ public final class PhysicalPlanGenerator
       final PhysicalStage physicalStage =
           new PhysicalStage(stage.getId(), stageInternalDAGBuilder.build(),
               stageParallelism, stage.getScheduleGroupIndex(), containerType, logicalTaskIdToReadables,
-              Collections.emptyMap());
+              locationShares);
 
       physicalDAGBuilder.addVertex(physicalStage);
       runtimeStageIdToPhysicalStageMap.put(stage.getId(), physicalStage);

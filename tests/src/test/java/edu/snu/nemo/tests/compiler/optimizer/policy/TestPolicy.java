@@ -40,6 +40,7 @@ public final class TestPolicy implements Policy {
   public List<CompileTimePass> getCompileTimePasses() {
     List<CompileTimePass> policy = new ArrayList<>();
     policy.add(new DefaultStagePartitioningPass());
+    policy.add(new LocationShareAssignmentPass());
 
     if (testPushPolicy) {
       policy.add(new ShuffleEdgePushPass());
