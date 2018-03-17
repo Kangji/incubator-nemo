@@ -101,15 +101,16 @@ public final class RoundRobinSchedulingPolicy implements SchedulingPolicy {
       final String containerType = scheduledTaskGroup.getContainerType();
       initializeContainerTypeIfAbsent(containerType);
 
-      Optional<String> executorId = selectExecutorByRR(containerType);
+      Optional<String> executorId = selectExecutorByRR(containerType, scheduledTaskGroup.getLocation());
       if (!executorId.isPresent()) { // If there is no available executor to schedule this task group now,
         // TODO #696 Sleep Time Per Container Type in Scheduling Policy
         final boolean executorAvailable =
             conditionByContainerType.get(containerType).await(scheduleTimeoutMs, TimeUnit.MILLISECONDS);
         if (executorAvailable) { // if an executor has become available before scheduleTimeoutMs,
-          executorId = selectExecutorByRR(containerType);
+          executorId = selectExecutorByRR(containerType, scheduledTaskGroup.getLocation());
           if (executorId.isPresent()) {
-            scheduleTaskGroup(selectExecutorByRR(containerType).get(), scheduledTaskGroup, jobStateManager);
+            scheduleTaskGroup(selectExecutorByRR(containerType, scheduledTaskGroup.getLocation()).get(),
+                scheduledTaskGroup, jobStateManager);
             return true;
           } else {
             throw new SchedulingException(new Throwable("An executor must be available at this point"));
@@ -217,12 +218,16 @@ public final class RoundRobinSchedulingPolicy implements SchedulingPolicy {
    * It checks the task groups running (as compared to each executor's capacity).
    *
    * @param containerType to select an executor for.
+   * @param location location criterion for the executor, or {@code null}
    * @return (optionally) the selected executor.
    */
-  private Optional<String> selectExecutorByRR(final String containerType) {
-    final List<String> candidateExecutorIds = (containerType.equals(ExecutorPlacementProperty.NONE))
+  private Optional<String> selectExecutorByRR(final String containerType, final String location) {
+    final List<String> executorsWithMatchingContainerType = (containerType.equals(ExecutorPlacementProperty.NONE))
         ? getAllContainers() // all containers
         : executorIdByContainerType.get(containerType); // containers of a particular type
+    final List<String> candidateExecutorIds = location == null ? executorsWithMatchingContainerType
+        : executorsWithMatchingContainerType.stream().filter(executorId -> executorRegistry
+        .getRunningExecutorRepresenter(executorId).getNodeName().equals(location)).collect(Collectors.toList());
 
     if (candidateExecutorIds != null && !candidateExecutorIds.isEmpty()) {
       final int numExecutors = candidateExecutorIds.size();
