@@ -81,6 +81,8 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
         stageIdToLocationToNumTaskGroups.put(stageId, Collections.emptyMap());
       } else {
         // to-do.
+        final int parentStageId = stageIdToParentStageIds.get(stageId).iterator().next();
+        final Map<String, Integer> parentLocationShare = stageIdToLocationToNumTaskGroups.get(parentStageId);
         stageIdToLocationToNumTaskGroups.put(stageId, Collections.emptyMap());
       }
     });
