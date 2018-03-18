@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 
 /**
  * Computes and assigns appropriate share of locations to each stage,
- * with respect to bandwidth restrictions of locations.
+ * with respect to bandwidth restrictions of locations. If bandwidth information is not given, this pass does nothing.
  *
  * <h3>Assumptions</h3>
  * This pass assumes no skew in input or intermediate data, so that the number of TaskGroups assigned to a location
@@ -40,6 +40,8 @@ import java.util.stream.Stream;
  * Also, this pass assumes stages with empty map as {@link LocationSharesProperty} are assigned to locations evenly.
  * For example, if source splits are not distributed evenly, any source location-aware scheduling policy will
  * assign TaskGroups unevenly.
+ * Also, this pass assumes network bandwidth to be the bottleneck. Each location should have enough capacity to run
+ * TaskGroups immediately as scheduler attempts to schedule a TaskGroup.
  */
 public final class LocationShareAssignmentPass extends AnnotatingPass {
 
