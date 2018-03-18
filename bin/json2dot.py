@@ -262,7 +262,7 @@ class PhysicalStage:
             state = ''
         else:
             state = ' ({})'.format(self.state.state)
-        locations = '\\n'.join(["@{}: {}".format(loc[0], loc[1]) for loc in self.locationToNumTaskGroups.items()])
+        locations = '\\n'.join(["@{}: {}".format(loc[0], loc[1]) for loc in sorted(self.locationToNumTaskGroups.items())])
         dot = 'subgraph cluster_{} {{'.format(self.idx)
         dot += 'label = "{}{}\\n\\n{} TaskGroup(s):\\n{}\\nLocations:\\n{}";'.format(self.id, state, len(self.state.taskGroups), self.state.taskGroupStateSummary, locations)
         dot += 'color=red; bgcolor="{}";'.format(stateToColor(self.state.state))
