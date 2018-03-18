@@ -50,10 +50,8 @@ public final class MapReduce {
         .apply(MapElements.<String, KV<String, Long>>via(new SimpleFunction<String, KV<String, Long>>() {
           @Override
           public KV<String, Long> apply(final String line) {
-            final String[] words = line.split(" +");
-            final String documentId = words[0] + "#" + words[1];
-            final Long count = Long.parseLong(words[2]);
-            return KV.of(documentId, count);
+            final String[] words = line.trim().split(" +");
+            return KV.of(words[2], 1L);
           }
         }))
         .apply(GroupByKey.<String, Long>create())
