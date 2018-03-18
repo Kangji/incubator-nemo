@@ -137,8 +137,9 @@ public final class PhysicalStage extends Vertex {
     boolean first = true;
     for (Map.Entry<String, Integer> entry : locationToNumTaskGroups.entrySet()) {
       if (first) {
-        sb.append(", ");
         first = false;
+      } else {
+        sb.append(", ");
       }
       sb.append("\"").append(entry.getKey()).append("\": ").append(entry.getValue());
     }

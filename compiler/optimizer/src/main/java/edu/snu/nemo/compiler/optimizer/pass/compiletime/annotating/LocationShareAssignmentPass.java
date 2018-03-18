@@ -22,6 +22,8 @@ import edu.snu.nemo.common.ir.edge.IREdge;
 import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.executionproperty.LocationSharesProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
@@ -40,6 +42,8 @@ import java.util.stream.Stream;
  * assign TaskGroups unevenly.
  */
 public final class LocationShareAssignmentPass extends AnnotatingPass {
+
+  private static final Logger LOG = LoggerFactory.getLogger(LocationShareAssignmentPass.class);
 
   private static String bandwidthSpecificationString = "";
 
@@ -73,8 +77,10 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
     dag.getVertices().forEach(irVertex -> {
       final int stageId = irVertex.getProperty(ExecutionProperty.Key.StageId);
       final Set<Integer> parentStageIds = stageIdToParentStageIds.computeIfAbsent(stageId, id -> new HashSet<>());
-      dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
-          parentStageIds.add(irEdge.getSrc().getExecutionProperties().get(ExecutionProperty.Key.StageId)));
+      dag.getIncomingEdgesOf(irVertex).stream()
+          .map(irEdge -> (int) irEdge.getSrc().getExecutionProperties().get(ExecutionProperty.Key.StageId))
+          .filter(id -> id != stageId)
+          .forEach(parentStageIds::add);
     });
     return stageIdToParentStageIds;
   }
