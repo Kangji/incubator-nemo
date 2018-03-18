@@ -1,7 +1,7 @@
 [
   {
     "type": "Compute",
-    "memory_mb": 61440,
+    "memory_mb": 51200,
     "capacity": 16,
     "num": 10
   }
