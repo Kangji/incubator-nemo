@@ -253,6 +253,7 @@ class PhysicalStage:
     def __init__(self, id, properties, state):
         self.id = id
         self.taskGroup = DAG(properties['taskGroupDag'], JobState.empty())
+        self.locationToNumTaskGroups = properties['locationToNumTaskGroups']
         self.idx = getIdx()
         self.state = state
     @property
@@ -261,8 +262,9 @@ class PhysicalStage:
             state = ''
         else:
             state = ' ({})'.format(self.state.state)
+        location = '\\n'.join(["@{} {}".format(loc[0], loc[1]) for loc in self.locationToNumTaskGroups])
         dot = 'subgraph cluster_{} {{'.format(self.idx)
-        dot += 'label = "{}{}\\n\\n{} TaskGroup(s):\\n{}";'.format(self.id, state, len(self.state.taskGroups), self.state.taskGroupStateSummary)
+        dot += 'label = "{}{}\\n\\n{} TaskGroup(s):\\n{}\\nLocations:\\n{}";'.format(self.id, state, len(self.state.taskGroups), self.state.taskGroupStateSummary, location)
         dot += 'color=red; bgcolor="{}";'.format(stateToColor(self.state.state))
         dot += self.taskGroup.dot
         dot += '}'

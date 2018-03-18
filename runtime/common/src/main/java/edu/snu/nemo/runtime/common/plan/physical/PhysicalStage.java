@@ -127,7 +127,22 @@ public final class PhysicalStage extends Vertex {
     sb.append(", \"taskGroupDag\": ").append(taskGroupDag);
     sb.append(", \"parallelism\": ").append(parallelism);
     sb.append(", \"containerType\": \"").append(containerType).append("\"");
+    sb.append(", \"locationToNumTaskGroups\": ").append(locationToNumTaskGroupsToJSON(locationToNumTaskGroups));
     sb.append('}');
+    return sb.toString();
+  }
+
+  private static String locationToNumTaskGroupsToJSON(final Map<String, Integer> locationToNumTaskGroups) {
+    final StringBuilder sb = new StringBuilder("{");
+    boolean first = true;
+    for (Map.Entry<String, Integer> entry : locationToNumTaskGroups.entrySet()) {
+      if (first) {
+        sb.append(", ");
+        first = false;
+      }
+      sb.append("\"").append(entry.getKey()).append("\": ").append(entry.getValue());
+    }
+    sb.append("}");
     return sb.toString();
   }
 }
