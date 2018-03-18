@@ -31,6 +31,7 @@ import org.apache.reef.io.network.util.StringIdentifierFactory;
 import org.apache.reef.runtime.local.client.LocalRuntimeConfiguration;
 import org.apache.reef.runtime.yarn.client.YarnClientConfiguration;
 import org.apache.reef.tang.*;
+import org.apache.reef.tang.annotations.Name;
 import org.apache.reef.tang.exceptions.InjectionException;
 import org.apache.reef.tang.formats.CommandLine;
 import org.apache.reef.util.EnvironmentUtils;
@@ -74,12 +75,15 @@ public final class JobLauncher {
     final Configuration driverConf = getDriverConf(jobConf);
     final Configuration driverNcsConf = getDriverNcsConf();
     final Configuration driverMessageConfg = getDriverMessageConf();
-    final Configuration executorResourceConfig = getExecutorResourceConf(jobConf);
+    final Configuration executorResourceConfig = getJsonConf(jobConf, JobConf.ExecutorJsonPath.class,
+        JobConf.ExecutorJsonContents.class);
+    final Configuration bandwidthConfig = getJsonConf(jobConf, JobConf.BandwidthJsonPath.class,
+        JobConf.BandwidthJsonContents.class);
     final Configuration clientConf = getClientConf();
 
     // Merge Job and Driver Confs
     jobAndDriverConf = Configurations.merge(jobConf, driverConf, driverNcsConf, driverMessageConfg,
-        executorResourceConfig);
+        executorResourceConfig, bandwidthConfig);
 
     // Get DeployMode Conf
     deployModeConf = Configurations.merge(getDeployModeConf(jobConf), clientConf);
@@ -211,6 +215,7 @@ public final class JobLauncher {
     cl.registerShortNameOfClass(JobConf.DeployMode.class);
     cl.registerShortNameOfClass(JobConf.DriverMemMb.class);
     cl.registerShortNameOfClass(JobConf.ExecutorJsonPath.class);
+    cl.registerShortNameOfClass(JobConf.BandwidthJsonPath.class);
     cl.registerShortNameOfClass(JobConf.JVMHeapSlack.class);
     cl.registerShortNameOfClass(JobConf.IORequestHandleThreadsTotal.class);
     cl.registerShortNameOfClass(JobConf.SchedulerTimeoutMs.class);
@@ -250,18 +255,24 @@ public final class JobLauncher {
   }
 
   /**
-   * Get executor resource configuration.
-   * @param jobConf job configuration to get executor json path.
-   * @return executor resource configuration.
+   * Read json file and return its contents as configuration.
+   * @param jobConf job configuration to read {@code path} configuration value
+   * @param pathParameter       named parameter represents path to the json file, or {@code ""}
+   * @param contentsParameter   named parameter represents contents of the json file
+   * @return configuration with {@code contents} configuration value
    * @throws InjectionException exception while injection.
    */
-  public static Configuration getExecutorResourceConf(final Configuration jobConf) throws InjectionException {
+  public static Configuration getJsonConf(final Configuration jobConf,
+                                          final Class<? extends Name<String>> pathParameter,
+                                          final Class<? extends Name<String>> contentsParameter)
+      throws InjectionException {
     final Injector injector = TANG.newInjector(jobConf);
     try {
-      final String path = injector.getNamedInstance(JobConf.ExecutorJsonPath.class);
-      final String contents = new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
+      final String path = injector.getNamedInstance(pathParameter);
+      final String contents = path.isEmpty() ? ""
+          : new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
       return TANG.newConfigurationBuilder()
-          .bindNamedParameter(JobConf.ExecutorJsonContents.class, contents)
+          .bindNamedParameter(contentsParameter, contents)
           .build();
     } catch (final IOException e) {
       throw new RuntimeException(e);
