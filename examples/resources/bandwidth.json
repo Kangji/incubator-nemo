@@ -22,31 +22,31 @@
   {
     "name": "w4",
     "up": 100,
-    "down": 100
+    "down" :1
   },
   {
     "name": "w5",
     "up": 100,
-    "down": 100
+    "down" :1
   },
   {
     "name": "w6",
     "up": 100,
-    "down": 100
+    "down" :1
   },
   {
     "name": "w7",
     "up": 100,
-    "down": 100
+    "down" :1
   },
   {
     "name": "w8",
     "up": 100,
-    "down": 100
+    "down" :1
   },
   {
     "name": "w9",
     "up": 100,
-    "down": 100
+    "down" :1
   }
 ]

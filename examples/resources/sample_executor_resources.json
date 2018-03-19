@@ -2,7 +2,7 @@
   {
     "type": "Compute",
     "memory_mb": 57344,
-    "capacity": 100,
+    "capacity": 8,
     "num": 10
   }
 ]
