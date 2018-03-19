@@ -76,7 +76,7 @@ public final class Executor {
                   final DataTransferFactory dataTransferFactory,
                   final MetricManagerWorker metricMessageSender) {
     this.executorId = executorId;
-    this.executorService = Executors.newFixedThreadPool(executorCapacity);
+    this.executorService = Executors.newCachedThreadPool(runnable -> new Thread(runnable, "TaskGroupExecutor"));
     this.persistentConnectionToMasterMap = persistentConnectionToMasterMap;
     this.serializerManager = serializerManager;
     this.dataTransferFactory = dataTransferFactory;
