@@ -23,13 +23,19 @@ import org.apache.spark.sql.SparkSession
 
 object SparkBenchmark {
   def main(args: Array[String]): Unit = {
-    val session = SparkSession.builder().appName("sparkBenchmark").getOrCreate();
+    val session = SparkSession.builder()
+//      .master()
+//      .config("spark.sql.perf.results", new java.io.File("performance").toURI.toString)
+      .appName("sparkBenchmark")
+      .getOrCreate()
     val sqlContext = session.sqlContext
 
 
     // SETUP
-    val rootDir = "~/xvdb/tpcds/data"
-    val dsdgenDir = "~/tpcds/tpcds-kit/tools" // location of dsdgen
+    println("BASEDIR: " + System.getProperty("user.home"))
+    val baseDir = System.getProperty("user.home")
+    val rootDir = baseDir + "/xvdb/tpcds/data"
+    val dsdgenDir = baseDir + "/tpcds/tpcds-kit/tools" // location of dsdgen
     val databaseName = "TPCDS"
     val scaleFactor = "10" // scaleFactor defines the size of the dataset to generate (in GB).
     val format = "parquet"
@@ -66,7 +72,7 @@ object SparkBenchmark {
     // RUN BENCHMARK
     val tpcds = new TPCDS(sqlContext = sqlContext)
     // Set:
-    val resultLocation: String = "~/xvdb/tpcds/result" // place to write results
+    val resultLocation: String = baseDir + "/xvdb/tpcds/result" // place to write results
     val iterations: Int = 1 // how many iterations of queries to run.
     val queries: Seq[Query] = tpcds.tpcds2_4Queries // queries to run.
     val timeout: Int = 24 * 60 * 60 // timeout, in seconds.
