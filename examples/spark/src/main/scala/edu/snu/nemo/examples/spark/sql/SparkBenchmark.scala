@@ -24,7 +24,7 @@ import org.apache.spark.sql.SparkSession
 object SparkBenchmark {
   def main(args: Array[String]): Unit = {
     val session = SparkSession.builder()
-//      .master()
+      .master("local[*]")
 //      .config("spark.sql.perf.results", new java.io.File("performance").toURI.toString)
       .appName("sparkBenchmark")
       .getOrCreate()

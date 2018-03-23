@@ -261,7 +261,7 @@ public final class SparkSession extends org.apache.spark.sql.SparkSession implem
    * @return the session builder.
    */
   public static Builder builder() {
-    return new Builder().master("local");
+    return new Builder();
   }
 
   /**
@@ -310,6 +310,10 @@ public final class SparkSession extends org.apache.spark.sql.SparkSession implem
 
     @Override
     public SparkSession getOrCreate() {
+      if (!options.containsKey("spark.master")) {
+        return this.master("local[*]").getOrCreate();
+      }
+
       UserGroupInformation.setLoginUser(UserGroupInformation.createRemoteUser("ubuntu"));
       return SparkSession.from(super.getOrCreate(), this.options);
     }
