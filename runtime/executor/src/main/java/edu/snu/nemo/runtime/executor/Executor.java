@@ -69,7 +69,6 @@ public final class Executor {
 
   @Inject
   public Executor(@Parameter(JobConf.ExecutorId.class) final String executorId,
-                  @Parameter(JobConf.ExecutorCapacity.class) final int executorCapacity,
                   final PersistentConnectionToMasterMap persistentConnectionToMasterMap,
                   final MessageEnvironment messageEnvironment,
                   final SerializerManager serializerManager,
