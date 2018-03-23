@@ -31,7 +31,7 @@ object NemoBenchmark {
     println("BASEDIR: " + System.getProperty("user.home"))
     val baseDir = System.getProperty("user.home")
     val rootDir = baseDir + "/xvdb/tpcds/data"
-    val dsdgenDir = baseDir + "/tpcds/tpcds-kit/tools" // location of dsdgen
+    val dsdgenDir = baseDir + "/xvdb/tpcds-kit/tools" // location of dsdgen
     val databaseName = "TPCDS"
     val scaleFactor = "10" // scaleFactor defines the size of the dataset to generate (in GB).
     val format = "parquet"
