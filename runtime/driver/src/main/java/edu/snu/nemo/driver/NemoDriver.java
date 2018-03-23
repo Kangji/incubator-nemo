@@ -124,9 +124,8 @@ public final class NemoDriver {
     @Override
     public void onNext(final AllocatedEvaluator allocatedEvaluator) {
       final String executorId = RuntimeIdGenerator.generateExecutorId();
-      final int numOfCores = allocatedEvaluator.getEvaluatorDescriptor().getNumberOfCores();
       runtimeMaster.onContainerAllocated(executorId, allocatedEvaluator,
-          getExecutorConfiguration(executorId, numOfCores));
+          getExecutorConfiguration(executorId));
     }
   }
 
@@ -188,10 +187,9 @@ public final class NemoDriver {
     }
   }
 
-  private Configuration getExecutorConfiguration(final String executorId, final int executorCapacity) {
+  private Configuration getExecutorConfiguration(final String executorId) {
     final Configuration executorConfiguration = JobConf.EXECUTOR_CONF
         .set(JobConf.EXECUTOR_ID, executorId)
-        .set(JobConf.EXECUTOR_CAPACITY, executorCapacity)
         .set(JobConf.GLUSTER_DISK_DIRECTORY, glusterDirectory)
         .set(JobConf.LOCAL_DISK_DIRECTORY, localDirectory)
         .set(JobConf.JOB_ID, jobId)
