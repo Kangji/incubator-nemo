@@ -24,8 +24,17 @@ import org.apache.spark.sql.SparkSession
 object SparkBenchmark {
   def main(args: Array[String]): Unit = {
     val session = SparkSession.builder()
-      .master("local[*]")
-//      .config("spark.sql.perf.results", new java.io.File("performance").toURI.toString)
+      .master("yarn")
+      .config("spark.yarn.am.memoryOverhead", "4800mb")
+      .config("spark.yarn.am.memory", "11200mb")
+      .config("spark.yarn.executor.memoryOverhead", "2400mb")
+      .config("spark.executor.extraClassPath", "/home/ubuntu/hadoop/share/hadoop/tools/lib/aws-java-sdk-1.7.4.jar:/home/ubuntu/hadoop/share/hadoop/tools/lib/hadoop-aws-2.7.2.jar")
+      .config("spark.driver.extraClassPath", "/home/ubuntu/hadoop/share/hadoop/tools/lib/aws-java-sdk-1.7.4.jar:/home/ubuntu/hadoop/share/hadoop/tools/lib/hadoop-aws-2.7.2.jar")
+      .config("spark.yarn.preserve.staging.files", "true")
+      .config("spark.shuffle.compress", "false")
+      .config("spark.executor.memory", "5600mb")
+      .config("spark.executor.cores", "1")
+      .config("spark.executor.instances", "6")
       .appName("sparkBenchmark")
       .getOrCreate()
     val sqlContext = session.sqlContext
