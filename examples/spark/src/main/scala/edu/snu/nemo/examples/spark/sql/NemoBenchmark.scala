@@ -23,7 +23,10 @@ import edu.snu.nemo.compiler.frontend.spark.sql.SparkSession
 
 object NemoBenchmark {
   def main(args: Array[String]): Unit = {
-    val session = SparkSession.builder().appName("nemoBenchmark").getOrCreate();
+    val session = SparkSession.builder()
+      .master("local[*]")
+      .appName("nemoBenchmark")
+      .getOrCreate()
     val sqlContext = session.sqlContext
 
 
