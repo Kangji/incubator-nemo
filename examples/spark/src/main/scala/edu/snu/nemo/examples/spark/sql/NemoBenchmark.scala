@@ -25,6 +25,8 @@ object NemoBenchmark {
   def main(args: Array[String]): Unit = {
     val session = SparkSession.builder()
       .master("yarn")
+      .config("spark.submit.deployMode", "client")
+//      .config("spark.submit.deployMode", "cluster")
       .config("spark.yarn.am.memoryOverhead", "4800mb")
       .config("spark.yarn.am.memory", "11200mb")
       .config("spark.yarn.executor.memoryOverhead", "2400mb")
