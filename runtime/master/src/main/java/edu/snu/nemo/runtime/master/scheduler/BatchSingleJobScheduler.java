@@ -167,6 +167,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
   @Override
   public void onExecutorAdded(final ExecutorRepresenter executorRepresenter) {
     schedulingPolicy.onExecutorAdded(executorRepresenter);
+    schedulerRunner.onAnExecutorAvailable();
   }
 
   @Override
@@ -381,11 +382,12 @@ public final class BatchSingleJobScheduler implements Scheduler {
       final String location = getLocationFromRange(taskGroupIdx, locationToNumTaskGroups);
       blockManagerMaster.onProducerTaskGroupScheduled(taskGroupId);
       LOG.debug("Enquing {}", taskGroupId);
-      pendingTaskGroupQueue.enqueue(new ScheduledTaskGroup(physicalPlan.getId(),
+      pendingTaskGroupQueue.add(new ScheduledTaskGroup(physicalPlan.getId(),
           stageToSchedule.getSerializedTaskGroupDag(), taskGroupId, stageIncomingEdges, stageOutgoingEdges, attemptIdx,
           stageToSchedule.getContainerType(), logicalTaskIdToReadables.get(taskGroupIdx), location));
 
     });
+    schedulerRunner.onATaskGroupAvailable();
   }
 
   /**
@@ -477,6 +479,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
         scheduleNextStage(stageIdForTaskGroupUponCompletion);
       }
     }
+    schedulerRunner.onAnExecutorAvailable();
   }
 
   /**
@@ -514,6 +517,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
     } else {
       onTaskGroupExecutionComplete(executorId, taskGroupId, true);
     }
+    schedulerRunner.onAnExecutorAvailable();
   }
 
   /**
@@ -581,5 +585,6 @@ public final class BatchSingleJobScheduler implements Scheduler {
       default:
         throw new UnknownFailureCauseException(new Throwable("Unknown cause: " + failureCause));
     }
+    schedulerRunner.onAnExecutorAvailable();
   }
 }

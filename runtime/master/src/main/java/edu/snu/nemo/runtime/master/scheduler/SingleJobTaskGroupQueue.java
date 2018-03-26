@@ -16,7 +16,6 @@
 package edu.snu.nemo.runtime.master.scheduler;
 
 import edu.snu.nemo.common.dag.DAG;
-import edu.snu.nemo.common.exception.SchedulingException;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
 import edu.snu.nemo.runtime.common.plan.physical.PhysicalPlan;
 import edu.snu.nemo.runtime.common.plan.physical.PhysicalStage;
@@ -28,7 +27,6 @@ import org.apache.reef.annotations.audience.DriverSide;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.BiFunction;
 
 /**
  * Keep tracks of all pending task groups.
@@ -45,7 +43,7 @@ public final class SingleJobTaskGroupQueue implements PendingTaskGroupQueue {
   /**
    * Pending TaskGroups awaiting to be scheduled for each stage.
    */
-  private final ConcurrentMap<String, Deque<ScheduledTaskGroup>> stageIdToPendingTaskGroups;
+  private final ConcurrentMap<String, Map<String, ScheduledTaskGroup>> stageIdToPendingTaskGroups;
 
   /**
    * Stages with TaskGroups that have not yet been scheduled.
@@ -59,63 +57,69 @@ public final class SingleJobTaskGroupQueue implements PendingTaskGroupQueue {
   }
 
   @Override
-  public void enqueue(final ScheduledTaskGroup scheduledTaskGroup) {
+  public synchronized void add(final ScheduledTaskGroup scheduledTaskGroup) {
     final String stageId = RuntimeIdGenerator.getStageIdFromTaskGroupId(scheduledTaskGroup.getTaskGroupId());
 
-    synchronized (stageIdToPendingTaskGroups) {
-      stageIdToPendingTaskGroups.compute(stageId,
-          new BiFunction<String, Deque<ScheduledTaskGroup>, Deque<ScheduledTaskGroup>>() {
-            @Override
-            public Deque<ScheduledTaskGroup> apply(final String s,
-                                                   final Deque<ScheduledTaskGroup> scheduledTaskGroups) {
-              if (scheduledTaskGroups == null) {
-                final Deque<ScheduledTaskGroup> pendingTaskGroupsForStage = new ArrayDeque<>();
-                pendingTaskGroupsForStage.add(scheduledTaskGroup);
-                updateSchedulableStages(stageId, scheduledTaskGroup.getContainerType());
-                return pendingTaskGroupsForStage;
-              } else {
-                scheduledTaskGroups.add(scheduledTaskGroup);
-                return scheduledTaskGroups;
-              }
-            }
-          });
-    }
+    stageIdToPendingTaskGroups.compute(stageId, (s, taskGroupIdToTaskGroup) -> {
+      if (taskGroupIdToTaskGroup == null) {
+        final Map<String, ScheduledTaskGroup> taskGroupIdToTaskGroupMap = new HashMap<>();
+        taskGroupIdToTaskGroupMap.put(scheduledTaskGroup.getTaskGroupId(), scheduledTaskGroup);
+        updateSchedulableStages(stageId, scheduledTaskGroup.getContainerType());
+        return taskGroupIdToTaskGroupMap;
+      } else {
+        taskGroupIdToTaskGroup.put(scheduledTaskGroup.getTaskGroupId(), scheduledTaskGroup);
+        return taskGroupIdToTaskGroup;
+      }
+    });
   }
 
   /**
-   * Dequeues the next TaskGroup to be scheduled according to job dependency priority.
-   * @return the next TaskGroup to be scheduled
+   * {@inheritDoc}
    */
   @Override
-  public Optional<ScheduledTaskGroup> dequeue() {
-    ScheduledTaskGroup taskGroupToSchedule = null;
-    final String stageId;
-    try {
-      stageId = schedulableStages.takeFirst();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-      throw new SchedulingException(new Throwable("An exception occurred while trying to dequeue the next TaskGroup"));
+  public synchronized ScheduledTaskGroup remove(final String taskGroupId) throws NoSuchElementException {
+    final String stageId = schedulableStages.peekFirst();
+    if (stageId == null) {
+      throw new NoSuchElementException("No schedulable stage in TaskGroup queue");
     }
 
-    synchronized (stageIdToPendingTaskGroups) {
-      final Deque<ScheduledTaskGroup> pendingTaskGroupsForStage = stageIdToPendingTaskGroups.get(stageId);
+    final Map<String, ScheduledTaskGroup> pendingTaskGroupsForStage = stageIdToPendingTaskGroups.get(stageId);
 
-      if (pendingTaskGroupsForStage == null) {
-        schedulableStages.addLast(stageId);
-      } else {
-        taskGroupToSchedule = pendingTaskGroupsForStage.poll();
-        if (pendingTaskGroupsForStage.isEmpty()) {
-          stageIdToPendingTaskGroups.remove(stageId);
-          stageIdToPendingTaskGroups.forEach((scheduledStageId, taskGroupList) ->
-              updateSchedulableStages(scheduledStageId, taskGroupList.getFirst().getContainerType()));
-        } else {
-          schedulableStages.addLast(stageId);
-        }
+    if (pendingTaskGroupsForStage == null) {
+      throw new RuntimeException(String.format("Stage %s not found in TaskGroup queue", stageId));
+    }
+    final ScheduledTaskGroup taskGroupToSchedule = pendingTaskGroupsForStage.remove(taskGroupId);
+    if (taskGroupToSchedule == null) {
+      throw new NoSuchElementException(String.format("TaskGroup %s not found in TaskGroup queue", taskGroupId));
+    }
+    if (pendingTaskGroupsForStage.isEmpty()) {
+      if (!schedulableStages.pollFirst().equals(stageId)) {
+        throw new RuntimeException(String.format("Expected stage %s to be polled", stageId));
       }
+      stageIdToPendingTaskGroups.remove(stageId);
+      stageIdToPendingTaskGroups.forEach((scheduledStageId, taskGroups) ->
+          updateSchedulableStages(scheduledStageId, taskGroups.values().iterator().next().getContainerType()));
     }
 
-    return (taskGroupToSchedule == null) ? Optional.empty()
-        : Optional.of(taskGroupToSchedule);
+    return taskGroupToSchedule;
+  }
+
+  /**
+   * Peeks TaskGroups that can be scheduled according to job dependency priority.
+   * @return TaskGroups to be scheduled, or {@link Optional#empty()} if the queue is empty
+   */
+  @Override
+  public synchronized Optional<Collection<ScheduledTaskGroup>> peekSchedulableTaskGroups() {
+    final String stageId = schedulableStages.peekFirst();
+    if (stageId == null) {
+      return Optional.empty();
+    }
+
+    final Map<String, ScheduledTaskGroup> pendingTaskGroupsForStage = stageIdToPendingTaskGroups.get(stageId);
+    if (pendingTaskGroupsForStage == null) {
+      throw new RuntimeException(String.format("Stage %s not found in stageIdToPendingTaskGroups map", stageId));
+    }
+    return Optional.of(new ArrayList<>(pendingTaskGroupsForStage.values()));
   }
 
   /**
@@ -123,17 +127,15 @@ public final class SingleJobTaskGroupQueue implements PendingTaskGroupQueue {
    * @param stageId for the stage to begin the removal recursively.
    */
   @Override
-  public void removeTaskGroupsAndDescendants(final String stageId) {
-    synchronized (stageIdToPendingTaskGroups) {
-      removeStageAndChildren(stageId);
-    }
+  public synchronized void removeTaskGroupsAndDescendants(final String stageId) {
+    removeStageAndChildren(stageId);
   }
 
   /**
    * Recursively removes a stage and its children stages from this PQ.
    * @param stageId for the stage to begin the removal recursively.
    */
-  private void removeStageAndChildren(final String stageId) {
+  private synchronized void removeStageAndChildren(final String stageId) {
     schedulableStages.remove(stageId);
     stageIdToPendingTaskGroups.remove(stageId);
 
@@ -150,7 +152,8 @@ public final class SingleJobTaskGroupQueue implements PendingTaskGroupQueue {
    * @param candidateStageId for the stage that can potentially be scheduled.
    * @param candidateStageContainerType for the stage that can potentially be scheduled.
    */
-  private void updateSchedulableStages(final String candidateStageId, final String candidateStageContainerType) {
+  private synchronized void updateSchedulableStages(
+      final String candidateStageId, final String candidateStageContainerType) {
     final DAG<PhysicalStage, PhysicalStageEdge> jobDAG = physicalPlan.getStageDAG();
 
     if (isSchedulable(candidateStageId, candidateStageContainerType)) {
@@ -175,7 +178,7 @@ public final class SingleJobTaskGroupQueue implements PendingTaskGroupQueue {
    * @param candidateStageContainerType for the stage that can potentially be scheduled.
    * @return true if schedulable, false otherwise.
    */
-  private boolean isSchedulable(final String candidateStageId, final String candidateStageContainerType) {
+  private synchronized boolean isSchedulable(final String candidateStageId, final String candidateStageContainerType) {
     final DAG<PhysicalStage, PhysicalStageEdge> jobDAG = physicalPlan.getStageDAG();
     for (final PhysicalStage descendantStage : jobDAG.getDescendants(candidateStageId)) {
       if (schedulableStages.contains(descendantStage.getId())) {
@@ -188,24 +191,17 @@ public final class SingleJobTaskGroupQueue implements PendingTaskGroupQueue {
   }
 
   @Override
-  public void onJobScheduled(final PhysicalPlan physicalPlanForJob) {
+  public synchronized void onJobScheduled(final PhysicalPlan physicalPlanForJob) {
     this.physicalPlan = physicalPlanForJob;
   }
 
   @Override
-  public boolean isEmpty() {
-    synchronized (stageIdToPendingTaskGroups) {
-      for (final String stageId : schedulableStages) {
-        if (!stageIdToPendingTaskGroups.get(stageId).isEmpty()) {
-          return false;
-        }
-      }
-      return true;
-    }
+  public synchronized boolean isEmpty() {
+    return schedulableStages.isEmpty();
   }
 
   @Override
-  public void close() {
+  public synchronized void close() {
     schedulableStages.clear();
     stageIdToPendingTaskGroups.clear();
   }
