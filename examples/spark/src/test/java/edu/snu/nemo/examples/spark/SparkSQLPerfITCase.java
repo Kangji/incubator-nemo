@@ -19,6 +19,7 @@ package edu.snu.nemo.examples.spark;
 import edu.snu.nemo.client.JobLauncher;
 import edu.snu.nemo.common.test.ArgBuilder;
 import edu.snu.nemo.compiler.optimizer.policy.DefaultPolicy;
+import edu.snu.nemo.examples.spark.sql.NemoLocalBenchmark;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -73,4 +74,14 @@ public final class SparkSQLPerfITCase {
 //        .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
 //        .build());
 //  }
+//
+  @Test(timeout = TIMEOUT)
+  public void testNemoLocalBenchmark() throws Exception {
+    JobLauncher.main(builder
+        .addJobId(NemoLocalBenchmark.class.getSimpleName() + "_test")
+        .addUserMain(NemoLocalBenchmark.class.getCanonicalName())
+        .addUserArgs("")
+        .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+        .build());
+  }
 }
