@@ -21,6 +21,8 @@ import edu.snu.nemo.runtime.common.comm.ControlMessage.ByteTransferDataDirection
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -53,7 +55,8 @@ import java.util.List;
  *   <---------------------------------- HEADER ---------------------------------------------------> <----- BODY ----->
  *   +-------+-------+-------------------+------------------+---------------+-------------+---------+-------...-------+
  *   | Zeros |   1   | DataDirectionFlag | NewSubStreamFlag | LastFrameFlag | TransferIdx | Length  |       Body      |
- *   | 4 bit | 1 bit |       1 bit       |      1 bit       |     1 bit     |   4 bytes   | 4 bytes | Variable length |
+ *   | 4 bit | 1 bit |       1 bit       |      1 bit       |     1 bit     |   4 bytes   | 4 bytes | Variable length |X
+ *   | 4 bit | 1 bit |       1 bit       |      1 bit       |     1 bit     |   4 bytes   | 8 bytes | Variable length |
  *   +-------+-------+-------------------+------------------+---------------+-------------+---------+-------...-------+
  * }
  * </pre>
@@ -61,8 +64,9 @@ import java.util.List;
  * @see ByteTransportChannelInitializer
  */
 final class FrameDecoder extends ByteToMessageDecoder {
-
+  private static final Logger LOG = LoggerFactory.getLogger(FrameDecoder.class.getName());
   private static final int HEADER_LENGTH = 9;
+  //private static final int HEADER_LENGTH = 13;
 
   private final ContextManager contextManager;
 
@@ -85,6 +89,8 @@ final class FrameDecoder extends ByteToMessageDecoder {
    * Whether or not the data frame currently being read is the last frame of a data message.
    */
   private boolean isLastFrame;
+
+  private long dataFrameLengthTotal = 0;
 
   FrameDecoder(final ContextManager contextManager) {
     this.contextManager = contextManager;
@@ -128,9 +134,14 @@ final class FrameDecoder extends ByteToMessageDecoder {
     final byte flags = in.readByte();
     final int transferIndex = in.readInt();
     final long length = in.readUnsignedInt();
+    //final long length = in.readLong();
+    LOG.debug("@@@@ frame length " + length);
     if (length < 0) {
       throw new IllegalStateException(String.format("Frame length is negative: %d", length));
-    }
+    } /*else if (length > (long) Integer.MAX_VALUE) {
+      LOG.error("@@@@ frame length " + length + " is greater than int max!");
+      throw new RuntimeException("@@@@ frame length greater than int max!");
+    }*/
     if ((flags & ((byte) (1 << 3))) == 0) {
       // setup context for reading control frame body
       controlBodyBytesToRead = length;
@@ -148,7 +159,7 @@ final class FrameDecoder extends ByteToMessageDecoder {
             ctx.channel().localAddress(), ctx.channel().remoteAddress()));
       }
       if (newSubStreamFlag) {
-        inputContext.onNewStream();
+        inputContext.onNewStream((int) length); // TODO #?: refactor? InputStream#available() return int.
       }
       if (dataBodyBytesToRead == 0) {
         onDataFrameEnd();

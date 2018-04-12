@@ -26,6 +26,8 @@ import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.util.Optional;
+
 /**
  * Test MapReduce program with JobLauncher.
  */
@@ -50,8 +52,12 @@ public final class MapReduceITCase {
 
   @After
   public void tearDown() throws Exception {
-    ExampleTestUtil.ensureOutputValidity(fileBasePath, outputFileName, testResourceFileName);
+    final Optional<String> errorMsg =
+        ExampleTestUtil.ensureOutputValidity(fileBasePath, outputFileName, testResourceFileName);
     ExampleTestUtil.deleteOutputFile(fileBasePath, outputFileName);
+    if (errorMsg.isPresent()) {
+      throw new RuntimeException(errorMsg.get());
+    }
   }
 
   @Test (timeout = TIMEOUT)
@@ -70,7 +76,7 @@ public final class MapReduceITCase {
         .addJobId(MapReduceITCase.class.getSimpleName() + "_sailfish")
         .addUserMain(MapReduce.class.getCanonicalName())
         .addUserArgs(inputFilePath, outputFilePath)
-        .addOptimizationPolicy(SailfishPolicyParallelsimFive.class.getCanonicalName())
+        .addOptimizationPolicy(SailfishPolicyParallelismFive.class.getCanonicalName())
         .build());
   }
 
@@ -80,7 +86,7 @@ public final class MapReduceITCase {
         .addJobId(MapReduceITCase.class.getSimpleName() + "_disagg")
         .addUserMain(MapReduce.class.getCanonicalName())
         .addUserArgs(inputFilePath, outputFilePath)
-        .addOptimizationPolicy(DisaggregationPolicyParallelsimFive.class.getCanonicalName())
+        .addOptimizationPolicy(DisaggregationPolicyParallelismFive.class.getCanonicalName())
         .build());
   }
 
@@ -90,7 +96,7 @@ public final class MapReduceITCase {
         .addJobId(MapReduceITCase.class.getSimpleName() + "_pado")
         .addUserMain(MapReduce.class.getCanonicalName())
         .addUserArgs(inputFilePath, outputFilePath)
-        .addOptimizationPolicy(PadoPolicyParallelsimFive.class.getCanonicalName())
+        .addOptimizationPolicy(PadoPolicyParallelismFive.class.getCanonicalName())
         .build());
   }
 
@@ -104,7 +110,7 @@ public final class MapReduceITCase {
         .addJobId(MapReduceITCase.class.getSimpleName() + "_dataskew")
         .addUserMain(MapReduce.class.getCanonicalName())
         .addUserArgs(inputFilePath, outputFilePath)
-        .addOptimizationPolicy(DataSkewPolicyParallelsimFive.class.getCanonicalName())
+        .addOptimizationPolicy(DataSkewPolicyParallelismFive.class.getCanonicalName())
         .build());
   }
 }

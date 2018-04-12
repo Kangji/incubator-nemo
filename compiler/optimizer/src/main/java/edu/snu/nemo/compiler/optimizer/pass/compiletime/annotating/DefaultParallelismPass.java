@@ -38,10 +38,10 @@ public final class DefaultParallelismPass extends AnnotatingPass {
   private final int shuffleDecreaseFactor;
 
   /**
-   * Default constructor with desired number of source parallelism 1, shuffle decreasing factor 11.
+   * Default constructor with desired number of source parallelism 1, shuffle decreasing factor 5.
    */
   public DefaultParallelismPass() {
-    this(1, 11);
+    this(1, 5);
   }
 
   /**

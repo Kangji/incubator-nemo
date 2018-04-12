@@ -17,8 +17,6 @@ package edu.snu.nemo.common.ir.vertex.transform;
 
 import edu.snu.nemo.common.ir.OutputCollector;
 
-import java.util.Iterator;
-
 /**
  * A {@link Transform} relays input data from upstream vertex to downstream vertex promptly.
  * This transform can be used for merging input data into the {@link OutputCollector}.
@@ -35,13 +33,13 @@ public final class RelayTransform<T> implements Transform<T, T> {
   }
 
   @Override
-  public void prepare(final Context context, final OutputCollector<T> oc) {
-    this.outputCollector = oc;
+  public void prepare(final Context context, final OutputCollector<T> p) {
+    this.outputCollector = p;
   }
 
   @Override
-  public void onData(final Iterator<T> elements, final String srcVertexId) {
-    elements.forEachRemaining(element -> outputCollector.emit(element));
+  public void onData(final T element) {
+    outputCollector.emit(element);
   }
 
   @Override

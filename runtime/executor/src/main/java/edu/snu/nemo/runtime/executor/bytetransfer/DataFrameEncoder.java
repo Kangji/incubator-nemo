@@ -21,6 +21,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.Recycler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -34,8 +36,10 @@ import java.util.List;
 @ChannelHandler.Sharable
 final class DataFrameEncoder extends MessageToMessageEncoder<DataFrameEncoder.DataFrame> {
 
+  private static final Logger LOG = LoggerFactory.getLogger(DataFrameEncoder.class.getName());
   private static final int TRANSFER_INDEX_LENGTH = Integer.BYTES;
   private static final int BODY_LENGTH_LENGTH = Integer.BYTES;
+  //private static final int BODY_LENGTH_LENGTH = Long.BYTES;
   private static final int HEADER_LENGTH = Byte.BYTES + TRANSFER_INDEX_LENGTH + BODY_LENGTH_LENGTH;
 
   // the maximum length of a frame body. 2**32 - 1
@@ -65,8 +69,15 @@ final class DataFrameEncoder extends MessageToMessageEncoder<DataFrameEncoder.Da
     header.writeInt(in.contextId.getTransferIndex());
 
     // in.length should not exceed the range of unsigned int
-    assert (in.length <= LENGTH_MAX);
+    if (in.length > LENGTH_MAX) {
+      LOG.error("@@@@ data frame to send length is greater than long max!");
+      throw new RuntimeException("@@@@ data frame to send length is greater than long max!");
+    } else if (in.length > (long) Integer.MAX_VALUE) {
+      LOG.error("@@@@ data frame to send length is greater than int max!");
+      throw new RuntimeException("@@@@ data frame to send length is greater than int max!");
+    }
     header.writeInt((int) in.length);
+    //header.writeLong(in.length);
 
     out.add(header);
 

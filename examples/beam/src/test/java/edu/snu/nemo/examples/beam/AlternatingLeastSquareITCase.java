@@ -19,13 +19,15 @@ import edu.snu.nemo.client.JobLauncher;
 import edu.snu.nemo.common.test.ArgBuilder;
 import edu.snu.nemo.common.test.ExampleTestUtil;
 import edu.snu.nemo.examples.beam.policy.DefaultPolicyParallelismFive;
-import edu.snu.nemo.examples.beam.policy.PadoPolicyParallelsimFive;
+import edu.snu.nemo.examples.beam.policy.PadoPolicyParallelismFive;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+
+import java.util.Optional;
 
 /**
  * Test Alternating Least Square program with JobLauncher.
@@ -52,8 +54,12 @@ public final class AlternatingLeastSquareITCase {
 
   @After
   public void tearDown() throws Exception {
-    ExampleTestUtil.ensureALSOutputValidity(fileBasePath, outputFileName, testResourceFileName);
+    final Optional<String> errorMsg =
+        ExampleTestUtil.ensureALSOutputValidity(fileBasePath, outputFileName, testResourceFileName);
     ExampleTestUtil.deleteOutputFile(fileBasePath, outputFileName);
+    if (errorMsg.isPresent()) {
+      throw new RuntimeException(errorMsg.get());
+    }
   }
 
   @Test (timeout = TIMEOUT)
@@ -72,7 +78,7 @@ public final class AlternatingLeastSquareITCase {
         .addJobId(AlternatingLeastSquareITCase.class.getSimpleName() + "_pado")
         .addUserMain(AlternatingLeastSquare.class.getCanonicalName())
         .addUserArgs(input, numFeatures, numIteration, lambda, output)
-        .addOptimizationPolicy(PadoPolicyParallelsimFive.class.getCanonicalName())
+        .addOptimizationPolicy(PadoPolicyParallelismFive.class.getCanonicalName())
         .build());
   }
 }

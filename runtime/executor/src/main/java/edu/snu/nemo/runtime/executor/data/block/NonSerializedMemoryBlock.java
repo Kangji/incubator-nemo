@@ -15,58 +15,86 @@
  */
 package edu.snu.nemo.runtime.executor.data.block;
 
+import edu.snu.nemo.common.exception.BlockFetchException;
+import edu.snu.nemo.common.exception.BlockWriteException;
 import edu.snu.nemo.runtime.common.data.KeyRange;
 import edu.snu.nemo.runtime.executor.data.DataUtil;
-import edu.snu.nemo.runtime.executor.data.NonSerializedPartition;
-import edu.snu.nemo.runtime.executor.data.SerializedPartition;
+import edu.snu.nemo.runtime.executor.data.partition.NonSerializedPartition;
+import edu.snu.nemo.runtime.executor.data.partition.Partition;
+import edu.snu.nemo.runtime.executor.data.partition.SerializedPartition;
 import edu.snu.nemo.runtime.executor.data.streamchainer.Serializer;
 
-import javax.annotation.concurrent.ThreadSafe;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * This class represents a block which is stored in local memory and not serialized.
+ * Concurrent read is supported, but concurrent write is not supported.
+ *
  * @param <K> the key type of its partitions.
  */
-@ThreadSafe
-public final class NonSerializedMemoryBlock<K extends Serializable> implements Block<K> {
+@NotThreadSafe
+public final class NonSerializedMemoryBlock<K extends Serializable> extends AbstractBlock<K> {
 
   private final List<NonSerializedPartition<K>> nonSerializedPartitions;
-  private final Serializer serializer;
   private volatile boolean committed;
 
   /**
    * Constructor.
+   * If write (or read) as bytes is enabled, data written to (read from) this block does not (de)serialized.
    *
-   * @param serializer the {@link Serializer}.
+   * @param blockId      the ID of this block.
+   * @param serializer   the {@link Serializer}.
    */
-  public NonSerializedMemoryBlock(final Serializer serializer) {
+  public NonSerializedMemoryBlock(final String blockId,
+                                  final Serializer serializer) {
+    super(blockId, serializer);
     this.nonSerializedPartitions = new ArrayList<>();
-    this.serializer = serializer;
     this.committed = false;
+  }
+
+  /**
+   * Writes an element to non-committed block.
+   * Invariant: This should not be invoked after this block is committed.
+   * Invariant: This method does not support concurrent write.
+   *
+   * @param key     the key.
+   * @param element the element to write.
+   * @throws BlockWriteException for any error occurred while trying to write a block.
+   */
+  @Override
+  public void write(final K key,
+                    final Object element) throws BlockWriteException {
+    if (committed) {
+      throw new BlockWriteException(new Throwable("The block is already committed!"));
+    } else {
+      try {
+        final NonSerializedPartition<K> partition = (NonSerializedPartition<K>)
+            getNonCommittedPartitionsMap().computeIfAbsent(key, absentKey -> new NonSerializedPartition<>(key));
+        partition.write(element);
+      } catch (final IOException e) {
+        throw new BlockWriteException(e);
+      }
+    }
   }
 
   /**
    * Stores {@link NonSerializedPartition}s to this block.
    * Invariant: This should not be invoked after this block is committed.
+   * Invariant: This method does not support concurrent write.
    *
    * @param partitions the {@link NonSerializedPartition}s to store.
-   * @throws IOException if fail to store.
+   * @throws BlockWriteException for any error occurred while trying to write a block.
    */
   @Override
-  public synchronized Optional<List<Long>> putPartitions(final Iterable<NonSerializedPartition<K>> partitions)
-      throws IOException {
+  public void writePartitions(final Iterable<NonSerializedPartition<K>> partitions) throws BlockWriteException {
     if (!committed) {
       partitions.forEach(nonSerializedPartitions::add);
     } else {
-      throw new IOException("Cannot append partition to the committed block");
+      throw new BlockWriteException(new Throwable("Cannot append partition to the committed block"));
     }
-
-    return Optional.empty();
   }
 
   /**
@@ -74,23 +102,23 @@ public final class NonSerializedMemoryBlock<K extends Serializable> implements B
    * Because all data in this block is stored in a non-serialized form,
    * the data in these partitions have to be deserialized.
    * Invariant: This should not be invoked after this block is committed.
+   * Invariant: This method does not support concurrent write.
    *
    * @param partitions the {@link SerializedPartition}s to store.
-   * @throws IOException if fail to store.
+   * @throws BlockWriteException for any error occurred while trying to write a block.
    */
   @Override
-  public synchronized List<Long> putSerializedPartitions(final Iterable<SerializedPartition<K>> partitions)
-      throws IOException {
+  public void writeSerializedPartitions(final Iterable<SerializedPartition<K>> partitions) throws BlockWriteException {
     if (!committed) {
-      final Iterable<NonSerializedPartition<K>> convertedPartitions =
-          DataUtil.convertToNonSerPartitions(serializer, partitions);
-      final List<Long> dataSizePerPartition = new ArrayList<>();
-      partitions.forEach(serializedPartition -> dataSizePerPartition.add((long) serializedPartition.getData().length));
-      putPartitions(convertedPartitions);
-
-      return dataSizePerPartition;
+      try {
+        final Iterable<NonSerializedPartition<K>> convertedPartitions =
+            DataUtil.convertToNonSerPartitions(getSerializer(), partitions);
+        writePartitions(convertedPartitions);
+      } catch (final IOException e) {
+        throw new BlockWriteException(e);
+      }
     } else {
-      throw new IOException("Cannot append partitions to the committed block");
+      throw new BlockWriteException(new Throwable("Cannot append partitions to the committed block"));
     }
   }
 
@@ -100,23 +128,23 @@ public final class NonSerializedMemoryBlock<K extends Serializable> implements B
    *
    * @param keyRange the hash range to retrieve.
    * @return an iterable of {@link NonSerializedPartition}s.
-   * @throws IOException if failed to retrieve.
+   * @throws BlockFetchException for any error occurred while trying to fetch a block.
    */
   @Override
-  public Iterable<NonSerializedPartition<K>> getPartitions(final KeyRange keyRange) throws IOException {
+  public Iterable<NonSerializedPartition<K>> readPartitions(final KeyRange keyRange) throws BlockFetchException {
     if (committed) {
       // Retrieves data in the hash range from the target block
       final List<NonSerializedPartition<K>> retrievedPartitions = new ArrayList<>();
       nonSerializedPartitions.forEach(partition -> {
         final K key = partition.getKey();
         if (keyRange.includes(key)) {
-          retrievedPartitions.add(new NonSerializedPartition(key, partition.getData()));
+          retrievedPartitions.add(partition);
         }
       });
 
       return retrievedPartitions;
     } else {
-      throw new IOException("Cannot retrieve elements before a block is committed");
+      throw new BlockFetchException(new Throwable("Cannot retrieve elements before a block is committed"));
     }
   }
 
@@ -127,18 +155,49 @@ public final class NonSerializedMemoryBlock<K extends Serializable> implements B
    *
    * @param keyRange the key range to retrieve.
    * @return an iterable of {@link SerializedPartition}s.
-   * @throws IOException if failed to retrieve.
+   * @throws BlockFetchException for any error occurred while trying to fetch a block.
    */
   @Override
-  public Iterable<SerializedPartition<K>> getSerializedPartitions(final KeyRange keyRange) throws IOException {
-    return DataUtil.convertToSerPartitions(serializer, getPartitions(keyRange));
+  public Iterable<SerializedPartition<K>> readSerializedPartitions(final KeyRange keyRange) throws BlockFetchException {
+    try {
+      return DataUtil.convertToSerPartitions(getSerializer(), readPartitions(keyRange));
+    } catch (final IOException e) {
+      throw new BlockFetchException(e);
+    }
   }
 
   /**
    * Commits this block to prevent further write.
+   *
+   * @return empty optional because the data is not serialized.
    */
   @Override
-  public synchronized void commit() {
-    committed = true;
+  public synchronized Optional<Map<K, Long>> commit() {
+    if (!committed) {
+      commitPartitions();
+      committed = true;
+    }
+    return Optional.empty();
+  }
+
+  @Override
+  public void commitPartitions() throws BlockWriteException {
+    try {
+      for (final Partition<?, K> partition : getNonCommittedPartitionsMap().values()) {
+        partition.commit();
+        nonSerializedPartitions.add((NonSerializedPartition<K>) partition);
+      }
+      getNonCommittedPartitionsMap().clear();
+    } catch (final IOException e) {
+      throw new BlockWriteException(e);
+    }
+  }
+
+  /**
+   * @return whether this block is committed or not.
+   */
+  @Override
+  public synchronized boolean isCommitted() {
+    return committed;
   }
 }

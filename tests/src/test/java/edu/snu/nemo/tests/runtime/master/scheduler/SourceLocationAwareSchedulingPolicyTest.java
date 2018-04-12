@@ -327,6 +327,7 @@ public final class SourceLocationAwareSchedulingPolicyTest {
         scheduledTaskGroups.add(scheduledTaskGroup);
         return null;
       }).when(mockInstance).onTaskGroupScheduled(any(ScheduledTaskGroup.class));
+
       doAnswer(invocationOnMock -> {
         final String taskGroupId = invocationOnMock.getArgument(0);
         scheduledTaskGroups.removeIf(scheduledTaskGroup -> scheduledTaskGroup.getTaskGroupId().equals(taskGroupId));

@@ -316,7 +316,7 @@ public final class SingleTaskGroupQueueTest {
     stage.getTaskGroupIds().forEach(taskGroupId ->
         pendingTaskGroupPriorityQueue.add(new ScheduledTaskGroup(
             "TestPlan", stage.getSerializedTaskGroupDag(), taskGroupId, Collections.emptyList(),
-            Collections.emptyList(), 0, stage.getContainerType(), Collections.emptyMap(), null)));
+            Collections.emptyList(), 0, stage.getContainerType(), Collections.emptyMap(), null, false)));
   }
 
   /**
