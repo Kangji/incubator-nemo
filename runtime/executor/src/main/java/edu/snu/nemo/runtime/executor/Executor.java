@@ -81,6 +81,7 @@ public final class Executor {
     this.dataTransferFactory = dataTransferFactory;
     this.metricMessageSender = metricMessageSender;
     messageEnvironment.setupListener(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID, new ExecutorMessageReceiver());
+    LOG.info("Executor [{}]", executorId);
   }
 
   public String getExecutorId() {

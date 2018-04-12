@@ -32,31 +32,48 @@ public abstract class FileMetadata<K extends Serializable> {
 
   private final List<PartitionMetadata<K>> partitionMetadataList; // The list of partition metadata.
   private final AtomicBoolean committed;
+  private final boolean readAsBytes;
+  private final boolean writeAsBytes;
   private volatile long writtenBytesCursor; // Indicates how many bytes are (at least, logically) written in the file.
 
   /**
    * Construct a new file metadata.
+   * If write (or read) as bytes is enabled, data written to (read from) the block does not (de)serialized.
+   *
+   * @param readAsBytes  whether read data from this file as arrays of bytes or not.
+   * @param writeAsBytes whether write data to this file as arrays of bytes or not.
    */
-  public FileMetadata() {
+  public FileMetadata(final boolean readAsBytes,
+                      final boolean writeAsBytes) {
     this.partitionMetadataList = new ArrayList<>();
     this.writtenBytesCursor = 0;
     this.committed = new AtomicBoolean(false);
+    this.readAsBytes = readAsBytes;
+    this.writeAsBytes = writeAsBytes;
   }
 
   /**
    * Construct a file metadata with existing partition metadata.
+   * If write (or read) as bytes is enabled, data written to (read from) the block does not (de)serialized.
+   *
    * @param partitionMetadataList the partition metadata list.
+   * @param readAsBytes           whether read data from this file as arrays of bytes or not.
+   * @param writeAsBytes          whether write data to this file as arrays of bytes or not.
    */
-  public FileMetadata(final List<PartitionMetadata<K>> partitionMetadataList) {
+  public FileMetadata(final List<PartitionMetadata<K>> partitionMetadataList,
+                      final boolean readAsBytes,
+                      final boolean writeAsBytes) {
     this.partitionMetadataList = partitionMetadataList;
     this.writtenBytesCursor = 0;
     this.committed = new AtomicBoolean(true);
+    this.readAsBytes = readAsBytes;
+    this.writeAsBytes = writeAsBytes;
   }
 
   /**
    * Writes the metadata for a partition.
    *
-   * @param key     the key of the partition.
+   * @param key           the key of the partition.
    * @param partitionSize the size of the partition.
    * @param elementsTotal the number of elements in the partition.
    * @throws IOException if fail to append the partition metadata.
@@ -75,13 +92,13 @@ public abstract class FileMetadata<K extends Serializable> {
   }
 
   /**
-   * Gets a iterable containing the partition metadata of corresponding block.
+   * Gets a list containing the partition metadata of corresponding block.
    *
-   * @return the iterable containing the partition metadata.
+   * @return the list containing the partition metadata.
    * @throws IOException if fail to get the iterable.
    */
-  public final Iterable<PartitionMetadata<K>> getPartitionMetadataIterable() throws IOException {
-    return Collections.unmodifiableCollection(partitionMetadataList);
+  public final List<PartitionMetadata<K>> getPartitionMetadataList() throws IOException {
+    return Collections.unmodifiableList(partitionMetadataList);
   }
 
   /**
@@ -100,9 +117,30 @@ public abstract class FileMetadata<K extends Serializable> {
 
   /**
    * Set the commit value.
+   *
    * @param committed whether this block is committed or not.
    */
   protected final void setCommitted(final boolean committed) {
     this.committed.set(committed);
+  }
+
+  /**
+   * @return whether read data from this file as arrays of bytes or not.
+   */
+  public final boolean isReadAsBytes() {
+    return readAsBytes;
+  }
+
+  /**
+   * @return whether write to this file as arrays of bytes or not.
+   */
+  public final boolean isWriteAsBytes() {
+    return writeAsBytes;
+  }
+  /**
+   * @return whether this file is committed or not.
+   */
+  public final boolean isCommitted() {
+    return committed.get();
   }
 }

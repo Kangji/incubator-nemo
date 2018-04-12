@@ -16,28 +16,43 @@
 package edu.snu.nemo.runtime.executor.datatransfer;
 
 import edu.snu.nemo.common.ir.OutputCollector;
+import edu.snu.nemo.runtime.common.plan.RuntimeEdge;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Output Collector Implementation.
+ * OutputCollector implementation.
+ *
  * @param <O> output type.
  */
 public final class OutputCollectorImpl<O> implements OutputCollector<O> {
-  private AtomicReference<List<O>> outputList;
+  private static final Logger LOG = LoggerFactory.getLogger(OutputCollectorImpl.class.getName());
+  private static final String OUTPUTCOLLECTORID_PREFIX = "OUTPUTCOLLECTOR_";
+  private static final AtomicInteger OUTPUTCOLLECTORID_GENERATOR = new AtomicInteger(0);
+
+  private final String id;
+  private final ArrayDeque<O> outputQueue;
+  private RuntimeEdge sideInputRuntimeEdge;
+  private List<String> sideInputReceivers;
 
   /**
-   * Constructor of a new OutputCollector.
+   * Constructor of a new OutputCollectorImpl.
    */
   public OutputCollectorImpl() {
-    outputList = new AtomicReference<>(new ArrayList<>());
+    this.id = OUTPUTCOLLECTORID_PREFIX + OUTPUTCOLLECTORID_GENERATOR.getAndIncrement();
+    this.outputQueue = new ArrayDeque<>();
+    this.sideInputRuntimeEdge = null;
+    this.sideInputReceivers = new ArrayList<>();
   }
 
   @Override
   public void emit(final O output) {
-    outputList.get().add(output);
+    outputQueue.add(output);
   }
 
   @Override
@@ -46,11 +61,39 @@ public final class OutputCollectorImpl<O> implements OutputCollector<O> {
   }
 
   /**
-   * Collects the accumulated output and replace the output list.
+   * Inter-Task data is transferred from sender-side Task's OutputCollectorImpl to receiver-side Task.
    *
-   * @return the list of output elements.
+   * @return the first element of this list
    */
-  public List<O> collectOutputList() {
-    return outputList.getAndSet(new ArrayList<>());
+  public O remove() {
+    return outputQueue.remove();
+  }
+
+  public boolean isEmpty() {
+    return outputQueue.isEmpty();
+  }
+
+  public int size() {
+    return outputQueue.size();
+  }
+
+  public void setSideInputRuntimeEdge(final RuntimeEdge edge) {
+    sideInputRuntimeEdge = edge;
+  }
+
+  public RuntimeEdge getSideInputRuntimeEdge() {
+    return sideInputRuntimeEdge;
+  }
+
+  public void setAsSideInputFor(final String physicalTaskId) {
+    sideInputReceivers.add(physicalTaskId);
+  }
+
+  public boolean hasSideInputFor(final String physicalTaskId) {
+    return sideInputReceivers.contains(physicalTaskId);
+  }
+
+  public String getId() {
+    return id;
   }
 }

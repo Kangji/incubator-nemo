@@ -22,6 +22,7 @@ import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.SourceVertex;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import edu.snu.nemo.compiler.frontend.beam.BeamKeyExtractor;
 import edu.snu.nemo.compiler.optimizer.examples.EmptyComponents;
 import edu.snu.nemo.conf.JobConf;
 import edu.snu.nemo.common.Pair;
@@ -134,10 +135,10 @@ public final class DataTransferTest {
     final UpdatePhysicalPlanEventHandler updatePhysicalPlanEventHandler = mock(UpdatePhysicalPlanEventHandler.class);
     final SchedulingPolicy schedulingPolicy = new RoundRobinSchedulingPolicy(
         injector.getInstance(ExecutorRegistry.class));
-    final PendingTaskGroupCollection taskGroupQueue = new SingleJobTaskGroupCollection();
-    final SchedulerRunner schedulerRunner = new SchedulerRunner(schedulingPolicy, taskGroupQueue);
+    final PendingTaskGroupCollection taskGroupCollection = new SingleJobTaskGroupCollection();
+    final SchedulerRunner schedulerRunner = new SchedulerRunner(schedulingPolicy, taskGroupCollection);
     final Scheduler scheduler =
-        new BatchSingleJobScheduler(schedulingPolicy, schedulerRunner, taskGroupQueue, master,
+        new BatchSingleJobScheduler(schedulingPolicy, schedulerRunner, taskGroupCollection, master,
             pubSubEventHandler, updatePhysicalPlanEventHandler);
     final AtomicInteger executorCount = new AtomicInteger(0);
 
@@ -314,6 +315,7 @@ public final class DataTransferTest {
     final ExecutionPropertyMap edgeProperties = dummyIREdge.getExecutionProperties();
     edgeProperties.put(DataCommunicationPatternProperty.of(commPattern));
     edgeProperties.put(PartitionerProperty.of(PartitionerProperty.Value.HashPartitioner));
+    edgeProperties.put(KeyExtractorProperty.of(new BeamKeyExtractor()));
 
     edgeProperties.put(DataStoreProperty.of(store));
     edgeProperties.put(UsedDataHandlingProperty.of(UsedDataHandlingProperty.Value.Keep));
@@ -339,7 +341,7 @@ public final class DataTransferTest {
       final List dataWritten = getRangedNumList(0, PARALLELISM_TEN);
       final OutputWriter writer = new OutputWriter(HASH_RANGE_MULTIPLIER, srcTaskIndex, srcVertex.getId(), dstVertex,
           dummyEdge, sender);
-      writer.write(dataWritten);
+      dataWritten.iterator().forEachRemaining(writer::writeElement);
       writer.close();
       dataWrittenList.add(dataWritten);
     });
@@ -433,13 +435,13 @@ public final class DataTransferTest {
       final List dataWritten = getRangedNumList(0, PARALLELISM_TEN);
       final OutputWriter writer = new OutputWriter(HASH_RANGE_MULTIPLIER, srcTaskIndex, srcVertex.getId(), dstVertex,
           dummyEdge, sender);
-      writer.write(dataWritten);
+      dataWritten.iterator().forEachRemaining(writer::writeElement);
       writer.close();
       dataWrittenList.add(dataWritten);
 
       final OutputWriter writer2 = new OutputWriter(HASH_RANGE_MULTIPLIER, srcTaskIndex, srcVertex.getId(), dstVertex,
           dummyEdge2, sender);
-      writer2.write(dataWritten);
+      dataWritten.iterator().forEachRemaining(writer2::writeElement);
       writer2.close();
     });
 

@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A ScheduledTaskGroup is a grouping of {@link Task} that belong to a stage.
+ * A ScheduledTaskGroup is a grouping of {@link Task}s that belong to a stage.
  * Executors receive units of ScheduledTaskGroups during job execution,
  * and thus the resource type of all tasks of a ScheduledTaskGroup must be identical.
  * A stage contains a list of IDs of TaskGroups whose length corresponds to stage/operator parallelism.
@@ -41,6 +41,7 @@ public final class ScheduledTaskGroup implements Serializable {
   private final int attemptIdx;
   private final String containerType;
   private final byte[] serializedTaskGroupDag;
+  private final boolean isSmall;
   private final Map<String, Readable> logicalTaskIdToReadable;
 
   /**
@@ -54,6 +55,7 @@ public final class ScheduledTaskGroup implements Serializable {
    * @param attemptIdx              the attempt index.
    * @param containerType           the type of container to execute the task group on.
    * @param logicalTaskIdToReadable the map between logical task ID and readable.
+   * @param isSmall                 whether this task group is small or not (scheduler hack for sailfish exp).
    */
   public ScheduledTaskGroup(final String jobId,
                             final byte[] serializedTaskGroupDag,
@@ -62,7 +64,8 @@ public final class ScheduledTaskGroup implements Serializable {
                             final List<PhysicalStageEdge> taskGroupOutgoingEdges,
                             final int attemptIdx,
                             final String containerType,
-                            final Map<String, Readable> logicalTaskIdToReadable) {
+                            final Map<String, Readable> logicalTaskIdToReadable,
+                            final boolean isSmall) {
     this.jobId = jobId;
     this.taskGroupId = taskGroupId;
     this.taskGroupIdx = RuntimeIdGenerator.getIndexFromTaskGroupId(taskGroupId);
@@ -72,6 +75,7 @@ public final class ScheduledTaskGroup implements Serializable {
     this.containerType = containerType;
     this.serializedTaskGroupDag = serializedTaskGroupDag;
     this.logicalTaskIdToReadable = logicalTaskIdToReadable;
+    this.isSmall = isSmall;
   }
 
   /**
@@ -135,5 +139,9 @@ public final class ScheduledTaskGroup implements Serializable {
    */
   public Map<String, Readable> getLogicalTaskIdToReadable() {
     return logicalTaskIdToReadable;
+  }
+
+  public boolean isSmall() {
+    return isSmall;
   }
 }

@@ -19,6 +19,7 @@ import edu.snu.nemo.common.Pair;
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.eventhandler.PubSubEventHandlerWrapper;
 import edu.snu.nemo.common.ir.Readable;
+import edu.snu.nemo.common.ir.vertex.transform.RelayTransform;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
 import edu.snu.nemo.runtime.common.eventhandler.DynamicOptimizationEvent;
 import edu.snu.nemo.runtime.common.plan.RuntimeEdge;
@@ -370,6 +371,9 @@ public final class BatchSingleJobScheduler implements Scheduler {
     final int attemptIdx = jobStateManager.getAttemptCountForStage(stageToSchedule.getId());
     LOG.info("Scheduling Stage {} with attemptIdx={}", new Object[]{stageToSchedule.getId(), attemptIdx});
 
+    final boolean isSmall = stageToSchedule.getTaskGroupDag().getTopologicalSort().stream()
+        .filter(task -> task instanceof OperatorTask)
+        .anyMatch(opTask -> ((OperatorTask) opTask).getTransform() instanceof RelayTransform);
     // each readable and source task will be bounded in executor.
     final List<Map<String, Readable>> logicalTaskIdToReadables = stageToSchedule.getLogicalTaskIdToReadables();
 
@@ -379,7 +383,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
       LOG.debug("Enquing {}", taskGroupId);
       pendingTaskGroupCollection.add(new ScheduledTaskGroup(physicalPlan.getId(),
           stageToSchedule.getSerializedTaskGroupDag(), taskGroupId, stageIncomingEdges, stageOutgoingEdges, attemptIdx,
-          stageToSchedule.getContainerType(), logicalTaskIdToReadables.get(taskGroupIdx)));
+          stageToSchedule.getContainerType(), logicalTaskIdToReadables.get(taskGroupIdx), isSmall));
     });
     schedulerRunner.onATaskGroupAvailable();
   }

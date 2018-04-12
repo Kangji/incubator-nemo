@@ -191,9 +191,10 @@ public final class RoundRobinSchedulingPolicy implements SchedulingPolicy {
   }
 
   private boolean hasFreeSlot(final ExecutorRepresenter executor) {
-    LOG.debug("Has Free Slot: " + executor.getExecutorId());
-    LOG.debug("Running TaskGroups: " + executor.getRunningTaskGroups());
-    return executor.getRunningTaskGroups().size() < executor.getExecutorCapacity();
+    //LOG.debug("Has Free Slot: " + executor.getExecutorId());
+    //LOG.debug("Running TaskGroups: " + executor.getRunningTaskGroups());
+    return executor.getRunningTaskGroups().size() - executor.getSmallTaskGroups().size()
+        < executor.getExecutorCapacity();
   }
 
   private void initializeContainerTypeIfAbsent(final String containerType) {

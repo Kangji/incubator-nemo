@@ -16,9 +16,11 @@
 package edu.snu.nemo.runtime.executor.bytetransfer;
 
 import edu.snu.nemo.runtime.executor.data.FileArea;
-import edu.snu.nemo.runtime.executor.data.SerializedPartition;
+import edu.snu.nemo.runtime.executor.data.partition.SerializedPartition;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -35,6 +37,7 @@ import java.nio.file.Paths;
  */
 public final class ByteOutputContext extends ByteTransferContext implements AutoCloseable {
 
+  private static final Logger LOG = LoggerFactory.getLogger(ByteOutputContext.class);
   private final Channel channel;
 
   private volatile ByteOutputStream currentByteOutputStream = null;
@@ -43,10 +46,10 @@ public final class ByteOutputContext extends ByteTransferContext implements Auto
   /**
    * Creates a output context.
    *
-   * @param remoteExecutorId    id of the remote executor
-   * @param contextId           identifier for this context
-   * @param contextDescriptor   user-provided context descriptor
-   * @param contextManager      {@link ContextManager} for the channel
+   * @param remoteExecutorId  id of the remote executor
+   * @param contextId         identifier for this context
+   * @param contextDescriptor user-provided context descriptor
+   * @param contextManager    {@link ContextManager} for the channel
    */
   ByteOutputContext(final String remoteExecutorId,
                     final ContextId contextId,
@@ -58,6 +61,7 @@ public final class ByteOutputContext extends ByteTransferContext implements Auto
 
   /**
    * Closes existing sub-stream (if any) and create a new sub-stream.
+   *
    * @return new {@link ByteOutputStream}
    * @throws IOException if an exception was set or this context was closed.
    */
@@ -105,8 +109,10 @@ public final class ByteOutputContext extends ByteTransferContext implements Auto
   void ensureNoException() throws IOException {
     if (hasException()) {
       if (getException() == null) {
+        LOG.error("Exception is caught without contents.");
         throw new IOException();
       } else {
+        LOG.error("Exception is caught.", getException());
         throw new IOException(getException());
       }
     }
@@ -114,7 +120,7 @@ public final class ByteOutputContext extends ByteTransferContext implements Auto
 
   /**
    * An {@link OutputStream} implementation which buffers data to {@link ByteBuf}s.
-   *
+   * <p>
    * <p>Public methods are thread safe,
    * although the execution order may not be linearized if they were called from different threads.</p>
    */
@@ -139,6 +145,7 @@ public final class ByteOutputContext extends ByteTransferContext implements Auto
 
     /**
      * Writes {@link SerializedPartition}.
+     *
      * @param serializedPartition {@link SerializedPartition} to write.
      * @return {@code this}
      * @throws IOException when an exception has been set or this stream was closed
@@ -184,6 +191,7 @@ public final class ByteOutputContext extends ByteTransferContext implements Auto
 
     /**
      * Writes a data frame, from {@link ByteBuf}.
+     *
      * @param byteBuf {@link ByteBuf} to write.
      */
     private void writeByteBuf(final ByteBuf byteBuf) throws IOException {
@@ -194,8 +202,9 @@ public final class ByteOutputContext extends ByteTransferContext implements Auto
 
     /**
      * Writes a data frame.
-     * @param body        the body or {@code null}
-     * @param length      the length of the body, in bytes
+     *
+     * @param body   the body or {@code null}
+     * @param length the length of the body, in bytes
      * @throws IOException when an exception has been set or this stream was closed
      */
     private synchronized void writeDataFrame(final Object body, final long length) throws IOException {

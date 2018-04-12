@@ -235,7 +235,11 @@ public final class SingleTaskGroupQueueTest {
   }
 
   /**
+<<<<<<< HEAD
    * This method builds a physical DAG starting from an IR DAG and submits it to {@link SingleJobTaskGroupCollection}.
+=======
+   * This method builds a physical DAG starting from an IR DAG and submits it to {@link SingleJobTaskGroupQueue}.
+>>>>>>> sailfish_exp
    * Tests whether the dequeued TaskGroups are according to the stage-dependency priority,
    * while concurrently scheduling TaskGroups that have dependencies, but are of different container types.
    */
@@ -316,7 +320,7 @@ public final class SingleTaskGroupQueueTest {
     stage.getTaskGroupIds().forEach(taskGroupId ->
         pendingTaskGroupPriorityQueue.add(new ScheduledTaskGroup(
             "TestPlan", stage.getSerializedTaskGroupDag(), taskGroupId, Collections.emptyList(),
-            Collections.emptyList(), 0, stage.getContainerType(), Collections.emptyMap())));
+            Collections.emptyList(), 0, stage.getContainerType(), Collections.emptyMap(), false)));
   }
 
   /**
