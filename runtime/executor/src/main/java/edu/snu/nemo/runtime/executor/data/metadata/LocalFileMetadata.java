@@ -28,9 +28,14 @@ public final class LocalFileMetadata<K extends Serializable> extends FileMetadat
 
   /**
    * Constructor.
+   * If write (or read) as bytes is enabled, data written to (read from) the block does not (de)serialized.
+   *
+   * @param readAsBytes  whether read data from this file as arrays of bytes or not.
+   * @param writeAsBytes whether write data to this file as arrays of bytes or not.
    */
-  public LocalFileMetadata() {
-    super();
+  public LocalFileMetadata(final boolean readAsBytes,
+                           final boolean writeAsBytes) {
+    super(readAsBytes, writeAsBytes);
   }
 
   /**

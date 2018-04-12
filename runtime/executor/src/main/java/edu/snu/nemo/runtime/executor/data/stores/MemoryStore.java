@@ -15,8 +15,11 @@
  */
 package edu.snu.nemo.runtime.executor.data.stores;
 
+import edu.snu.nemo.common.exception.BlockWriteException;
 import edu.snu.nemo.runtime.executor.data.SerializerManager;
+import edu.snu.nemo.runtime.executor.data.block.Block;
 import edu.snu.nemo.runtime.executor.data.block.NonSerializedMemoryBlock;
+import edu.snu.nemo.runtime.executor.data.partition.NonSerializedPartition;
 import edu.snu.nemo.runtime.executor.data.streamchainer.Serializer;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -39,19 +42,44 @@ public final class MemoryStore extends LocalBlockStore {
   }
 
   /**
-   * @see BlockStore#createBlock(String)
+   * @see BlockStore#createBlock(String, boolean, boolean).
+   * @throws BlockWriteException if fail to create.
    */
   @Override
-  public void createBlock(final String blockId) {
+  public Block createBlock(final String blockId,
+                           final boolean readAsBytes,
+                           final boolean writeAsBytes) throws BlockWriteException {
+    if (readAsBytes || writeAsBytes) {
+      throw new BlockWriteException(new Throwable(
+          "Read/WriteAsBytes is not supported in " + MemoryStore.class.getName()));
+    }
     final Serializer serializer = getSerializerFromWorker(blockId);
-    getBlockMap().put(blockId, new NonSerializedMemoryBlock(serializer));
+    return new NonSerializedMemoryBlock(blockId, serializer);
   }
 
   /**
-   * @see BlockStore#removeBlock(String)
+   * Writes a committed block to this store.
+   *
+   * @param block the block to write.
+   * @throws BlockWriteException if fail to write.
    */
   @Override
-  public Boolean removeBlock(final String blockId) {
+  public void writeBlock(final Block block) throws BlockWriteException {
+    if (!(block instanceof NonSerializedMemoryBlock)) {
+      throw new BlockWriteException(new Throwable(
+          this.toString() + "only accept " + NonSerializedPartition.class.getName()));
+    } else if (!block.isCommitted()) {
+      throw new BlockWriteException(new Throwable("The block " + block.getId() + "is not committed yet."));
+    } else {
+      getBlockMap().put(block.getId(), block);
+    }
+  }
+
+  /**
+   * @see BlockStore#deleteBlock(String)
+   */
+  @Override
+  public boolean deleteBlock(final String blockId) {
     return getBlockMap().remove(blockId) != null;
   }
 }

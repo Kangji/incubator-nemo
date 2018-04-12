@@ -18,33 +18,40 @@ package edu.snu.nemo.common.ir.edge.executionproperty;
 import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 
 /**
- * Partitioner ExecutionProperty.
+ * AsBytes ExecutionProperty.
  */
-public final class PartitionerProperty extends ExecutionProperty<PartitionerProperty.Value> {
+public final class AsBytesProperty extends ExecutionProperty<AsBytesProperty.Value> {
   /**
    * Constructor.
+   *
    * @param value value of the execution property.
    */
-  private PartitionerProperty(final Value value) {
-    super(Key.Partitioner, value);
+  private AsBytesProperty(final Value value) {
+    super(Key.AsBytes, value);
   }
 
   /**
    * Static method exposing the constructor.
+   *
    * @param value value of the new execution property.
    * @return the newly created execution property.
    */
-  public static PartitionerProperty of(final Value value) {
-    return new PartitionerProperty(value);
+  public static AsBytesProperty of(final Value value) {
+    return new AsBytesProperty(value);
   }
 
   /**
-   * Possible values of Partitioner ExecutionProperty.
+   * Possible values of AsBytes ExecutionProperty.
+   * When an edge is annotated as Write(or Read)AsBytes,
+   * the writing (reading) Task writes (reads) data as arrays of bytes, instead of (de)serialized form.
+   * If a data read as bytes, each element will be a serialized bytes of a partition.
+   * Because of this, each element should be written to a partition respectively,
+   * through partitioner like increment partitioner. (During this, the key of each partition can be changed.)
+   * This bytes should be written as bytes also to restore it's contents.
    */
   public enum Value {
-    DataSkewHashPartitioner,
-    HashPartitioner,
-    IntactPartitioner,
-    IncrementPartitioner
+    ReadAsBytes,
+    WriteAsBytes,
+    ReadWriteAsBytes
   }
 }

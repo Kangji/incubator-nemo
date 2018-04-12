@@ -37,17 +37,29 @@ import java.util.Optional;
 public interface PendingTaskGroupCollection {
 
   /**
+<<<<<<< HEAD:runtime/master/src/main/java/edu/snu/nemo/runtime/master/scheduler/PendingTaskGroupCollection.java
    * Adds a TaskGroup to this collection.
+=======
+   * Enqueues a TaskGroup to this PQ.
+>>>>>>> sailfish_exp:runtime/master/src/main/java/edu/snu/nemo/runtime/master/scheduler/PendingTaskGroupQueue.java
    * @param scheduledTaskGroup to add.
    */
   void add(final ScheduledTaskGroup scheduledTaskGroup);
 
   /**
+<<<<<<< HEAD:runtime/master/src/main/java/edu/snu/nemo/runtime/master/scheduler/PendingTaskGroupCollection.java
    * Removes the specified TaskGroup to be scheduled.
    * @param taskGroupId id of the TaskGroup
    * @return the specified TaskGroup
    * @throws NoSuchElementException if the specified TaskGroup is not in the queue,
    *                                or removing this TaskGroup breaks scheduling order
+=======
+   * Remove the specified TaskGroup to be scheduled.
+   * @param taskGroupId id of the TaskGroup
+   * @return the specified TaskGroup
+   * @throws NoSuchElementException if the specified TaskGroup is not in the queue,
+   *                                or dequeuing this TaskGroup breaks scheduling order
+>>>>>>> sailfish_exp:runtime/master/src/main/java/edu/snu/nemo/runtime/master/scheduler/PendingTaskGroupQueue.java
    */
   ScheduledTaskGroup remove(final String taskGroupId) throws NoSuchElementException;
 

@@ -15,6 +15,7 @@
  */
 package edu.snu.nemo.runtime.executor.bytetransfer;
 
+import edu.snu.nemo.runtime.executor.data.LimitedInputStream;
 import io.netty.buffer.ByteBuf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,7 @@ import java.util.concurrent.CompletableFuture;
  * Container for multiple input streams. Represents a transfer context on receiver-side.
  *
  * <h3>Thread safety:</h3>
- * <p>Methods with default access modifier, namely {@link #onNewStream()}, {@link #onByteBuf(ByteBuf)},
+ * <p>Methods with default access modifier, namely {@link #onNewStream(int)}, {@link #onByteBuf(ByteBuf)},
  * {@link #onContextClose()}, are not thread-safe, since they are called by a single Netty event loop.</p>
  * <p>Public methods are thread safe,
  * although the execution order may not be linearized if they were called from different threads.</p>
@@ -40,7 +41,7 @@ public final class ByteInputContext extends ByteTransferContext {
   private static final Logger LOG = LoggerFactory.getLogger(ByteInputContext.class.getName());
 
   private final CompletableFuture<Iterator<InputStream>> completedFuture = new CompletableFuture<>();
-  private final ClosableBlockingQueue<ByteBufInputStream> byteBufInputStreams = new ClosableBlockingQueue<>();
+  private final ClosableBlockingQueue<LimitedInputStream> byteBufInputStreams = new ClosableBlockingQueue<>();
   private volatile ByteBufInputStream currentByteBufInputStream = null;
 
   private final Iterator<InputStream> inputStreams = new Iterator<InputStream>() {
@@ -99,13 +100,15 @@ public final class ByteInputContext extends ByteTransferContext {
 
   /**
    * Called when a punctuation for sub-stream incarnation is detected.
+   *
+   * @param lengthToRead the size of the new stream.
    */
-  void onNewStream() {
+  void onNewStream(final int lengthToRead) {
     if (currentByteBufInputStream != null) {
       currentByteBufInputStream.byteBufQueue.close();
     }
     currentByteBufInputStream = new ByteBufInputStream();
-    byteBufInputStreams.put(currentByteBufInputStream);
+    byteBufInputStreams.put(new LimitedInputStream(currentByteBufInputStream, lengthToRead));
   }
 
   /**
@@ -153,6 +156,7 @@ public final class ByteInputContext extends ByteTransferContext {
   private static final class ByteBufInputStream extends InputStream {
 
     private final ClosableBlockingQueue<ByteBuf> byteBufQueue = new ClosableBlockingQueue<>();
+    private int readByteCount = 0;
 
     @Override
     public int read() throws IOException {

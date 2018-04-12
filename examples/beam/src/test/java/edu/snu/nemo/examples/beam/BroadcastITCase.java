@@ -19,13 +19,15 @@ import edu.snu.nemo.client.JobLauncher;
 import edu.snu.nemo.common.test.ArgBuilder;
 import edu.snu.nemo.common.test.ExampleTestUtil;
 import edu.snu.nemo.examples.beam.policy.DefaultPolicyParallelismFive;
-import edu.snu.nemo.examples.beam.policy.PadoPolicyParallelsimFive;
+import edu.snu.nemo.examples.beam.policy.PadoPolicyParallelismFive;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+
+import java.util.Optional;
 
 /**
  * Test Broadcast program with JobLauncher.
@@ -50,8 +52,12 @@ public final class BroadcastITCase {
 
   @After
   public void tearDown() throws Exception {
-    ExampleTestUtil.ensureOutputValidity(fileBasePath, outputFileName, testResourceFileName);
+    final Optional<String> errorMsg =
+        ExampleTestUtil.ensureOutputValidity(fileBasePath, outputFileName, testResourceFileName);
     ExampleTestUtil.deleteOutputFile(fileBasePath, outputFileName);
+    if (errorMsg.isPresent()) {
+      throw new RuntimeException(errorMsg.get());
+    }
   }
 
   @Test (timeout = TIMEOUT)
@@ -70,7 +76,7 @@ public final class BroadcastITCase {
         .addJobId(BroadcastITCase.class.getSimpleName() + "_pado")
         .addUserMain(Broadcast.class.getCanonicalName())
         .addUserArgs(inputFilePath, outputFilePath)
-        .addOptimizationPolicy(PadoPolicyParallelsimFive.class.getCanonicalName())
+        .addOptimizationPolicy(PadoPolicyParallelismFive.class.getCanonicalName())
         .build());
   }
 }
