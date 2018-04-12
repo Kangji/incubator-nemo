@@ -27,6 +27,7 @@ import org.apache.beam.sdk.values.PCollection;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Sample MapReduce application.
@@ -64,11 +65,8 @@ public final class MapReduce {
           public String apply(final KV<String, Iterable<String>> kv) {
             final List<String> value = Lists.newArrayList(kv.getValue());
             Collections.sort(value);
-            final StringBuilder stringBuilder = new StringBuilder();
-            for (final String element : value) {
-              stringBuilder.append(element);
-            }
-            return String.format("%s: %s", kv.getKey(), stringBuilder.toString());
+            final String joined = value.stream().collect(Collectors.joining(","));
+            return String.format("%s: %s", kv.getKey(), joined);
           }
         }));
     GenericSourceSink.write(result, outputFilePath);
