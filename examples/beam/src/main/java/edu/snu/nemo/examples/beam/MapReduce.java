@@ -15,6 +15,7 @@
  */
 package edu.snu.nemo.examples.beam;
 
+import com.google.common.collect.Lists;
 import edu.snu.nemo.compiler.frontend.beam.NemoPipelineOptions;
 import edu.snu.nemo.compiler.frontend.beam.NemoPipelineRunner;
 import org.apache.beam.sdk.Pipeline;
@@ -23,6 +24,9 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Sample MapReduce application.
@@ -50,15 +54,21 @@ public final class MapReduce {
         .apply(MapElements.via(new SimpleFunction<String, KV<String, String>>() {
           @Override
           public KV<String, String> apply(final String line) {
-            final String[] words = line.trim().split(" +");
-            return KV.of(words[2], line);
+            final String[] words = line.trim().split(",");
+            return KV.of(words[0], words[1]);
           }
         }))
         .apply(GroupByKey.create())
         .apply(MapElements.via(new SimpleFunction<KV<String, Iterable<String>>, String>() {
           @Override
           public String apply(final KV<String, Iterable<String>> kv) {
-            return kv.getKey();
+            final List<String> value = Lists.newArrayList(kv.getValue());
+            Collections.sort(value);
+            final StringBuilder stringBuilder = new StringBuilder();
+            for (final String element : value) {
+              stringBuilder.append(element);
+            }
+            return String.format("%s: %s", kv.getKey(), stringBuilder.toString());
           }
         }));
     GenericSourceSink.write(result, outputFilePath);
