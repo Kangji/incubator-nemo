@@ -19,7 +19,6 @@ import edu.snu.nemo.common.ir.OutputCollector;
 import edu.snu.nemo.common.ir.vertex.transform.Transform;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 
 /**
  * Flatten transform implementation.
@@ -37,13 +36,13 @@ public final class FlattenTransform<T> implements Transform<T, T> {
   }
 
   @Override
-  public void prepare(final Context context, final OutputCollector<T> oc) {
-    this.outputCollector = oc;
+  public void prepare(final Context context, final OutputCollector<T> p) {
+    this.outputCollector = p;
   }
 
   @Override
-  public void onData(final Iterator<T> elements, final String srcVertexId) {
-    elements.forEachRemaining(collectedElements::add);
+  public void onData(final T element) {
+    collectedElements.add(element);
   }
 
   @Override

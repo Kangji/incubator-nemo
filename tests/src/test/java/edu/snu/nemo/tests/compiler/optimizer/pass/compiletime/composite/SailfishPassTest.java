@@ -18,10 +18,7 @@ package edu.snu.nemo.tests.compiler.optimizer.pass.compiletime.composite;
 import edu.snu.nemo.client.JobLauncher;
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.ir.edge.IREdge;
-import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
-import edu.snu.nemo.common.ir.edge.executionproperty.DataFlowModelProperty;
-import edu.snu.nemo.common.ir.edge.executionproperty.DataStoreProperty;
-import edu.snu.nemo.common.ir.edge.executionproperty.UsedDataHandlingProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.*;
 import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.SailfishPass;
@@ -65,6 +62,8 @@ public class SailfishPassTest {
                 edgeToMerger.getProperty(ExecutionProperty.Key.UsedDataHandling));
             assertEquals(DataStoreProperty.Value.SerializedMemoryStore,
                 edgeToMerger.getProperty(ExecutionProperty.Key.DataStore));
+            assertEquals(AsBytesProperty.Value.ReadAsBytes,
+                edgeToMerger.getProperty(ExecutionProperty.Key.AsBytes));
           } else {
             assertEquals(DataFlowModelProperty.Value.Pull,
                 edgeToMerger.getProperty(ExecutionProperty.Key.DataFlowModel));
@@ -77,6 +76,10 @@ public class SailfishPassTest {
               edgeFromMerger.getProperty(ExecutionProperty.Key.DataCommunicationPattern));
           assertEquals(DataStoreProperty.Value.LocalFileStore,
               edgeFromMerger.getProperty(ExecutionProperty.Key.DataStore));
+          assertEquals(AsBytesProperty.Value.WriteAsBytes,
+              edgeFromMerger.getProperty(ExecutionProperty.Key.AsBytes));
+          assertEquals(PartitionerProperty.Value.IncrementPartitioner,
+              edgeFromMerger.getProperty(ExecutionProperty.Key.Partitioner));
         });
       } else {
         // Non merger vertex.
