@@ -99,67 +99,6 @@ public final class DataSkewRuntimePass implements RuntimePass<Map<String, List<P
   @VisibleForTesting
   public List<KeyRange> calculateHashRanges(final Map<String, List<Pair<Integer, Long>>> metricData,
                                             final Integer taskGroupListSize) {
-    // NOTE: metricData is made up of a map of blockId to blockSizes.
-    // Count the hash range (number of blocks for each block).
-    final int maxHashValue = metricData.values().stream()
-        .map(list -> list.stream()
-            .map(pair -> pair.left())
-            .max(Integer::compareTo)
-            .orElseThrow(() -> new DynamicOptimizationException("Cannot find max hash value in a block.")))
-        .max(Integer::compareTo)
-        .orElseThrow(() -> new DynamicOptimizationException("Cannot find max hash value among blocks."));
-
-    // Aggregate metric data.
-    final Map<Integer, Long> aggregatedMetricData = new HashMap<>(maxHashValue);
-    // for each hash range index, we aggregate the metric data.
-    metricData.forEach((blockId, pairs) -> {
-      pairs.forEach(pair -> {
-        final int key = pair.left();
-        if (aggregatedMetricData.containsKey(key)) {
-          aggregatedMetricData.compute(key, (existKey, existValue) -> existValue + pair.right());
-        } else {
-          aggregatedMetricData.put(key, pair.right());
-        }
-      });
-    });
-
-    // Do the optimization using the information derived above.
-    final Long totalSize = aggregatedMetricData.values().stream().mapToLong(n -> n).sum(); // get total size
-    final Long idealSizePerTaskGroup = totalSize / taskGroupListSize; // and derive the ideal size per task group
-    LOG.info("idealSizePerTaskgroup {} = {}(totalSize) / {}(taskGroupListSize)",
-        idealSizePerTaskGroup, totalSize, taskGroupListSize);
-
-    // find HashRanges to apply (for each blocks of each block).
-    final List<KeyRange> keyRanges = new ArrayList<>(taskGroupListSize);
-    int startingHashValue = 0;
-    int finishingHashValue = 1; // initial values
-    Long currentAccumulatedSize = aggregatedMetricData.getOrDefault(startingHashValue, 0L);
-    for (int i = 1; i <= taskGroupListSize; i++) {
-      if (i != taskGroupListSize) {
-        final Long idealAccumulatedSize = idealSizePerTaskGroup * i; // where we should end
-        // find the point while adding up one by one.
-        while (currentAccumulatedSize < idealAccumulatedSize) {
-          currentAccumulatedSize += aggregatedMetricData.getOrDefault(finishingHashValue, 0L);
-          finishingHashValue++;
-        }
-
-        final Long oneStepBack =
-            currentAccumulatedSize - aggregatedMetricData.getOrDefault(finishingHashValue - 1, 0L);
-        final Long diffFromIdeal = currentAccumulatedSize - idealAccumulatedSize;
-        final Long diffFromIdealOneStepBack = idealAccumulatedSize - oneStepBack;
-        // Go one step back if we came too far.
-        if (diffFromIdeal > diffFromIdealOneStepBack) {
-          finishingHashValue--;
-          currentAccumulatedSize -= aggregatedMetricData.getOrDefault(finishingHashValue, 0L);
-        }
-
-        // assign appropriately
-        keyRanges.add(i - 1, HashRange.of(startingHashValue, finishingHashValue));
-        startingHashValue = finishingHashValue;
-      } else { // last one: we put the range of the rest.
-        keyRanges.add(i - 1, HashRange.of(startingHashValue, maxHashValue + 1));
-      }
-    }
-    return keyRanges;
+    return null;
   }
 }

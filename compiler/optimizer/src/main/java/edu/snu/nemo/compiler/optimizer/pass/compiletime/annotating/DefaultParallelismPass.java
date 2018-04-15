@@ -41,7 +41,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
    * Default constructor with desired number of source parallelism 1, shuffle decreasing factor 5.
    */
   public DefaultParallelismPass() {
-    this(1, 5);
+    this(20, 2);
   }
 
   /**
@@ -78,8 +78,11 @@ public final class DefaultParallelismPass extends AnnotatingPass {
           // No reason to propagate via Broadcast edges, as the data streams that will use the broadcasted data
           // as a sideInput will have their own number of parallelism
           final Integer o2oParallelism = inEdges.stream()
-             .filter(edge -> DataCommunicationPatternProperty.Value.OneToOne
-                  .equals(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern)))
+             .filter(edge -> {
+               final Enum commProp = edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern);
+               return DataCommunicationPatternProperty.Value.OneToOne.equals(commProp)
+                   || DataCommunicationPatternProperty.Value.BroadCast.equals(commProp);
+             })
               .mapToInt(edge -> edge.getSrc().getProperty(ExecutionProperty.Key.Parallelism))
               .max().orElse(1);
           final Integer shuffleParallelism = inEdges.stream()
