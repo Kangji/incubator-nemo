@@ -106,24 +106,26 @@ public final class TaskGroupExecutor {
 
 
 
-  private static final LoadingCache<BroadcastInputReaderWrapper, List> broadcastCache = CacheBuilder.newBuilder()
+  private static final LoadingCache<BroadcastInputReaderWrapper, Object[]> broadcastCache = CacheBuilder.newBuilder()
       .expireAfterWrite(60, TimeUnit.SECONDS)
-      .build(new CacheLoader<BroadcastInputReaderWrapper, List>() {
-        public List load(final BroadcastInputReaderWrapper broadcastInputReaderWrapper) {
+      .build(new CacheLoader<BroadcastInputReaderWrapper, Object[]>() {
+        public Object[] load(final BroadcastInputReaderWrapper broadcastInputReaderWrapper) {
           final String edgeId = broadcastInputReaderWrapper.inputReader.getRuntimeEdge().getId();
 
           try {
             LOG.info("[START-broadcastReader] {}", edgeId);
-            final List pieces = new ArrayList();
+            final LinkedBlockingQueue pieces = new LinkedBlockingQueue<>();
             final ExecutorService serializationBoy = Executors.newCachedThreadPool();
 
             broadcastInputReaderWrapper.inputReader.read().forEach(compFuture -> {
               serializationBoy.submit(() -> {
                 try {
                   final Iterator iterator = compFuture.get();
-                  LOG.info("piece added {}", edgeId);
                   while (iterator.hasNext()) {
-                    pieces.add(iterator.next());
+                    LOG.info("[START] iterator.next() {}", edgeId);
+                    final Object elementObject = iterator.next();
+                    pieces.add(elementObject);
+                    LOG.info("[FINISH] iterator.next() done, piece added {}", edgeId);
                   }
                 } catch (Exception e) {
                   throw new RuntimeException(e);
@@ -135,7 +137,7 @@ public final class TaskGroupExecutor {
             serializationBoy.awaitTermination(1, TimeUnit.DAYS);
 
             LOG.info("[FINISH-broadcastReader] {}", edgeId);
-            return pieces;
+            return pieces.toArray();
           } catch (Exception e) {
             throw new RuntimeException(e);
           }
