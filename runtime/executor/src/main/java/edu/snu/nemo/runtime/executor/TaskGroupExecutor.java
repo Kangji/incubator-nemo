@@ -15,6 +15,9 @@
  */
 package edu.snu.nemo.runtime.executor;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import edu.snu.nemo.common.ContextImpl;
 import edu.snu.nemo.common.Pair;
 import edu.snu.nemo.common.dag.DAG;
@@ -77,6 +80,57 @@ public final class TaskGroupExecutor {
 
   private static final String ITERATORID_PREFIX = "ITERATOR_";
   private static final AtomicInteger ITERATORID_GENERATOR = new AtomicInteger(0);
+
+
+  public class BroadcastInputReaderWrapper {
+    public final InputReader inputReader;
+
+    public BroadcastInputReaderWrapper(final InputReader inputReader) {
+      this.inputReader = inputReader;
+    }
+
+    @Override
+    public int hashCode() {
+      final int hash = inputReader.getRuntimeEdge().getId().hashCode();
+      LOG.info("hash: {}", hash);
+      return hash;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      final boolean equality = this.hashCode() == other.hashCode();
+      LOG.info("equals: {}", equality);
+      return equality;
+    }
+  }
+
+
+  private static final LoadingCache<BroadcastInputReaderWrapper, List> broadcastCache = CacheBuilder.newBuilder()
+      .expireAfterWrite(60, TimeUnit.SECONDS)
+      .build(new CacheLoader<BroadcastInputReaderWrapper, List>() {
+        public List load(final BroadcastInputReaderWrapper broadcastInputReaderWrapper) {
+          final String edgeId = broadcastInputReaderWrapper.inputReader.getRuntimeEdge().getId();
+
+          try {
+            LOG.info("[START-broadcastReader] {}", edgeId);
+            final List pieces = new ArrayList();
+            broadcastInputReaderWrapper.inputReader.read().forEach(compFuture -> {
+              try {
+                final Iterator iterator = compFuture.get();
+                while (iterator.hasNext()) {
+                  pieces.add(iterator.next());
+                }
+              } catch (Exception e) {
+                throw new RuntimeException(e);
+              }
+            });
+            LOG.info("[FINISH-broadcastReader] {}", edgeId);
+            return pieces;
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
 
   /**
    * Constructor.
@@ -204,26 +258,16 @@ public final class TaskGroupExecutor {
         // cache.get(new Loader() {fetch Data and run task} )
         if (!dataHandler.getBroadcastFromOtherStage().isEmpty()) {
           final InputReader broadcastReader = dataHandler.getBroadcastFromOtherStage().remove(0);
-          LOG.info("[START-broadcastReader] {}", task.getId());
-          broadcastReader.read().forEach(compFuture -> {
-            // LOG.info("[FUTURE-START-broadcastReader] {}", broadcastReader.getSrcIrVertexId());
-            try {
-              final Iterator iterator = compFuture.get();
-              while (iterator.hasNext()) {
-                transform.onData(iterator.next());
-              }
-            } catch (Exception e) {
-              throw new RuntimeException(e);
+          try {
+            for (final Object piece : broadcastCache.get(new BroadcastInputReaderWrapper(broadcastReader))) {
+              transform.onData(piece);
             }
-          });
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
           transform.close();
           finishedTaskIds.add(task.getId());
-          LOG.info("[FINISH-broadcastReader] {}", task.getId());
-
-          //LOG.info("[2-broadcastReader] {}", outputCollector.size());
-          // sideInputFromOtherStages(task, sideInputMap);
         }
-
       }
     });
   }
