@@ -104,6 +104,13 @@ public final class DefaultParallelismPass extends AnnotatingPass {
         throw new RuntimeException(e);
       }
     });
+
+    dag.topologicalDo(vertex -> {
+      if ((Integer)vertex.getProperty(ExecutionProperty.Key.Parallelism) == 81) {
+        vertex.setProperty(ParallelismProperty.of(500));
+      }
+    });
+
     final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>(dag);
     return builder.build();
   }
