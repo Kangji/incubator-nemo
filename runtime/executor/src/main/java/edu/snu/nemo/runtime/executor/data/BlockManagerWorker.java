@@ -292,7 +292,6 @@ public final class BlockManagerWorker {
         throw new UnsupportedExecutionPropertyException("This used data handling property is not supported.");
     }
 
-    LOG.info("1-CommitBlock: {}", blockId);
 
     final BlockStore store = getBlockStore(blockStore);
     store.writeBlock(block);
@@ -316,10 +315,7 @@ public final class BlockManagerWorker {
             .setBlockStateChangedMsg(blockStateChangedMsgBuilder.build())
             .build());
 
-    LOG.info("2-CommitBlock: {}", blockId);
-
     if (reportPartitionSizes) {
-      LOG.info("3-CommitBlock: {}", blockId);
       final List<ControlMessage.PartitionSizeEntry> partitionSizeEntries = new ArrayList<>();
       partitionSizeMap.forEach((key, size) ->
           partitionSizeEntries.add(
@@ -342,7 +338,6 @@ public final class BlockManagerWorker {
               )
               .build());
 
-      LOG.info("4-CommitBlock: {}", blockId);
     }
   }
 

@@ -204,8 +204,9 @@ public final class TaskGroupExecutor {
         // cache.get(new Loader() {fetch Data and run task} )
         if (!dataHandler.getBroadcastFromOtherStage().isEmpty()) {
           final InputReader broadcastReader = dataHandler.getBroadcastFromOtherStage().remove(0);
-          //LOG.info("[1-broadcastReader] {}", broadcastReader.getSrcIrVertexId());
+          LOG.info("[START-broadcastReader] {}", broadcastReader.getSrcIrVertexId());
           broadcastReader.read().forEach(compFuture -> {
+            LOG.info("[FUTURE-START-broadcastReader] {}", broadcastReader.getSrcIrVertexId());
             try {
               final Iterator iterator = compFuture.get();
               while (iterator.hasNext()) {
@@ -217,6 +218,7 @@ public final class TaskGroupExecutor {
           });
           transform.close();
           finishedTaskIds.add(task.getId());
+          LOG.info("[FINISH-broadcastReader] {}", broadcastReader.getSrcIrVertexId());
 
           //LOG.info("[2-broadcastReader] {}", outputCollector.size());
           // sideInputFromOtherStages(task, sideInputMap);
