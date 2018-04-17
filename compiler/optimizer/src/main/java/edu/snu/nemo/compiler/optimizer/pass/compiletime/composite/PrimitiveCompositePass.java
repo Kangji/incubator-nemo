@@ -33,7 +33,7 @@ public final class PrimitiveCompositePass extends CompositePass {
         new DefaultParallelismPass(), // annotating after reshaping passes, before stage partitioning
         new DefaultStagePartitioningPass(),
         new ReviseInterStageEdgeDataStorePass(), // after stage partitioning
-        new DefaultEdgeUsedDataHandlingPass(),
+        //new DefaultEdgeUsedDataHandlingPass(),
         new ScheduleGroupPass()
         // new CompressionPass()
     ));
