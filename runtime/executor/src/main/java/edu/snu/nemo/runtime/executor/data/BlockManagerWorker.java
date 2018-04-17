@@ -261,6 +261,7 @@ public final class BlockManagerWorker {
             .setRuntimeEdgeId(runtimeEdgeId)
             .setKeyRange(ByteString.copyFrom(SerializationUtils.serialize(keyRange)))
             .build();
+        LOG.info("6-[queryBLock] {}", blockId);
         return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
             .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(), serializerToUse));
       }

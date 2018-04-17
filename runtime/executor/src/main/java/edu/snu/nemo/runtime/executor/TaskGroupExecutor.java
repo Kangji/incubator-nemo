@@ -105,6 +105,7 @@ public final class TaskGroupExecutor {
   }
 
 
+
   private static final LoadingCache<BroadcastInputReaderWrapper, List> broadcastCache = CacheBuilder.newBuilder()
       .expireAfterWrite(60, TimeUnit.SECONDS)
       .build(new CacheLoader<BroadcastInputReaderWrapper, List>() {
@@ -114,16 +115,25 @@ public final class TaskGroupExecutor {
           try {
             LOG.info("[START-broadcastReader] {}", edgeId);
             final List pieces = new ArrayList();
+            final ExecutorService serializationBoy = Executors.newCachedThreadPool();
+
             broadcastInputReaderWrapper.inputReader.read().forEach(compFuture -> {
-              try {
-                final Iterator iterator = compFuture.get();
-                while (iterator.hasNext()) {
-                  pieces.add(iterator.next());
+              serializationBoy.submit(() -> {
+                try {
+                  final Iterator iterator = compFuture.get();
+                  LOG.info("piece added {}", edgeId);
+                  while (iterator.hasNext()) {
+                    pieces.add(iterator.next());
+                  }
+                } catch (Exception e) {
+                  throw new RuntimeException(e);
                 }
-              } catch (Exception e) {
-                throw new RuntimeException(e);
-              }
+              });
             });
+
+            serializationBoy.shutdown();
+            serializationBoy.awaitTermination(1, TimeUnit.DAYS);
+
             LOG.info("[FINISH-broadcastReader] {}", edgeId);
             return pieces;
           } catch (Exception e) {
