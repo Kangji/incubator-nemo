@@ -447,13 +447,13 @@ public final class BlockManagerWorker {
           if (DataStoreProperty.Value.LocalFileStore.equals(blockStore)
               || DataStoreProperty.Value.GlusterFileStore.equals(blockStore)) {
 
-            LOG.info("[START-onOutputContext]");
+            LOG.info("[START-onOutputContext] {}", blockId);
             final List<FileArea> fileAreas = ((FileBlock) getBlockStore(blockStore)
                 .readBlock(blockId).get()).asFileAreas(keyRange);
             for (final FileArea fileArea : fileAreas) {
               outputContext.newOutputStream().writeFileArea(fileArea).close();
             }
-            LOG.info("[Stop-onOutputContext]");
+            LOG.info("[Stop-onOutputContext] {}", blockId);
           } else {
             final Iterable<SerializedPartition> partitions = getBlockStore(blockStore)
                 .readBlock(blockId).get().readSerializedPartitions(keyRange);
