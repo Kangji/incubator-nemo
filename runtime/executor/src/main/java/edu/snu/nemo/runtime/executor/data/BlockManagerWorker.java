@@ -207,6 +207,9 @@ public final class BlockManagerWorker {
       final boolean readAsBytes,
       final DataStoreProperty.Value blockStore,
       final KeyRange keyRange) {
+
+    LOG.info("1-[queryBLock] {}", blockId);
+
     // Let's see if a remote worker has it
     final CompletableFuture<ControlMessage.Message> blockLocationFuture =
         pendingBlockLocationRequest.computeIfAbsent(blockId, blockIdToRequest -> {
@@ -229,6 +232,7 @@ public final class BlockManagerWorker {
 
     // Using thenCompose so that fetching block data starts after getting response from master.
     return blockLocationFuture.thenCompose(responseFromMaster -> {
+      LOG.info("2-[queryBLock] {}", blockId);
       if (responseFromMaster.getType() != ControlMessage.MessageType.BlockLocationInfo) {
         throw new RuntimeException("Response message type mismatch!");
       }
@@ -239,12 +243,16 @@ public final class BlockManagerWorker {
             "Block " + blockId + " not found both in any storage: "
                 + "The block state is " + blockLocationInfoMsg.getState()));
       }
+      LOG.info("3-[queryBLock] {}", blockId);
+
       // This is the executor id that we wanted to know
       final String targetExecutorId = blockLocationInfoMsg.getOwnerExecutorId();
       if (targetExecutorId.equals(executorId) || targetExecutorId.equals(REMOTE_FILE_STORE)) {
+        LOG.info("4-[queryBLock] {}", blockId);
         // Block resides in the evaluator
         return retrieveDataFromBlock(blockId, blockStore, keyRange);
       } else {
+        LOG.info("5-[queryBLock] {}", blockId);
         final Serializer serializerToUse = readAsBytes
             ? SerializerManager.getAsBytesSerializer() : serializerManager.getSerializer(runtimeEdgeId);
         final ByteTransferContextDescriptor descriptor = ByteTransferContextDescriptor.newBuilder()
