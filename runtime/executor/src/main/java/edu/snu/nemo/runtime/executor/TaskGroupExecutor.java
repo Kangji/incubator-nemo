@@ -121,12 +121,12 @@ public final class TaskGroupExecutor {
               serializationBoy.submit(() -> {
                 try {
                   final Iterator iterator = compFuture.get();
+                  LOG.info("[START] iterator.next() {}", edgeId);
                   while (iterator.hasNext()) {
-                    LOG.info("[START] iterator.next() {}", edgeId);
                     final Object elementObject = iterator.next();
                     pieces.add(elementObject);
-                    LOG.info("[FINISH] iterator.next() done, piece added {}", edgeId);
                   }
+                  LOG.info("[FINISH] iterator.next() done, piece added {}", edgeId);
                 } catch (Exception e) {
                   throw new RuntimeException(e);
                 }
