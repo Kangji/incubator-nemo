@@ -54,6 +54,7 @@ public final class MetricManagerWorker implements MetricMessageSender {
   }
 
   private synchronized void flushMetricMessageQueueToMaster() {
+    /*
     if (!metricMessageQueue.isEmpty()) {
       // Build batched metric messages
       int size = metricMessageQueue.size();
@@ -75,13 +76,16 @@ public final class MetricManagerWorker implements MetricMessageSender {
               .setMetricMsg(metricMsgBuilder.build())
               .build());
     }
+    */
   }
 
   @Override
   public void send(final String metricKey, final String metricValue) {
+    /*
     LOG.debug("Executor logged! {}", metricKey);
     metricMessageQueue.add(
         ControlMessage.Metric.newBuilder().setMetricKey(metricKey).setMetricValue(metricValue).build());
+        */
   }
 
   @Override

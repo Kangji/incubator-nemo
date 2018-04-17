@@ -32,19 +32,21 @@ public final class TaskDataHandler {
     this.task = task;
     this.children = new ArrayList<>();
     this.inputFromThisStage = new ArrayList<>();
-    this.sideInputFromOtherStages = new ArrayList<>();
     this.sideInputFromThisStage = new ArrayList<>();
     this.outputCollector = null;
     this.outputWriters = new ArrayList<>();
+
+    this.broadcastFromOtherStage = new ArrayList<>();
   }
 
   private final Task task;
   private List<TaskDataHandler> children;
   private final List<OutputCollectorImpl> inputFromThisStage;
-  private final List<InputReader> sideInputFromOtherStages;
   private final List<OutputCollectorImpl> sideInputFromThisStage;
   private OutputCollectorImpl outputCollector;
   private final List<OutputWriter> outputWriters;
+
+  private final List<InputReader> broadcastFromOtherStage;
 
   public Task getTask() {
     return task;
@@ -52,14 +54,6 @@ public final class TaskDataHandler {
 
   public List<TaskDataHandler> getChildren() {
     return children;
-  }
-
-  public List<OutputCollectorImpl> getInputFromThisStage() {
-    return inputFromThisStage;
-  }
-
-  public List<InputReader> getSideInputFromOtherStages() {
-    return sideInputFromOtherStages;
   }
 
   public List<OutputCollectorImpl> getSideInputFromThisStage() {
@@ -83,8 +77,14 @@ public final class TaskDataHandler {
     inputFromThisStage.add(input);
   }
 
-  public void addSideInputFromOtherStages(final InputReader sideInputReader) {
-    sideInputFromOtherStages.add(sideInputReader);
+
+  public List<InputReader> getBroadcastFromOtherStage() {
+    return broadcastFromOtherStage;
+
+  }
+
+  public void addBroadcastFromOtherStage(final InputReader broadcastInputReader) {
+    broadcastFromOtherStage.add(broadcastInputReader);
   }
 
   public void addSideInputFromThisStage(final OutputCollectorImpl ocAsSideInput) {

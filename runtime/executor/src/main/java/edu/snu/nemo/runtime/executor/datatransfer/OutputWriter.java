@@ -25,6 +25,8 @@ import edu.snu.nemo.runtime.common.plan.RuntimeEdge;
 import edu.snu.nemo.runtime.executor.data.BlockManagerWorker;
 import edu.snu.nemo.runtime.executor.data.block.Block;
 import edu.snu.nemo.runtime.executor.data.partitioner.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -32,6 +34,9 @@ import java.util.*;
  * Represents the output data transfer from a task.
  */
 public final class OutputWriter extends DataTransfer implements AutoCloseable {
+
+  private static final Logger LOG = LoggerFactory.getLogger(OutputWriter.class.getName());
+
   private final String blockId;
   private final RuntimeEdge<?> runtimeEdge;
   private final String srcVertexId;
@@ -159,6 +164,8 @@ public final class OutputWriter extends DataTransfer implements AutoCloseable {
       blockManagerWorker.writeBlock(blockToWrite, blockStoreValue, isDataSizeMetricCollectionEdge,
           Collections.emptyMap(), srcVertexId, getDstParallelism() * multiplier, usedDataHandling);
     }
+
+    LOG.info("OutputWriter close {}", runtimeEdge.getId());
   }
 
   /**

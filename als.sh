@@ -19,4 +19,4 @@
  	-user_main edu.snu.nemo.examples.beam.AlternatingLeastSquare \
  	-optimization_policy edu.snu.nemo.compiler.optimizer.policy.PadoPolicy \
  	-dag_dir "./dag/als" \
- 	-user_args "`pwd`/examples/resources/sample_input_als 10 3"
+ 	-user_args "`pwd`/examples/resources/sample_input_als 3 3"

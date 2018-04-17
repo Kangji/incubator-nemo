@@ -38,7 +38,6 @@ public final class OutputCollectorImpl<O> implements OutputCollector<O> {
   private final String id;
   private final ArrayDeque<O> outputQueue;
   private RuntimeEdge sideInputRuntimeEdge;
-  private List<String> sideInputReceivers;
 
   /**
    * Constructor of a new OutputCollectorImpl.
@@ -47,7 +46,6 @@ public final class OutputCollectorImpl<O> implements OutputCollector<O> {
     this.id = OUTPUTCOLLECTORID_PREFIX + OUTPUTCOLLECTORID_GENERATOR.getAndIncrement();
     this.outputQueue = new ArrayDeque<>();
     this.sideInputRuntimeEdge = null;
-    this.sideInputReceivers = new ArrayList<>();
   }
 
   @Override
@@ -83,14 +81,6 @@ public final class OutputCollectorImpl<O> implements OutputCollector<O> {
 
   public RuntimeEdge getSideInputRuntimeEdge() {
     return sideInputRuntimeEdge;
-  }
-
-  public void setAsSideInputFor(final String physicalTaskId) {
-    sideInputReceivers.add(physicalTaskId);
-  }
-
-  public boolean hasSideInputFor(final String physicalTaskId) {
-    return sideInputReceivers.contains(physicalTaskId);
   }
 
   public String getId() {

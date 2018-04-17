@@ -21,6 +21,8 @@ import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.exception.BlockFetchException;
 import edu.snu.nemo.common.exception.BlockWriteException;
 import edu.snu.nemo.common.ir.Readable;
+import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
+import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.transform.Transform;
 import edu.snu.nemo.common.ir.vertex.OperatorVertex;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
@@ -157,8 +159,9 @@ public final class TaskGroupExecutor {
             taskGroupIdx, physicalStageEdge.getSrcVertex(), physicalStageEdge);
 
         // For InputReaders that have side input, collect them separately.
-        if (inputReader.isSideInputReader()) {
-          dataHandler.addSideInputFromOtherStages(inputReader);
+        if (DataCommunicationPatternProperty.Value.BroadCast.equals(inputReader.getRuntimeEdge()
+            .getExecutionProperties().get(ExecutionProperty.Key.DataCommunicationPattern))) {
+          dataHandler.addBroadcastFromOtherStage(inputReader);
         } else {
           inputReaders.add(inputReader);
           inputReaderToDataHandlersMap.putIfAbsent(inputReader, new ArrayList<>());
@@ -187,16 +190,38 @@ public final class TaskGroupExecutor {
         final Map<Transform, Object> sideInputMap = new HashMap<>();
         final TaskDataHandler dataHandler = getTaskDataHandler(task);
         // Check and collect side inputs.
-        if (!dataHandler.getSideInputFromOtherStages().isEmpty()) {
-          sideInputFromOtherStages(task, sideInputMap);
-        }
         if (!dataHandler.getSideInputFromThisStage().isEmpty()) {
+          //LOG.info("[1-Side input from this stage] {}", dataHandler.getSideInputFromThisStage());
           sideInputFromThisStage(task, sideInputMap);
+          //LOG.info("[2-Side input from this stage] {}", sideInputMap);
         }
 
         final Transform.Context transformContext = new ContextImpl(sideInputMap);
         final OutputCollectorImpl outputCollector = dataHandler.getOutputCollector();
         transform.prepare(transformContext, outputCollector);
+
+        // TODO: first version -- do not cache
+        // cache.get(new Loader() {fetch Data and run task} )
+        if (!dataHandler.getBroadcastFromOtherStage().isEmpty()) {
+          final InputReader broadcastReader = dataHandler.getBroadcastFromOtherStage().remove(0);
+          //LOG.info("[1-broadcastReader] {}", broadcastReader.getSrcIrVertexId());
+          broadcastReader.read().forEach(compFuture -> {
+            try {
+              final Iterator iterator = compFuture.get();
+              while (iterator.hasNext()) {
+                transform.onData(iterator.next());
+              }
+            } catch (Exception e) {
+              throw new RuntimeException(e);
+            }
+          });
+          transform.close();
+          finishedTaskIds.add(task.getId());
+
+          //LOG.info("[2-broadcastReader] {}", outputCollector.size());
+          // sideInputFromOtherStages(task, sideInputMap);
+        }
+
       }
     });
   }
@@ -227,7 +252,10 @@ public final class TaskGroupExecutor {
     if (parentTasks != null) {
       parentTasks.forEach(parent -> {
         final OutputCollectorImpl parentOutputCollector = getTaskDataHandler(parent).getOutputCollector();
-        if (parentOutputCollector.hasSideInputFor(physicalTaskId)) {
+
+        //LOG.info("[addInputFromThisStage] parent Output collector {}: {}", task.getId(), parentOutputCollector.getId());
+        if (parentOutputCollector.getSideInputRuntimeEdge() != null) {
+          //LOG.info("[addInputFromThisStage] sideInput Output collector {}: {}", task.getId(), parentOutputCollector.getId());
           dataHandler.addSideInputFromThisStage(parentOutputCollector);
         } else {
           dataHandler.addInputFromThisStages(parentOutputCollector);
@@ -250,8 +278,8 @@ public final class TaskGroupExecutor {
 
     taskGroupDag.getOutgoingEdgesOf(task).forEach(outEdge -> {
       if (outEdge.isSideInput()) {
+        //LOG.info("[setOutputCollector] sideInput Output collector {}: {}", task.getId(), outputCollector.getId());
         outputCollector.setSideInputRuntimeEdge(outEdge);
-        outputCollector.setAsSideInputFor(physicalTaskId);
       }
     });
 
@@ -275,15 +303,21 @@ public final class TaskGroupExecutor {
     final long writeStartTime = System.currentTimeMillis();
 
     getTaskDataHandler(task).getOutputWriters().forEach(outputWriter -> {
+      //LOG.info("Closing outputwriter {}", outputWriter.getId());
       outputWriter.close();
+      //LOG.info("Closed outputwriter {}", outputWriter.getId());
       final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
       writtenBytes.ifPresent(writtenBytesList::add);
+      //LOG.info("2-Closed outputwriter {}", outputWriter.getId());
     });
 
     final long writeEndTime = System.currentTimeMillis();
+    //LOG.info("3-Closed outputwriter {}", task.getId());
     metric.put("OutputWriteTime(ms)", writeEndTime - writeStartTime);
     putWrittenBytesMetric(writtenBytesList, metric);
+    //LOG.info("4-Closed outputwriter {}", task.getId());
     metricCollector.endMeasurement(physicalTaskId, metric);
+    //LOG.info("5-Closed outputwriter {}", task.getId());
   }
 
   private void prepareInputFromSource() {
@@ -298,8 +332,7 @@ public final class TaskGroupExecutor {
         } catch (final BlockFetchException ex) {
           taskGroupStateManager.onTaskGroupStateChanged(TaskGroupState.State.FAILED_RECOVERABLE,
               Optional.empty(), Optional.of(TaskGroupState.RecoverableFailureCause.INPUT_READ_FAILURE));
-          LOG.info("{} Execution Failed (Recoverable: input read failure)! Exception: {}",
-              taskGroupId, ex.toString());
+          LOG.info("{} Execution Failed (Recoverable: input read failure)! Exception: {}", taskGroupId, ex.toString());
         } catch (final Exception e) {
           taskGroupStateManager.onTaskGroupStateChanged(TaskGroupState.State.FAILED_UNRECOVERABLE,
               Optional.empty(), Optional.empty());
@@ -377,6 +410,7 @@ public final class TaskGroupExecutor {
     }
   }
 
+  /*
   private void sideInputFromOtherStages(final Task task, final Map<Transform, Object> sideInputMap) {
     getTaskDataHandler(task).getSideInputFromOtherStages().forEach(sideInputReader -> {
       try {
@@ -407,6 +441,7 @@ public final class TaskGroupExecutor {
       }
     });
   }
+  */
 
   private void sideInputFromThisStage(final Task task, final Map<Transform, Object> sideInputMap) {
     final String physicalTaskId = getPhysicalTaskId(task.getId());
@@ -498,6 +533,8 @@ public final class TaskGroupExecutor {
       // Intra-TaskGroup data comes from outputCollectors of this TaskGroup's Tasks.
       initializeOutputToChildrenDataHandlersMap();
       while (!finishedAllTasks()) {
+        // LOG.info("finishedAllTasks()");
+
         outputToChildrenDataHandlersMap.forEach((outputCollector, childrenDataHandlers) -> {
           // Get the task that has this outputCollector as its output outputCollector
           Task outputCollectorOwnerTask = taskDataHandlers.stream()
@@ -534,8 +571,12 @@ public final class TaskGroupExecutor {
           if (hasOutputWriter(outputCollectorOwnerTask)) {
             writeAndCloseOutputWriters(outputCollectorOwnerTask);
           }
+
+          // LOG.info("6-Closed outputwriter {}");
         });
+        // LOG.info("7-Closed outputwriter {}");
         updateOutputToChildrenDataHandlersMap();
+        // LOG.info("8-Closed outputwriter {}");
       }
     } catch (final BlockWriteException ex2) {
       taskGroupStateManager.onTaskGroupStateChanged(TaskGroupState.State.FAILED_RECOVERABLE,
@@ -549,6 +590,8 @@ public final class TaskGroupExecutor {
           taskGroupId, e.toString());
       throw new RuntimeException(e);
     }
+
+    // LOG.info("{} Before metric!", taskGroupId);
 
     // Put TaskGroup-unit metrics.
     final boolean available = serBlockSize >= 0;

@@ -292,6 +292,8 @@ public final class BlockManagerWorker {
         throw new UnsupportedExecutionPropertyException("This used data handling property is not supported.");
     }
 
+    LOG.info("1-CommitBlock: {}", blockId);
+
     final BlockStore store = getBlockStore(blockStore);
     store.writeBlock(block);
     final ControlMessage.BlockStateChangedMsg.Builder blockStateChangedMsgBuilder =
@@ -314,7 +316,10 @@ public final class BlockManagerWorker {
             .setBlockStateChangedMsg(blockStateChangedMsgBuilder.build())
             .build());
 
+    LOG.info("2-CommitBlock: {}", blockId);
+
     if (reportPartitionSizes) {
+      LOG.info("3-CommitBlock: {}", blockId);
       final List<ControlMessage.PartitionSizeEntry> partitionSizeEntries = new ArrayList<>();
       partitionSizeMap.forEach((key, size) ->
           partitionSizeEntries.add(
@@ -336,6 +341,8 @@ public final class BlockManagerWorker {
                   .addAllPartitionSize(partitionSizeEntries)
               )
               .build());
+
+      LOG.info("4-CommitBlock: {}", blockId);
     }
   }
 
@@ -444,8 +451,7 @@ public final class BlockManagerWorker {
             final List<FileArea> fileAreas = ((FileBlock) getBlockStore(blockStore)
                 .readBlock(blockId).get()).asFileAreas(keyRange);
             for (final FileArea fileArea : fileAreas) {
-              outputContext.newOutputStream().writeFileArea(fileArea).close();
-            }
+              outputContext.newOutputStream().writeFileArea(fileArea).close(); }
           } else {
             final Iterable<SerializedPartition> partitions = getBlockStore(blockStore)
                 .readBlock(blockId).get().readSerializedPartitions(keyRange);
