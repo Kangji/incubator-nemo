@@ -104,7 +104,7 @@ public final class BlockManagerWorker {
     this.remoteFileStore = remoteFileStore;
     this.persistentConnectionToMasterMap = persistentConnectionToMasterMap;
     this.byteTransfer = byteTransfer;
-    this.backgroundExecutorService = Executors.newFixedThreadPool(numThreads);
+    this.backgroundExecutorService = Executors.newCachedThreadPool();
     this.blockToRemainingRead = new ConcurrentHashMap<>();
     this.serializerManager = serializerManager;
     this.pendingBlockLocationRequest = new ConcurrentHashMap<>();
