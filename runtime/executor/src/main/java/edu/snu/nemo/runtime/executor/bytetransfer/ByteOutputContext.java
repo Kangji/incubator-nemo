@@ -212,8 +212,11 @@ public final class ByteOutputContext extends ByteTransferContext implements Auto
       if (closed) {
         throw new IOException("Stream already closed.");
       }
-      channel.writeAndFlush(DataFrameEncoder.DataFrame.newInstance(getContextId(), body, length, newSubStream))
-          .addListener(getChannelWriteListener());
+      LOG.info("START - writeDataFrame")
+      final ChannelFuture future =
+          channel.writeAndFlush(DataFrameEncoder.DataFrame.newInstance(getContextId(), body, length, newSubStream))
+              .addListener(getChannelWriteListener());
+      future.addListener(x -> LOG.info("DONE - writeDataFrame"));
       newSubStream = false;
     }
   }

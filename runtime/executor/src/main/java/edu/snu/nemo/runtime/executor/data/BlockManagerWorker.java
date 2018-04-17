@@ -208,7 +208,6 @@ public final class BlockManagerWorker {
       final DataStoreProperty.Value blockStore,
       final KeyRange keyRange) {
 
-    LOG.info("1-[queryBLock] {}", blockId);
 
     // Let's see if a remote worker has it
     final CompletableFuture<ControlMessage.Message> blockLocationFuture =
@@ -232,7 +231,6 @@ public final class BlockManagerWorker {
 
     // Using thenCompose so that fetching block data starts after getting response from master.
     return blockLocationFuture.thenCompose(responseFromMaster -> {
-      LOG.info("2-[queryBLock] {}", blockId);
       if (responseFromMaster.getType() != ControlMessage.MessageType.BlockLocationInfo) {
         throw new RuntimeException("Response message type mismatch!");
       }
@@ -243,16 +241,13 @@ public final class BlockManagerWorker {
             "Block " + blockId + " not found both in any storage: "
                 + "The block state is " + blockLocationInfoMsg.getState()));
       }
-      LOG.info("3-[queryBLock] {}", blockId);
 
       // This is the executor id that we wanted to know
       final String targetExecutorId = blockLocationInfoMsg.getOwnerExecutorId();
       if (targetExecutorId.equals(executorId) || targetExecutorId.equals(REMOTE_FILE_STORE)) {
-        LOG.info("4-[queryBLock] {}", blockId);
         // Block resides in the evaluator
         return retrieveDataFromBlock(blockId, blockStore, keyRange);
       } else {
-        LOG.info("5-[queryBLock] {}", blockId);
         final Serializer serializerToUse = readAsBytes
             ? SerializerManager.getAsBytesSerializer() : serializerManager.getSerializer(runtimeEdgeId);
         final ByteTransferContextDescriptor descriptor = ByteTransferContextDescriptor.newBuilder()
@@ -261,7 +256,6 @@ public final class BlockManagerWorker {
             .setRuntimeEdgeId(runtimeEdgeId)
             .setKeyRange(ByteString.copyFrom(SerializationUtils.serialize(keyRange)))
             .build();
-        LOG.info("6-[queryBLock] {}", blockId);
         return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
             .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(), serializerToUse));
       }
@@ -445,16 +439,21 @@ public final class BlockManagerWorker {
     final String blockId = descriptor.getBlockId();
     final KeyRange keyRange = SerializationUtils.deserialize(descriptor.getKeyRange().toByteArray());
 
+
     backgroundExecutorService.submit(new Runnable() {
       @Override
       public void run() {
         try {
           if (DataStoreProperty.Value.LocalFileStore.equals(blockStore)
               || DataStoreProperty.Value.GlusterFileStore.equals(blockStore)) {
+
+            LOG.info("[START-onOutputContext]");
             final List<FileArea> fileAreas = ((FileBlock) getBlockStore(blockStore)
                 .readBlock(blockId).get()).asFileAreas(keyRange);
             for (final FileArea fileArea : fileAreas) {
-              outputContext.newOutputStream().writeFileArea(fileArea).close(); }
+              outputContext.newOutputStream().writeFileArea(fileArea).close();
+            }
+            LOG.info("[Stop-onOutputContext]");
           } else {
             final Iterable<SerializedPartition> partitions = getBlockStore(blockStore)
                 .readBlock(blockId).get().readSerializedPartitions(keyRange);
