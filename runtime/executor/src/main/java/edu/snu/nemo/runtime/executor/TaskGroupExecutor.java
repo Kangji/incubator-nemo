@@ -126,7 +126,8 @@ public final class TaskGroupExecutor {
                     final Object elementObject = iterator.next();
                     pieces.add(elementObject);
                   }
-                  LOG.info("[FINISH] iterator.next() done, piece added {}", edgeId);
+                  LOG.info("[FINISH] iterator.next() done, piece added {} => {}", edgeId,
+                      Thread.currentThread().getId());
                 } catch (Exception e) {
                   throw new RuntimeException(e);
                 }
