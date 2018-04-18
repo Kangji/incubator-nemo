@@ -115,7 +115,7 @@ public final class TaskGroupExecutor {
           try {
             LOG.info("[START-broadcastReader] {}", edgeId);
             final LinkedBlockingQueue pieces = new LinkedBlockingQueue<>();
-            final ExecutorService serializationBoy = Executors.newCachedThreadPool();
+            final ExecutorService serializationBoy = Executors.newFixedThreadPool(4);
 
             broadcastInputReaderWrapper.inputReader.read().forEach(compFuture -> {
               serializationBoy.submit(() -> {
