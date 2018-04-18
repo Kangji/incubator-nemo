@@ -278,9 +278,7 @@ public final class DataUtil {
           throw new RuntimeException(e);
         }
         try {
-          LOG.info("[DECODE-START]");
           next = serializer.getCoder().decode(encodedCountingStream);
-          LOG.info("[DECODE-STOP]");
           hasNext = true;
           return true;
         } catch (final IOException e) {
