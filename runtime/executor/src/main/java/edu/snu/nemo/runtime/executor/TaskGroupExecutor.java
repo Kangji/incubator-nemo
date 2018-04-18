@@ -120,13 +120,19 @@ public final class TaskGroupExecutor {
             broadcastInputReaderWrapper.inputReader.read().forEach(compFuture -> {
               serializationBoy.submit(() -> {
                 try {
-                  final Iterator iterator = compFuture.get();
                   final long threadId = Thread.currentThread().getId();
+
+                  // get
+                  LOG.info("[START] compFuture.get {} => {}", edgeId, threadId);
+                  final Iterator iterator = compFuture.get();
+                  LOG.info("[FINISH] compFuture.get {} => {}", edgeId, threadId);
+
+                  // hasNext
                   LOG.info("[START] iterator.hasNext {} => {}", edgeId, threadId);
                   iterator.hasNext();
                   LOG.info("[FINISH] iterator.hasNext {} => {}", edgeId, threadId);
 
-
+                  // next
                   LOG.info("[START] iterator.next {} => {}", edgeId, threadId);
                   while (iterator.hasNext()) {
                     final Object elementObject = iterator.next();
