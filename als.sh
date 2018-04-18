@@ -16,7 +16,7 @@
 ./bin/run.sh \
 	-job_id als \
 	-executor_json `pwd`/examples/resources/sample_executor_resources.json \
- 	-user_main edu.snu.nemo.examples.beam.AlternatingLeastSquare \
+ 	-user_main edu.snu.nemo.examples.beam.GeonWooALS \
  	-optimization_policy edu.snu.nemo.compiler.optimizer.policy.PadoPolicy \
  	-dag_dir "./dag/als" \
  	-user_args "`pwd`/examples/resources/sample_input_als 3 3"

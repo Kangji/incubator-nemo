@@ -46,10 +46,7 @@ public final class PadoEdgeDataStorePass extends AnnotatingPass {
       final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
       if (!inEdges.isEmpty()) {
         inEdges.forEach(edge -> {
-          if (DataCommunicationPatternProperty.Value.BroadCast
-              .equals(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern))) {
-            edge.setProperty(DataStoreProperty.of(DataStoreProperty.Value.SerializedMemoryStore));
-          } else if (fromTransientToReserved(edge) || fromReservedToTransient(edge)) {
+          if (fromTransientToReserved(edge) || fromReservedToTransient(edge)) {
             edge.setProperty(DataStoreProperty.of(DataStoreProperty.Value.LocalFileStore));
           } else if (DataCommunicationPatternProperty.Value.OneToOne
               .equals(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern))) {
