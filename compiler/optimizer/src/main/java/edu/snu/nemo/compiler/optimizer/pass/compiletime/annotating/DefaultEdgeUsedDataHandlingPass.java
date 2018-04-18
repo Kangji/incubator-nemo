@@ -42,8 +42,7 @@ public final class DefaultEdgeUsedDataHandlingPass extends AnnotatingPass {
         dag.getIncomingEdgesOf(irVertex).forEach(irEdge -> {
           if (irEdge.getProperty(ExecutionProperty.Key.UsedDataHandling) == null) {
             final DataStoreProperty.Value dataStoreValue = irEdge.getProperty(ExecutionProperty.Key.DataStore);
-            if (DataStoreProperty.Value.MemoryStore.equals(dataStoreValue)
-                || DataStoreProperty.Value.SerializedMemoryStore.equals(dataStoreValue)) {
+            if (DataStoreProperty.Value.MemoryStore.equals(dataStoreValue)) {
               irEdge.setProperty(UsedDataHandlingProperty.of(UsedDataHandlingProperty.Value.Discard));
             } else {
               irEdge.setProperty(UsedDataHandlingProperty.of(UsedDataHandlingProperty.Value.Keep));
