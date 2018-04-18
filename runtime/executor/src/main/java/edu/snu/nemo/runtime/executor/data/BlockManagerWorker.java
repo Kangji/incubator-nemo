@@ -257,8 +257,18 @@ public final class BlockManagerWorker {
             .setRuntimeEdgeId(runtimeEdgeId)
             .setKeyRange(ByteString.copyFrom(SerializationUtils.serialize(keyRange)))
             .build();
+
+        /*
+        JANGHO MAGIC
         return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
             .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(), serializerToUse));
+            */
+
+        return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
+            .thenCompose(context -> context.getCompletedFuture())
+            .thenApply(streams -> new DataUtil.InputStreamIterator(streams, serializerToUse));
+
+
       }
     });
   }
