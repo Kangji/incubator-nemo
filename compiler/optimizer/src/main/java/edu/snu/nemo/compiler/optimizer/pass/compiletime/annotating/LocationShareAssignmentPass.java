@@ -169,8 +169,8 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
 
     // The sum of all coefficient is 1
     final double[] sumCoefficientVector = new double[coefficientVectorSize];
-    for (int i = 1; i <= locations.size(); i++) {
-      sumCoefficientVector[i] = 1;
+    for (int i = 0; i < locations.size(); i++) {
+      sumCoefficientVector[OBJECTIVE_COEFFICIENT_INDEX + 1 + i] = 1;
     }
     constraints.add(new LinearConstraint(sumCoefficientVector, Relationship.EQ, 1));
 
