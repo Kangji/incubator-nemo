@@ -63,10 +63,11 @@ public final class MapReduce {
         .apply(MapElements.via(new SimpleFunction<KV<String, Iterable<String>>, String>() {
           @Override
           public String apply(final KV<String, Iterable<String>> kv) {
-            final List<String> value = Lists.newArrayList(kv.getValue());
-            Collections.sort(value);
-            final String joined = value.stream().collect(Collectors.joining(","));
-            return String.format("%s: %s", kv.getKey(), joined);
+            final StringBuilder builder = new StringBuilder(kv.getKey()).append(": ");
+            for (final String element : kv.getValue()) {
+              builder.append(element).append(",");
+            }
+            return builder.toString();
           }
         }));
     GenericSourceSink.write(result, outputFilePath);
