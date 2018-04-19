@@ -25,10 +25,12 @@ import edu.snu.nemo.common.ir.vertex.executionproperty.LocationSharesProperty;
 import org.apache.commons.math3.optim.PointValuePair;
 import org.apache.commons.math3.optim.linear.*;
 import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
+import org.apache.commons.math3.util.Incrementor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -142,8 +144,6 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
     final List<String> locations = bandwidthSpecification.getLocations();
     final List<LinearConstraint> constraints = new ArrayList<>();
     final int coefficientVectorSize = locations.size() + 1;
-    final SimplexSolver solver = new SimplexSolver();
-    LOG.info(String.format("Max iterations: %d", solver.getMaxIterations()));
 
     for (int i = 0; i < locations.size(); i++) {
       final String location = locations.get(i);
@@ -182,10 +182,20 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
     final LinearObjectiveFunction objectiveFunction = new LinearObjectiveFunction(objectiveCoefficientVector, 0);
 
     // Solve
-    final PointValuePair solved = solver.optimize(
-        new LinearConstraintSet(constraints), objectiveFunction, GoalType.MAXIMIZE);
+    try {
+      final SimplexSolver solver = new SimplexSolver();
+      final Field iterations = solver.getClass().getDeclaredField("iterations");
+      iterations.setAccessible(true);
+      final Incrementor incrementor = (Incrementor) iterations.get(solver);
+      incrementor.setMaximalCount(2147483647);
+      LOG.info(String.format("Max iterations: %d", solver.getMaxIterations()));
+      final PointValuePair solved = solver.optimize(
+          new LinearConstraintSet(constraints), objectiveFunction, GoalType.MAXIMIZE);
 
-    return Arrays.copyOfRange(solved.getPoint(), OBJECTIVE_COEFFICIENT_INDEX + 1, coefficientVectorSize);
+      return Arrays.copyOfRange(solved.getPoint(), OBJECTIVE_COEFFICIENT_INDEX + 1, coefficientVectorSize);
+    } catch (final NoSuchFieldException | IllegalAccessException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
