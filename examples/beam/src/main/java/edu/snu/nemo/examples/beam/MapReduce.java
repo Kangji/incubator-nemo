@@ -15,7 +15,6 @@
  */
 package edu.snu.nemo.examples.beam;
 
-import com.google.common.collect.Lists;
 import edu.snu.nemo.compiler.frontend.beam.NemoPipelineOptions;
 import edu.snu.nemo.compiler.frontend.beam.NemoPipelineRunner;
 import org.apache.beam.sdk.Pipeline;
@@ -24,10 +23,6 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Sample MapReduce application.
