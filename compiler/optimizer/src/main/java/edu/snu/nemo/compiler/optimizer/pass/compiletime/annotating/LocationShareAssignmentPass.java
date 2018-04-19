@@ -22,6 +22,7 @@ import edu.snu.nemo.common.ir.edge.IREdge;
 import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.executionproperty.LocationSharesProperty;
+import org.apache.commons.math3.optim.BaseOptimizer;
 import org.apache.commons.math3.optim.PointValuePair;
 import org.apache.commons.math3.optim.linear.*;
 import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
@@ -184,7 +185,7 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
     // Solve
     try {
       final SimplexSolver solver = new SimplexSolver();
-      final Field iterations = solver.getClass().getDeclaredField("iterations");
+      final Field iterations = BaseOptimizer.class.getDeclaredField("iterations");
       iterations.setAccessible(true);
       final Incrementor incrementor = (Incrementor) iterations.get(solver);
       incrementor.setMaximalCount(2147483647);
