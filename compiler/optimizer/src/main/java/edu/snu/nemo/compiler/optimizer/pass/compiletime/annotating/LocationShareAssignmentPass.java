@@ -22,6 +22,9 @@ import edu.snu.nemo.common.ir.edge.IREdge;
 import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.executionproperty.LocationSharesProperty;
+import org.apache.commons.math3.optim.PointValuePair;
+import org.apache.commons.math3.optim.linear.*;
+import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +48,7 @@ import java.util.stream.Stream;
  */
 public final class LocationShareAssignmentPass extends AnnotatingPass {
 
+  private static final int OBJECTIVE_COEFFICIENT_INDEX = 0;
   private static final Logger LOG = LoggerFactory.getLogger(LocationShareAssignmentPass.class);
 
   private static String bandwidthSpecificationString = "";
@@ -103,7 +107,7 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
         // The stage is root stage, or has multiple parent stages.
         // Fall back to setting even distribution
         final Map<String, Integer> shares = new HashMap<>();
-        final List<String> locations = new ArrayList<>(bandwidthSpecification.getLocations());
+        final List<String> locations = bandwidthSpecification.getLocations();
         final int defaultShare = parallelism / locations.size();
         final int remainder = parallelism % locations.size();
         for (int i = 0; i < locations.size(); i++) {
@@ -113,27 +117,12 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
         return;
       }
       final int parentStageId = stageIdToParentStageIds.get(stageId).iterator().next();
-      final Map<String, Integer> parentLocationShare = stageIdToLocationToNumTaskGroups.get(parentStageId);
-      final Map<String, Double> locationToRatio = new HashMap<>();
-      double ratioSum = 0;
-      for (final String location : bandwidthSpecification.getLocations()) {
-        try {
-          final double ratio = getLocationShareToShuffleTimeRatioFor(location, parentLocationShare,
-              bandwidthSpecification);
-          ratioSum += ratio;
-          locationToRatio.put(location, ratio);
-        } catch (final ArithmeticException e) {
-          // This implies ratio for this location is infinite.
-          final Map<String, Integer> shares = new HashMap<>();
-          bandwidthSpecification.getLocations().forEach(loc -> shares.put(loc, location.equals(loc) ? parallelism : 0));
-          stageIdToLocationToNumTaskGroups.put(stageId, shares);
-          return;
-        }
-      }
-      final double coefficient = ((double) parallelism) / ratioSum;
+      final Map<String, Integer> parentLocationShares = stageIdToLocationToNumTaskGroups.get(parentStageId);
+      final double[] ratios = optimize(bandwidthSpecification, parentLocationShares);
       final Map<String, Integer> shares = new HashMap<>();
-      bandwidthSpecification.getLocations().forEach(location -> shares.put(location,
-          (int) (locationToRatio.get(location) * coefficient)));
+      for (int i = 0; i < bandwidthSpecification.getLocations().size(); i++) {
+        shares.put(bandwidthSpecification.getLocations().get(i), (int) (ratios[i] * parallelism));
+      }
       int remainder = parallelism - shares.values().stream().mapToInt(i -> i).sum();
       for (final String location : shares.keySet()) {
         if (remainder == 0) {
@@ -147,30 +136,61 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
     return stageIdToLocationToNumTaskGroups;
   }
 
-  private static double getLocationShareToShuffleTimeRatioFor(final String location,
-                                                              final Map<String, Integer> parentLocationShare,
-                                                              final BandwidthSpecification bandwidthSpecification) {
-    double inverseRatio = 0;
-    try {
-      for (final String remoteLocation : bandwidthSpecification.getLocations()) {
-        if (remoteLocation.equals(location)) {
-          continue;
-        }
-        inverseRatio += ((double) parentLocationShare.get(remoteLocation))
-            / ((double) bandwidthSpecification.getBandwidth(remoteLocation, location));
-      }
-    } catch (final ArithmeticException e) {
-      // Bandwidth from a remote location to this location is zero.
-      // We're not going to allocate any TaskGroups to this location, since it cannot download intermediate data at all.
-      return 0;
+  private static double[] optimize(final BandwidthSpecification bandwidthSpecification,
+                                   final Map<String, Integer> parentLocationShares) {
+    final int parentParallelism = parentLocationShares.values().stream().mapToInt(i -> i).sum();
+    final List<String> locations = bandwidthSpecification.getLocations();
+    final List<LinearConstraint> constraints = new ArrayList<>();
+    final int coefficientVectorSize = locations.size() + 1;
+
+    for (int i = 0; i < locations.size(); i++) {
+      final String location = locations.get(i);
+      final int locationCoefficientIndex = i + 1;
+      final int parentParallelismOnThisLocation = parentLocationShares.get(location);
+
+      // Upload bandwidth
+      final double[] uploadCoefficientVector = new double[coefficientVectorSize];
+      uploadCoefficientVector[OBJECTIVE_COEFFICIENT_INDEX] = bandwidthSpecification.up(location);
+      uploadCoefficientVector[locationCoefficientIndex] = parentParallelismOnThisLocation;
+      constraints.add(new LinearConstraint(uploadCoefficientVector, Relationship.GEQ,
+          parentParallelismOnThisLocation));
+
+      // Download bandwidth
+      final double[] downloadCoefficientVector = new double[coefficientVectorSize];
+      downloadCoefficientVector[OBJECTIVE_COEFFICIENT_INDEX] = bandwidthSpecification.down(location);
+      downloadCoefficientVector[locationCoefficientIndex] = parentParallelismOnThisLocation - parentParallelism;
+      constraints.add(new LinearConstraint(downloadCoefficientVector, Relationship.GEQ, 0));
+
+      // The coefficient is non-negative
+      final double[] nonNegativeCoefficientVector = new double[coefficientVectorSize];
+      nonNegativeCoefficientVector[locationCoefficientIndex] = 1;
+      constraints.add(new LinearConstraint(nonNegativeCoefficientVector, Relationship.GEQ, 0));
     }
-    return 1 / inverseRatio;
+
+    // The sum of all coefficient is 1
+    final double[] sumCoefficientVector = new double[coefficientVectorSize];
+    for (int i = 1; i <= locations.size(); i++) {
+      sumCoefficientVector[i] = 1;
+    }
+    constraints.add(new LinearConstraint(sumCoefficientVector, Relationship.EQ, 1));
+
+    // Objective
+    final double[] objectiveCoefficientVector = new double[coefficientVectorSize];
+    objectiveCoefficientVector[OBJECTIVE_COEFFICIENT_INDEX] = 1;
+    final LinearObjectiveFunction objectiveFunction = new LinearObjectiveFunction(objectiveCoefficientVector, 0);
+
+    // Solve
+    final PointValuePair solved = new SimplexSolver().optimize(
+        new LinearConstraintSet(constraints), objectiveFunction, GoalType.MAXIMIZE);
+
+    return Arrays.copyOfRange(solved.getPoint(), OBJECTIVE_COEFFICIENT_INDEX + 1, coefficientVectorSize);
   }
 
   /**
    * Bandwidth specification.
    */
   private static final class BandwidthSpecification {
+    private final List<String> locations = new ArrayList<>();
     private final Map<String, Integer> uplinkBandwidth = new HashMap<>();
     private final Map<String, Integer> downlinkBandwidth = new HashMap<>();
 
@@ -187,6 +207,7 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
           final String name = locationNode.get("name").traverse().nextTextValue();
           final int up = locationNode.get("up").traverse().getIntValue();
           final int down = locationNode.get("down").traverse().getIntValue();
+          specification.locations.add(name);
           specification.uplinkBandwidth.put(name, up);
           specification.downlinkBandwidth.put(name, down);
         }
@@ -196,12 +217,16 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
       return specification;
     }
 
-    int getBandwidth(final String source, final String destination) {
-      return Math.min(uplinkBandwidth.get(source), downlinkBandwidth.get(destination));
+    int up(final String location) {
+      return uplinkBandwidth.get(location);
     }
 
-    Set<String> getLocations() {
-      return uplinkBandwidth.keySet();
+    int down(final String location) {
+      return downlinkBandwidth.get(location);
+    }
+
+    List<String> getLocations() {
+      return locations;
     }
   }
 }
