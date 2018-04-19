@@ -142,6 +142,8 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
     final List<String> locations = bandwidthSpecification.getLocations();
     final List<LinearConstraint> constraints = new ArrayList<>();
     final int coefficientVectorSize = locations.size() + 1;
+    final SimplexSolver solver = new SimplexSolver();
+    LOG.info(String.format("Max iterations: %d", solver.getMaxIterations()));
 
     for (int i = 0; i < locations.size(); i++) {
       final String location = locations.get(i);
@@ -180,7 +182,7 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
     final LinearObjectiveFunction objectiveFunction = new LinearObjectiveFunction(objectiveCoefficientVector, 0);
 
     // Solve
-    final PointValuePair solved = new SimplexSolver().optimize(
+    final PointValuePair solved = solver.optimize(
         new LinearConstraintSet(constraints), objectiveFunction, GoalType.MAXIMIZE);
 
     return Arrays.copyOfRange(solved.getPoint(), OBJECTIVE_COEFFICIENT_INDEX + 1, coefficientVectorSize);
