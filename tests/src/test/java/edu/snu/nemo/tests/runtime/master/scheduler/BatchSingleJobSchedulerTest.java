@@ -103,12 +103,12 @@ public final class BatchSingleJobSchedulerTest {
     metricMessageHandler = mock(MetricMessageHandler.class);
     pendingTaskGroupCollection = new SingleJobTaskGroupCollection();
     schedulingPolicy = new RoundRobinSchedulingPolicy(executorRegistry);
-    schedulerRunner = new SchedulerRunner(schedulingPolicy, pendingTaskGroupCollection);
+    schedulerRunner = new SchedulerRunner(schedulingPolicy, pendingTaskGroupCollection, executorRegistry);
     pubSubEventHandler = mock(PubSubEventHandlerWrapper.class);
     updatePhysicalPlanEventHandler = mock(UpdatePhysicalPlanEventHandler.class);
     scheduler =
         new BatchSingleJobScheduler(schedulingPolicy, schedulerRunner, pendingTaskGroupCollection,
-            blockManagerMaster, pubSubEventHandler, updatePhysicalPlanEventHandler);
+            blockManagerMaster, pubSubEventHandler, updatePhysicalPlanEventHandler, executorRegistry);
 
     final ActiveContext activeContext = mock(ActiveContext.class);
     Mockito.doThrow(new RuntimeException()).when(activeContext).close();
