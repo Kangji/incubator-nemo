@@ -55,6 +55,7 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
   private static final Logger LOG = LoggerFactory.getLogger(LocationShareAssignmentPass.class);
 
   private static String bandwidthSpecificationString = "";
+  private static double inverseProcessingRateForIntermediateData = 0;
 
   /**
    * Default constructor.
@@ -79,6 +80,10 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
 
   public static void setBandwidthSpecificationString(final String value) {
     bandwidthSpecificationString = value;
+  }
+
+  public static void setProcessingRateForIntermediateData(final double rate) {
+    inverseProcessingRateForIntermediateData = rate <= 0 ? 0 : 1 / rate;
   }
 
   private static Map<Integer, Set<Integer>> getStageIdToParentStageIds(final DAG<IRVertex, IREdge> dag) {
@@ -162,7 +167,8 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
       final double[] downloadCoefficientVector = new double[coefficientVectorSize];
       downloadCoefficientVector[OBJECTIVE_COEFFICIENT_INDEX] = bandwidthSpecification.down(location);
       downloadCoefficientVector[locationCoefficientIndex] = parentParallelismOnThisLocation - parentParallelism;
-      constraints.add(new LinearConstraint(downloadCoefficientVector, Relationship.GEQ, 0));
+      constraints.add(new LinearConstraint(downloadCoefficientVector, Relationship.GEQ,
+          inverseProcessingRateForIntermediateData * bandwidthSpecification.down(location)));
 
       // The coefficient is non-negative
       final double[] nonNegativeCoefficientVector = new double[coefficientVectorSize];

@@ -116,6 +116,14 @@ public final class JobConf extends ConfigurationModuleBuilder {
   }
 
   /**
+   * Processing rate for intermediate data.
+   */
+  @NamedParameter(doc = "Processing rate for intermediate data",
+      default_value = "-1", short_name = "processing_rate")
+  public final class ProcessingRateForIntermediateData implements Name<Double> {
+  }
+
+  /**
    * The fraction of container memory not to use fo the JVM heap.
    */
   @NamedParameter(doc = "The fraction of the container memory not to use for the JVM heap", short_name = "heap_slack",
