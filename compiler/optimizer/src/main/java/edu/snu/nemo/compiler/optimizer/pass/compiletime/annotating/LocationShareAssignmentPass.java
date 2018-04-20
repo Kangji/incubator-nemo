@@ -181,7 +181,7 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
 
     // Solve
     final PointValuePair solved = new SimplexSolver().optimize(
-        new LinearConstraintSet(constraints), objectiveFunction, GoalType.MAXIMIZE);
+        new LinearConstraintSet(constraints), objectiveFunction, GoalType.MINIMIZE);
 
     return Arrays.copyOfRange(solved.getPoint(), OBJECTIVE_COEFFICIENT_INDEX + 1, coefficientVectorSize);
   }
