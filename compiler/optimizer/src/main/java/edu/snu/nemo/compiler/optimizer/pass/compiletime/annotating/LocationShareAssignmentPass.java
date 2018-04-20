@@ -191,7 +191,7 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
       incrementor.setMaximalCount(2147483647);
       LOG.info(String.format("Max iterations: %d", solver.getMaxIterations()));
       final PointValuePair solved = solver.optimize(
-          new LinearConstraintSet(constraints), objectiveFunction, GoalType.MAXIMIZE);
+          new LinearConstraintSet(constraints), objectiveFunction, GoalType.MINIMIZE);
 
       return Arrays.copyOfRange(solved.getPoint(), OBJECTIVE_COEFFICIENT_INDEX + 1, coefficientVectorSize);
     } catch (final NoSuchFieldException | IllegalAccessException e) {
