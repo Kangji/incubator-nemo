@@ -254,7 +254,8 @@ public final class BlockManagerWorker {
             .setKeyRange(ByteString.copyFrom(SerializationUtils.serialize(keyRange)))
             .build();
         return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
-            .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(), serializerToUse));
+            .thenCompose(context -> context.getCompletedFuture())
+            .thenApply(streams -> new DataUtil.InputStreamIterator(streams, serializerToUse));
       }
     });
   }

@@ -151,10 +151,17 @@ public final class InputReader extends DataTransfer {
     final List<CompletableFuture<DataUtil.IteratorWithNumBytes>> futures = new ArrayList<>();
     for (int srcTaskIdx = 0; srcTaskIdx < numSrcTasks; srcTaskIdx++) {
       final String blockId = getBlockId(srcTaskIdx);
-      futures.add(
+      final CompletableFuture<DataUtil.IteratorWithNumBytes> future =
           blockManagerWorker.queryBlock(blockId, getId(), readAsBytes,
               (DataStoreProperty.Value) runtimeEdge.getProperty(ExecutionProperty.Key.DataStore),
-              hashRangeToRead));
+              hashRangeToRead);
+      try {
+        future.get();
+      } catch (final InterruptedException | ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+      futures.add(future);
+
     }
 
     return futures;
