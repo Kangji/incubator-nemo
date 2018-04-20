@@ -56,6 +56,10 @@ public final class RoundRobinSchedulingPolicy implements SchedulingPolicy {
                                    final JobStateManager jobStateManager) {
     final String containerType = scheduledTaskGroup.getContainerType();
 
+    if (scheduledTaskGroup.getLocation() != null) {
+      LOG.info(String.format("TG_LOCATION %s %s", scheduledTaskGroup.getTaskGroupId(),
+          scheduledTaskGroup.getLocation()));
+    }
     Optional<String> executorId = selectExecutorByRR(containerType, scheduledTaskGroup.getLocation());
     if (!executorId.isPresent()) { // If there is no available executor to schedule this task group now,
       return false;
