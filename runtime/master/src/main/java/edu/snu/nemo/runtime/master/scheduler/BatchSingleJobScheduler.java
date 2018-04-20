@@ -64,6 +64,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
   private final SchedulingPolicy schedulingPolicy;
   private final SchedulerRunner schedulerRunner;
   private final PendingTaskGroupCollection pendingTaskGroupCollection;
+  private final ExecutorRegistry executorRegistry;
 
   /**
    * Other necessary components of this {@link edu.snu.nemo.runtime.master.RuntimeMaster}.
@@ -84,12 +85,14 @@ public final class BatchSingleJobScheduler implements Scheduler {
                                  final PendingTaskGroupCollection pendingTaskGroupCollection,
                                  final BlockManagerMaster blockManagerMaster,
                                  final PubSubEventHandlerWrapper pubSubEventHandlerWrapper,
-                                 final UpdatePhysicalPlanEventHandler updatePhysicalPlanEventHandler) {
+                                 final UpdatePhysicalPlanEventHandler updatePhysicalPlanEventHandler,
+                                 final ExecutorRegistry executorRegistry) {
     this.schedulingPolicy = schedulingPolicy;
     this.schedulerRunner = schedulerRunner;
     this.pendingTaskGroupCollection = pendingTaskGroupCollection;
     this.blockManagerMaster = blockManagerMaster;
     this.pubSubEventHandlerWrapper = pubSubEventHandlerWrapper;
+    this.executorRegistry = executorRegistry;
     updatePhysicalPlanEventHandler.setScheduler(this);
     if (pubSubEventHandlerWrapper.getPubSubEventHandler() != null) {
       pubSubEventHandlerWrapper.getPubSubEventHandler()
@@ -167,6 +170,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
 
   @Override
   public void onExecutorAdded(final ExecutorRepresenter executorRepresenter) {
+    executorRegistry.registerRepresenter(executorRepresenter);
     schedulingPolicy.onExecutorAdded(executorRepresenter);
     schedulerRunner.onAnExecutorAvailable();
   }
@@ -178,6 +182,10 @@ public final class BatchSingleJobScheduler implements Scheduler {
     // TaskGroups for lost blocks
     taskGroupsToReExecute.addAll(blockManagerMaster.removeWorker(executorId));
 
+    // Set as failed executor
+    executorRegistry.setRepresenterAsFailed(executorId);
+    final ExecutorRepresenter executor = executorRegistry.getFailedExecutorRepresenter(executorId);
+    executor.onExecutorFailed();
     // TaskGroups executing on the removed executor
     taskGroupsToReExecute.addAll(schedulingPolicy.onExecutorRemoved(executorId));
 
@@ -472,6 +480,10 @@ public final class BatchSingleJobScheduler implements Scheduler {
                                             final Boolean isOnHoldToComplete) {
     LOG.debug("{} completed in {}", new Object[]{taskGroupId, executorId});
     if (!isOnHoldToComplete) {
+      final ExecutorRepresenter executor = executorRegistry.getRunningExecutorRepresenter(executorId);
+      executor.onTaskGroupExecutionComplete(taskGroupId);
+      LOG.info("{" + taskGroupId + "} completed in [" + executorId + "]");
+      LOG.info(String.format("%s completed at %s(%s)", taskGroupId, executorId, executor.getNodeName()));
       schedulingPolicy.onTaskGroupExecutionComplete(executorId, taskGroupId);
     }
 
@@ -494,6 +506,8 @@ public final class BatchSingleJobScheduler implements Scheduler {
   private void onTaskGroupExecutionOnHold(final String executorId,
                                           final String taskGroupId,
                                           final String taskPutOnHold) {
+    final ExecutorRepresenter executor = executorRegistry.getRunningExecutorRepresenter(executorId);
+    executor.onTaskGroupExecutionComplete(taskGroupId);
     LOG.info("{} put on hold in {}", new Object[]{taskGroupId, executorId});
     schedulingPolicy.onTaskGroupExecutionComplete(executorId, taskGroupId);
     final String stageIdForTaskGroupUponCompletion = RuntimeIdGenerator.getStageIdFromTaskGroupId(taskGroupId);
@@ -535,6 +549,9 @@ public final class BatchSingleJobScheduler implements Scheduler {
                                                      final int attemptIdx, final TaskGroupState.State newState,
                                                      final TaskGroupState.RecoverableFailureCause failureCause) {
     LOG.info("{} failed in {} by {}", new Object[]{taskGroupId, executorId, failureCause});
+    final ExecutorRepresenter executor = executorRegistry.getExecutorRepresenter(executorId);
+    executor.onTaskGroupExecutionFailed(taskGroupId);
+    LOG.info("{" + taskGroupId + "} failed in [" + executorId + "]");
     schedulingPolicy.onTaskGroupExecutionFailed(executorId, taskGroupId);
 
     final String stageId = RuntimeIdGenerator.getStageIdFromTaskGroupId(taskGroupId);
