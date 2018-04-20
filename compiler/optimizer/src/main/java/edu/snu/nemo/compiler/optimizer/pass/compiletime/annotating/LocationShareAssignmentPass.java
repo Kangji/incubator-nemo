@@ -166,10 +166,9 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
       // Download bandwidth
       final double[] downloadCoefficientVector = new double[coefficientVectorSize];
       downloadCoefficientVector[OBJECTIVE_COEFFICIENT_INDEX] = bandwidthSpecification.down(location);
-      downloadCoefficientVector[locationCoefficientIndex] = parentParallelismOnThisLocation - parentParallelism;
-      constraints.add(new LinearConstraint(downloadCoefficientVector, Relationship.GEQ,
-          inverseProcessingRateForIntermediateData * bandwidthSpecification.down(location)
-              * -downloadCoefficientVector[locationCoefficientIndex]));
+      downloadCoefficientVector[locationCoefficientIndex] = parentParallelismOnThisLocation - parentParallelism
+          - parentParallelism * inverseProcessingRateForIntermediateData * bandwidthSpecification.down(location);
+      constraints.add(new LinearConstraint(downloadCoefficientVector, Relationship.GEQ, 0));
 
       // The coefficient is non-negative
       final double[] nonNegativeCoefficientVector = new double[coefficientVectorSize];
