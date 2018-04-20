@@ -47,19 +47,24 @@ public final class MapReduce {
 
     final Pipeline p = Pipeline.create(options);
     final PCollection<String> result = GenericSourceSink.read(p, inputFilePath)
-        .apply(MapElements.via(new SimpleFunction<String, KV<String, Long>>() {
+        .apply(MapElements.via(new SimpleFunction<String, KV<String, String>>() {
           @Override
-          public KV<String, Long> apply(final String line) {
+          public KV<String, String> apply(final String line) {
             final String[] words = line.trim().split(" +");
-            return KV.of(String.format("%s-%s", words[2], words[4]), 1L);
+            return KV.of(words[2], words[4]);
           }
         }))
         .apply(GroupByKey.create())
-        .apply(Combine.groupedValues(Sum.ofLongs()))
-        .apply(MapElements.via(new SimpleFunction<KV<String, Long>, String>() {
+        .apply(MapElements.via(new SimpleFunction<KV<String, Iterable<String>>, String>() {
           @Override
-          public String apply(final KV<String, Long> kv) {
-            return String.format("%s-%d", kv.getKey(), kv.getValue());
+          public String apply(final KV<String, Iterable<String>> kv) {
+
+            final StringBuilder builder = new StringBuilder(kv.getKey()).append(": ");
+            for (final String element : kv.getValue()) {
+              builder.append(element).append(",");
+            }
+            return builder.toString();
+
           }
         }));
     GenericSourceSink.write(result, outputFilePath);
