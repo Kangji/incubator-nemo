@@ -215,7 +215,6 @@ public final class JobLauncher {
     cl.registerShortNameOfClass(JobConf.DeployMode.class);
     cl.registerShortNameOfClass(JobConf.DriverMemMb.class);
     cl.registerShortNameOfClass(JobConf.ExecutorJsonPath.class);
-    cl.registerShortNameOfClass(JobConf.ProcessingRateForIntermediateData.class);
     cl.registerShortNameOfClass(JobConf.BandwidthJsonPath.class);
     cl.registerShortNameOfClass(JobConf.JVMHeapSlack.class);
     cl.registerShortNameOfClass(JobConf.IORequestHandleThreadsTotal.class);

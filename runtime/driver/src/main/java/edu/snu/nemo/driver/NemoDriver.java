@@ -81,7 +81,6 @@ public final class NemoDriver {
                      final JobMessageObserver client,
                      @Parameter(JobConf.ExecutorJsonContents.class) final String resourceSpecificationString,
                      @Parameter(JobConf.BandwidthJsonContents.class) final String bandwidthSpecificationString,
-                     @Parameter(JobConf.ProcessingRateForIntermediateData.class) final double processingRatePerBlock,
                      @Parameter(JobConf.JobId.class) final String jobId,
                      @Parameter(JobConf.FileDirectory.class) final String localDirectory,
                      @Parameter(JobConf.GlusterVolumeDirectory.class) final String glusterDirectory) {
@@ -97,7 +96,6 @@ public final class NemoDriver {
     this.client = client;
     this.handler = new RemoteClientMessageLoggingHandler(client);
     LocationShareAssignmentPass.setBandwidthSpecificationString(bandwidthSpecificationString);
-    LocationShareAssignmentPass.setProcessingRateForIntermediateData(processingRatePerBlock);
   }
 
   /**
