@@ -92,14 +92,12 @@ public final class TaskGroupExecutor {
     @Override
     public int hashCode() {
       final int hash = inputReader.getRuntimeEdge().getId().hashCode();
-      LOG.info("hash: {}", hash);
       return hash;
     }
 
     @Override
     public boolean equals(Object other) {
       final boolean equality = this.hashCode() == other.hashCode();
-      LOG.info("equals: {}", equality);
       return equality;
     }
   }
@@ -107,13 +105,12 @@ public final class TaskGroupExecutor {
 
 
   private static final LoadingCache<BroadcastInputReaderWrapper, Object[]> broadcastCache = CacheBuilder.newBuilder()
-      .expireAfterWrite(60, TimeUnit.SECONDS)
+      .expireAfterWrite(30, TimeUnit.SECONDS)
       .build(new CacheLoader<BroadcastInputReaderWrapper, Object[]>() {
         public Object[] load(final BroadcastInputReaderWrapper broadcastInputReaderWrapper) {
           final String edgeId = broadcastInputReaderWrapper.inputReader.getRuntimeEdge().getId();
 
           try {
-            LOG.info("[START-broadcastReader] {}", edgeId);
             final LinkedBlockingQueue pieces = new LinkedBlockingQueue<>();
             final ExecutorService serializationBoy = Executors.newFixedThreadPool(4);
 
@@ -123,22 +120,16 @@ public final class TaskGroupExecutor {
                   final long threadId = Thread.currentThread().getId();
 
                   // get
-                  LOG.info("[START] compFuture.get {} => {}", edgeId, threadId);
                   final Iterator iterator = compFuture.get();
-                  LOG.info("[FINISH] compFuture.get {} => {}", edgeId, threadId);
 
                   // hasNext
-                  LOG.info("[START] iterator.hasNext {} => {}", edgeId, threadId);
                   iterator.hasNext();
-                  LOG.info("[FINISH] iterator.hasNext {} => {}", edgeId, threadId);
 
                   // next
-                  LOG.info("[START] iterator.next {} => {}", edgeId, threadId);
                   while (iterator.hasNext()) {
                     final Object elementObject = iterator.next();
                     pieces.add(elementObject);
                   }
-                  LOG.info("[FINISH] iterator.next done, piece added {} => {}", edgeId, threadId);
                 } catch (Exception e) {
                   throw new RuntimeException(e);
                 }
@@ -148,7 +139,6 @@ public final class TaskGroupExecutor {
             serializationBoy.shutdown();
             serializationBoy.awaitTermination(1, TimeUnit.DAYS);
 
-            LOG.info("[FINISH-broadcastReader] {}", edgeId);
             return pieces.toArray();
           } catch (Exception e) {
             throw new RuntimeException(e);
@@ -269,9 +259,7 @@ public final class TaskGroupExecutor {
         final TaskDataHandler dataHandler = getTaskDataHandler(task);
         // Check and collect side inputs.
         if (!dataHandler.getSideInputFromThisStage().isEmpty()) {
-          //LOG.info("[1-Side input from this stage] {}", dataHandler.getSideInputFromThisStage());
           sideInputFromThisStage(task, sideInputMap);
-          //LOG.info("[2-Side input from this stage] {}", sideInputMap);
         }
 
         final Transform.Context transformContext = new ContextImpl(sideInputMap);
@@ -323,9 +311,7 @@ public final class TaskGroupExecutor {
       parentTasks.forEach(parent -> {
         final OutputCollectorImpl parentOutputCollector = getTaskDataHandler(parent).getOutputCollector();
 
-        //LOG.info("[addInputFromThisStage] parent Output collector {}: {}", task.getId(), parentOutputCollector.getId());
         if (parentOutputCollector.getSideInputRuntimeEdge() != null) {
-          //LOG.info("[addInputFromThisStage] sideInput Output collector {}: {}", task.getId(), parentOutputCollector.getId());
           dataHandler.addSideInputFromThisStage(parentOutputCollector);
         } else {
           dataHandler.addInputFromThisStages(parentOutputCollector);
@@ -348,7 +334,6 @@ public final class TaskGroupExecutor {
 
     taskGroupDag.getOutgoingEdgesOf(task).forEach(outEdge -> {
       if (outEdge.isSideInput()) {
-        //LOG.info("[setOutputCollector] sideInput Output collector {}: {}", task.getId(), outputCollector.getId());
         outputCollector.setSideInputRuntimeEdge(outEdge);
       }
     });
@@ -373,21 +358,15 @@ public final class TaskGroupExecutor {
     final long writeStartTime = System.currentTimeMillis();
 
     getTaskDataHandler(task).getOutputWriters().forEach(outputWriter -> {
-      //LOG.info("Closing outputwriter {}", outputWriter.getId());
       outputWriter.close();
-      //LOG.info("Closed outputwriter {}", outputWriter.getId());
       final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
       writtenBytes.ifPresent(writtenBytesList::add);
-      //LOG.info("2-Closed outputwriter {}", outputWriter.getId());
     });
 
     final long writeEndTime = System.currentTimeMillis();
-    //LOG.info("3-Closed outputwriter {}", task.getId());
     metric.put("OutputWriteTime(ms)", writeEndTime - writeStartTime);
     putWrittenBytesMetric(writtenBytesList, metric);
-    //LOG.info("4-Closed outputwriter {}", task.getId());
     metricCollector.endMeasurement(physicalTaskId, metric);
-    //LOG.info("5-Closed outputwriter {}", task.getId());
   }
 
   private void prepareInputFromSource() {
@@ -603,7 +582,6 @@ public final class TaskGroupExecutor {
       // Intra-TaskGroup data comes from outputCollectors of this TaskGroup's Tasks.
       initializeOutputToChildrenDataHandlersMap();
       while (!finishedAllTasks()) {
-        // LOG.info("finishedAllTasks()");
 
         outputToChildrenDataHandlersMap.forEach((outputCollector, childrenDataHandlers) -> {
           // Get the task that has this outputCollector as its output outputCollector
@@ -642,11 +620,8 @@ public final class TaskGroupExecutor {
             writeAndCloseOutputWriters(outputCollectorOwnerTask);
           }
 
-          // LOG.info("6-Closed outputwriter {}");
         });
-        // LOG.info("7-Closed outputwriter {}");
         updateOutputToChildrenDataHandlersMap();
-        // LOG.info("8-Closed outputwriter {}");
       }
     } catch (final BlockWriteException ex2) {
       taskGroupStateManager.onTaskGroupStateChanged(TaskGroupState.State.FAILED_RECOVERABLE,

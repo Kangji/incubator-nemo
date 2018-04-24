@@ -258,15 +258,15 @@ public final class BlockManagerWorker {
             .setKeyRange(ByteString.copyFrom(SerializationUtils.serialize(keyRange)))
             .build();
 
-        /*
-        JANGHO MAGIC
+        // JANGHO MAGIC
         return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
             .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(), serializerToUse));
-            */
 
+        /*
         return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
             .thenCompose(context -> context.getCompletedFuture())
             .thenApply(streams -> new DataUtil.InputStreamIterator(streams, serializerToUse));
+        */
 
 
       }
@@ -458,13 +458,11 @@ public final class BlockManagerWorker {
           if (DataStoreProperty.Value.LocalFileStore.equals(blockStore)
               || DataStoreProperty.Value.GlusterFileStore.equals(blockStore)) {
 
-            LOG.info("[START-onOutputContext] {}", blockId);
             final List<FileArea> fileAreas = ((FileBlock) getBlockStore(blockStore)
                 .readBlock(blockId).get()).asFileAreas(keyRange);
             for (final FileArea fileArea : fileAreas) {
               outputContext.newOutputStream().writeFileArea(fileArea).close();
             }
-            LOG.info("[Stop-onOutputContext] {}", blockId);
           } else {
             final Iterable<SerializedPartition> partitions = getBlockStore(blockStore)
                 .readBlock(blockId).get().readSerializedPartitions(keyRange);
