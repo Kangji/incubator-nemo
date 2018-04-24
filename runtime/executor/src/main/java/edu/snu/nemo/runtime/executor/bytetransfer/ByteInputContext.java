@@ -74,7 +74,6 @@ public final class ByteInputContext extends ByteTransferContext {
                    final byte[] contextDescriptor,
                    final ContextManager contextManager) {
     super(remoteExecutorId, contextId, contextDescriptor, contextManager);
-    completedFuture.thenAccept(future -> LOG.info("Data Arrived"));
   }
 
   /**

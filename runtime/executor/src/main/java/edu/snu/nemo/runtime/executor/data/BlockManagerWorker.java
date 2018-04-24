@@ -250,7 +250,7 @@ public final class BlockManagerWorker {
       } else {
         final Serializer serializerToUse = readAsBytes
             ? SerializerManager.getAsBytesSerializer() : serializerManager.getSerializer(runtimeEdgeId);
-        LOG.info("Serializer: {}", serializerToUse.getCoder().toString());
+        // LOG.info("Serializer: {}", serializerToUse.getCoder().toString());
         final ByteTransferContextDescriptor descriptor = ByteTransferContextDescriptor.newBuilder()
             .setBlockId(blockId)
             .setBlockStore(convertBlockStore(blockStore))
