@@ -244,6 +244,7 @@ public final class BlockManagerWorker {
 
       // This is the executor id that we wanted to know
       final String targetExecutorId = blockLocationInfoMsg.getOwnerExecutorId();
+      LOG.info("queryBlock - now I know {} is in {}", blockId, targetExecutorId);
       if (targetExecutorId.equals(executorId) || targetExecutorId.equals(REMOTE_FILE_STORE)) {
         // Block resides in the evaluator
         return retrieveDataFromBlock(blockId, blockStore, keyRange);
@@ -463,6 +464,7 @@ public final class BlockManagerWorker {
             for (final FileArea fileArea : fileAreas) {
               outputContext.newOutputStream().writeFileArea(fileArea).close();
             }
+            LOG.info("onOutputContext Served blockId {}", blockId);
           } else {
             final Iterable<SerializedPartition> partitions = getBlockStore(blockStore)
                 .readBlock(blockId).get().readSerializedPartitions(keyRange);
