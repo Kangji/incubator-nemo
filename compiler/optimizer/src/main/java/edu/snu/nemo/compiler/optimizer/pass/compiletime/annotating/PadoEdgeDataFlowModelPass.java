@@ -59,6 +59,9 @@ public final class PadoEdgeDataFlowModelPass extends AnnotatingPass {
   }
 
   private boolean fromSource(final IREdge edge, final DAG<IRVertex, IREdge> dag) {
-    return dag.getIncomingEdgesOf(edge.getSrc()).stream().anyMatch(e -> e.getSrc() instanceof SourceVertex);
+    return dag.getIncomingEdgesOf(edge.getSrc())
+        .stream()
+        .flatMap(e -> dag.getIncomingEdgesOf(e.getSrc()).stream())
+        .anyMatch(e -> e.getSrc() instanceof SourceVertex);
   }
 }
