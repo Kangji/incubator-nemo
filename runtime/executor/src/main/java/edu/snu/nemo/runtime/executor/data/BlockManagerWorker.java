@@ -268,7 +268,7 @@ public final class BlockManagerWorker {
         return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
             .thenCompose(context -> context.getCompletedFuture())
             .thenApply(streams -> {
-              LOG.info("Data arrived {}", blockId);
+              LOG.info("{} arrived from {}", blockId, executorId);
               return streams;
             })
             .thenApply(streams -> new DataUtil.InputStreamIterator(streams, serializerToUse));
