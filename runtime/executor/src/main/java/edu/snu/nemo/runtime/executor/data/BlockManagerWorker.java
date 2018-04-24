@@ -72,7 +72,6 @@ public final class BlockManagerWorker {
   private final ExecutorService backgroundExecutorService;
   private final Map<String, AtomicInteger> blockToRemainingRead;
   private final SerializerManager serializerManager;
-  private final Map<String, CompletableFuture<ControlMessage.Message>> pendingBlockLocationRequest;
 
   /**
    * Constructor.
@@ -107,7 +106,6 @@ public final class BlockManagerWorker {
     this.backgroundExecutorService = Executors.newCachedThreadPool();
     this.blockToRemainingRead = new ConcurrentHashMap<>();
     this.serializerManager = serializerManager;
-    this.pendingBlockLocationRequest = new ConcurrentHashMap<>();
   }
 
   /**
@@ -210,25 +208,19 @@ public final class BlockManagerWorker {
 
     LOG.info("queryBlock - where is {}", blockId);
 
-    // Let's see if a remote worker has it
-    final CompletableFuture<ControlMessage.Message> blockLocationFuture =
-        pendingBlockLocationRequest.computeIfAbsent(blockId, blockIdToRequest -> {
-          // Ask Master for the location
-          final CompletableFuture<ControlMessage.Message> responseFromMasterFuture = persistentConnectionToMasterMap
-              .getMessageSender(MessageEnvironment.BLOCK_MANAGER_MASTER_MESSAGE_LISTENER_ID).request(
-                  ControlMessage.Message.newBuilder()
-                      .setId(RuntimeIdGenerator.generateMessageId())
-                      .setListenerId(MessageEnvironment.BLOCK_MANAGER_MASTER_MESSAGE_LISTENER_ID)
-                      .setType(ControlMessage.MessageType.RequestBlockLocation)
-                      .setRequestBlockLocationMsg(
-                          ControlMessage.RequestBlockLocationMsg.newBuilder()
-                              .setExecutorId(executorId)
-                              .setBlockId(blockId)
-                              .build())
-                      .build());
-          return responseFromMasterFuture;
-        });
-    blockLocationFuture.whenComplete((message, throwable) -> pendingBlockLocationRequest.remove(blockId));
+    // Ask Master for the location
+    final CompletableFuture<ControlMessage.Message> blockLocationFuture = persistentConnectionToMasterMap
+        .getMessageSender(MessageEnvironment.BLOCK_MANAGER_MASTER_MESSAGE_LISTENER_ID).request(
+            ControlMessage.Message.newBuilder()
+                .setId(RuntimeIdGenerator.generateMessageId())
+                .setListenerId(MessageEnvironment.BLOCK_MANAGER_MASTER_MESSAGE_LISTENER_ID)
+                .setType(ControlMessage.MessageType.RequestBlockLocation)
+                .setRequestBlockLocationMsg(
+                    ControlMessage.RequestBlockLocationMsg.newBuilder()
+                        .setExecutorId(executorId)
+                        .setBlockId(blockId)
+                        .build())
+                .build());
 
     // Using thenCompose so that fetching block data starts after getting response from master.
     return blockLocationFuture.thenCompose(responseFromMaster -> {
