@@ -410,6 +410,8 @@ public final class BlockManagerMaster {
               .setRequestId(requestId)
               .setBlockId(blockId);
 
+      LOG.info("loc Register request {}", blockId);
+
       locationFuture.whenComplete((location, throwable) -> {
         if (throwable == null) {
           infoMsgBuilder.setOwnerExecutorId(location);
@@ -417,6 +419,8 @@ public final class BlockManagerMaster {
           infoMsgBuilder.setState(
               convertBlockState(((AbsentBlockException) throwable).getState()));
         }
+
+        LOG.info("loc Reply start {}", blockId);
         messageContext.reply(
             ControlMessage.Message.newBuilder()
                 .setId(RuntimeIdGenerator.generateMessageId())
@@ -424,6 +428,7 @@ public final class BlockManagerMaster {
                 .setType(ControlMessage.MessageType.BlockLocationInfo)
                 .setBlockLocationInfoMsg(infoMsgBuilder.build())
                 .build());
+        LOG.info("loc Reply finished {}", blockId);
       });
     }
 

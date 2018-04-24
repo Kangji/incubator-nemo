@@ -208,6 +208,7 @@ public final class BlockManagerWorker {
       final DataStoreProperty.Value blockStore,
       final KeyRange keyRange) {
 
+    LOG.info("queryBlock - where is {}", blockId);
 
     // Let's see if a remote worker has it
     final CompletableFuture<ControlMessage.Message> blockLocationFuture =
