@@ -16,6 +16,7 @@
 package edu.snu.nemo.compiler.optimizer.policy;
 
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.*;
+import edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.PadoFromSourceStage;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.PrimitiveCompositePass;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.LoopOptimizationCompositePass;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.PadoCompositePass;
@@ -38,6 +39,8 @@ public final class PadoPolicy implements Policy {
         .registerCompileTimePass(new PadoCompositePass())
         .registerCompileTimePass(new LoopOptimizationCompositePass())
         .registerCompileTimePass(new PrimitiveCompositePass())
+        // We're doing this within the PadoCompositePass (strict=no => hang)
+        //.registerCompileTimePass(new PadoFromSourceStage())
         .build();
   }
 

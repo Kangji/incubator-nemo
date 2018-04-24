@@ -17,9 +17,9 @@ package edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating;
 
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.ir.edge.IREdge;
-import edu.snu.nemo.common.ir.vertex.IRVertex;
-import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.edge.executionproperty.DataFlowModelProperty;
+import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
+import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.SourceVertex;
 
 import java.util.List;
@@ -31,11 +31,11 @@ import static edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.PadoEd
 /**
  * Pado pass for tagging edges with DataFlowModel ExecutionProperty.
  */
-public final class PadoEdgeDataFlowModelPass extends AnnotatingPass {
+public final class PadoFromSourceStage extends AnnotatingPass {
   /**
    * Default constructor.
    */
-  public PadoEdgeDataFlowModelPass() {
+  public PadoFromSourceStage() {
     super(ExecutionProperty.Key.DataFlowModel, Stream.of(
         ExecutionProperty.Key.ExecutorPlacement
     ).collect(Collectors.toSet()));
@@ -47,9 +47,7 @@ public final class PadoEdgeDataFlowModelPass extends AnnotatingPass {
       final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
       if (!inEdges.isEmpty()) {
         inEdges.forEach(edge -> {
-          if (fromTransientToReserved(edge) && !fromSource(edge, dag)) {
-            edge.setProperty(DataFlowModelProperty.of(DataFlowModelProperty.Value.Push));
-          } else {
+          if (fromSourceStage(edge, dag)) {
             edge.setProperty(DataFlowModelProperty.of(DataFlowModelProperty.Value.Pull));
           }
         });
@@ -58,7 +56,10 @@ public final class PadoEdgeDataFlowModelPass extends AnnotatingPass {
     return dag;
   }
 
-  private boolean fromSource(final IREdge edge, final DAG<IRVertex, IREdge> dag) {
-    return dag.getIncomingEdgesOf(edge.getSrc()).stream().anyMatch(e -> e.getSrc() instanceof SourceVertex);
+  private boolean fromSourceStage(final IREdge edge, final DAG<IRVertex, IREdge> dag) {
+    final int stageId = edge.getSrc().getProperty(ExecutionProperty.Key.StageId);
+    return dag.getVertices().stream()
+        .filter(v -> v.getProperty(ExecutionProperty.Key.StageId).equals(stageId))
+        .anyMatch(v -> v instanceof SourceVertex);
   }
 }
