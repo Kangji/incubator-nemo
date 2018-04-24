@@ -19,6 +19,8 @@ import edu.snu.nemo.common.Pair;
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.eventhandler.PubSubEventHandlerWrapper;
 import edu.snu.nemo.common.ir.Readable;
+import edu.snu.nemo.common.ir.edge.executionproperty.DataFlowModelProperty;
+import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.transform.RelayTransform;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
 import edu.snu.nemo.runtime.common.eventhandler.DynamicOptimizationEvent;
@@ -371,9 +373,20 @@ public final class BatchSingleJobScheduler implements Scheduler {
     final int attemptIdx = jobStateManager.getAttemptCountForStage(stageToSchedule.getId());
     LOG.info("Scheduling Stage {} with attemptIdx={}", new Object[]{stageToSchedule.getId(), attemptIdx});
 
+    /* Sanha ver
     final boolean isSmall = stageToSchedule.getTaskGroupDag().getTopologicalSort().stream()
         .filter(task -> task instanceof OperatorTask)
         .anyMatch(opTask -> ((OperatorTask) opTask).getTransform() instanceof RelayTransform);
+    */
+
+    // John ver
+    final boolean isSmall = stageToSchedule.getTaskGroupDag().getTopologicalSort().stream()
+        .map(task -> task.getIrVertexId())
+        .anyMatch(irVertexId -> stageIncomingEdges.stream()
+            .filter(stageIn -> stageIn.getDstVertex().getId().equals(irVertexId))
+            .anyMatch(stageIn -> stageIn.getProperty(ExecutionProperty.Key.DataFlowModel).equals(DataFlowModelProperty.Value.Push)));
+    LOG.info("{} is isSmall {}", stageToSchedule.getId(), isSmall);
+
     // each readable and source task will be bounded in executor.
     final List<Map<String, Readable>> logicalTaskIdToReadables = stageToSchedule.getLogicalTaskIdToReadables();
 
