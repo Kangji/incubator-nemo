@@ -41,18 +41,21 @@ public final class GroupByKeyTransform<I> implements Transform<I, KV<Object, Lis
 
   @Override
   public void prepare(final Context context, final OutputCollector<KV<Object, List>> p) {
+    LOG.info("Prepare");
     this.outputCollector = p;
   }
 
   @Override
   public void onData(final I element) {
     final KV kv = (KV) element;
+    LOG.info("Received key: {}", kv.getKey());
     keyToValues.putIfAbsent(kv.getKey(), new ArrayList());
     keyToValues.get(kv.getKey()).add(kv.getValue());
   }
 
   @Override
   public void close() {
+    LOG.info("Close");
     if (keyToValues.isEmpty()) {
       LOG.warn("Beam GroupByKeyTransform received no data!");
     } else {
