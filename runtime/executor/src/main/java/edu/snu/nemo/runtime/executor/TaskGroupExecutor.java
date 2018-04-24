@@ -125,11 +125,15 @@ public final class TaskGroupExecutor {
                   // hasNext
                   iterator.hasNext();
 
+                  LOG.info("[START] SerializationBoy {} - {}", threadId, edgeId);
+
                   // next
                   while (iterator.hasNext()) {
                     final Object elementObject = iterator.next();
                     pieces.add(elementObject);
                   }
+
+                  LOG.info("[STOP] SerializationBoy {} - {}", threadId, edgeId);
                 } catch (Exception e) {
                   throw new RuntimeException(e);
                 }
@@ -137,7 +141,9 @@ public final class TaskGroupExecutor {
             });
 
             serializationBoy.shutdown();
+            LOG.info("Wait for serializationBoy");
             serializationBoy.awaitTermination(1, TimeUnit.DAYS);
+            LOG.info("Boy's done. Let's go.");
 
             return pieces.toArray();
           } catch (Exception e) {
