@@ -18,8 +18,11 @@ package edu.snu.nemo.examples.beam;
 import com.github.fommil.netlib.BLAS;
 import com.github.fommil.netlib.LAPACK;
 import edu.snu.nemo.compiler.frontend.beam.NemoPipelineRunner;
+import edu.snu.nemo.compiler.frontend.beam.coder.FloatArrayCoder;
+import edu.snu.nemo.compiler.frontend.beam.coder.IntArrayCoder;
 import edu.snu.nemo.compiler.frontend.beam.transform.LoopCompositeTransform;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.coders.CoderProviders;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.*;
@@ -278,6 +281,8 @@ public class GeonWooALS {
     options.setStableUniqueNames(PipelineOptions.CheckEnabled.OFF);
 
     final Pipeline p = Pipeline.create(options);
+    p.getCoderRegistry().registerCoderProvider(CoderProviders.fromStaticMethods(int[].class, IntArrayCoder.class));
+    p.getCoderRegistry().registerCoderProvider(CoderProviders.fromStaticMethods(float[].class, FloatArrayCoder.class));
 
     // R
     final PCollection<String> rawData = GenericSourceSink.read(p, inputFilePath);
