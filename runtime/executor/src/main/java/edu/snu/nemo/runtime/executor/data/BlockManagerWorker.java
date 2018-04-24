@@ -260,14 +260,18 @@ public final class BlockManagerWorker {
             .build();
 
         // JANGHO MAGIC
-        return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
-            .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(), serializerToUse));
-
         /*
         return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
+            .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(), serializerToUse));
+            */
+
+        return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray())
             .thenCompose(context -> context.getCompletedFuture())
+            .thenApply(streams -> {
+              LOG.info("Data arrived {}", blockId);
+              return streams;
+            })
             .thenApply(streams -> new DataUtil.InputStreamIterator(streams, serializerToUse));
-        */
 
 
       }
