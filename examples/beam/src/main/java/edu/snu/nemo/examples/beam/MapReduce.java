@@ -59,9 +59,15 @@ public final class MapReduce {
           @Override
           public String apply(final KV<String, Iterable<String>> kv) {
 
-            final StringBuilder builder = new StringBuilder(kv.getKey()).append(": ");
+            final StringBuilder builder = new StringBuilder(kv.getKey()).append(":");
+            boolean isFirst = true;
             for (final String element : kv.getValue()) {
-              builder.append(element).append(",");
+              if (isFirst) {
+                isFirst = false;
+              } else {
+                builder.append(",");
+              }
+              builder.append(element);
             }
             return builder.toString();
 
