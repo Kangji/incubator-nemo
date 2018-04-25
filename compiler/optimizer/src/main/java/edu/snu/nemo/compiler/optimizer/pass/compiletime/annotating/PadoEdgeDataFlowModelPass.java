@@ -48,7 +48,7 @@ public final class PadoEdgeDataFlowModelPass extends AnnotatingPass {
       if (!inEdges.isEmpty()) {
         inEdges.forEach(edge -> {
           if (fromTransientToReserved(edge) && !fromSource(edge, dag)) {
-            edge.setProperty(DataFlowModelProperty.of(DataFlowModelProperty.Value.Push));
+            edge.setProperty(DataFlowModelProperty.of(DataFlowModelProperty.Value.Pull));
           } else {
             edge.setProperty(DataFlowModelProperty.of(DataFlowModelProperty.Value.Pull));
           }
