@@ -15,6 +15,9 @@
  */
 package edu.snu.nemo.runtime.common;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ReplyFutureMap<T> {
 
+  private static final Logger LOG = LoggerFactory.getLogger(ReplyFutureMap.class);
   private final ConcurrentHashMap<Long, CompletableFuture<T>> requestIdToFuture;
 
   public ReplyFutureMap() {
@@ -39,6 +43,7 @@ public final class ReplyFutureMap<T> {
    */
   public CompletableFuture<T> beforeRequest(final long id) {
     final CompletableFuture<T> future = new CompletableFuture<>();
+    LOG.info(String.format("REPLY_EXPECTED %s", id));
     requestIdToFuture.put(id, future);
     return future;
   }
@@ -49,6 +54,7 @@ public final class ReplyFutureMap<T> {
    * @param successMessage the reply message
    */
   public void onSuccessMessage(final long id, final T successMessage) {
+    LOG.info(String.format("REPLY_RECEIVED %s", id));
     requestIdToFuture.remove(id).complete(successMessage);
   }
 
