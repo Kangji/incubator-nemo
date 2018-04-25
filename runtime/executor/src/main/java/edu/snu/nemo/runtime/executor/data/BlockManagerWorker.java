@@ -263,7 +263,8 @@ public final class BlockManagerWorker {
         contextFuture.thenApply(context -> context.getCompletedFuture()
             .thenAccept(f -> parallelConnectionRestrictor.connectionFinished(runtimeEdgeId)));
         return contextFuture
-            .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(), serializerToUse));
+            .thenCompose(context -> context.getCompletedFuture())
+            .thenApply(streams -> new DataUtil.InputStreamIterator(streams, serializerToUse));
       }
     });
   }
