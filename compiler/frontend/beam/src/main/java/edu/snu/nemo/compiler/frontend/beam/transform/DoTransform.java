@@ -69,6 +69,10 @@ public final class DoTransform<I, O> implements Transform<I, O> {
     }
   }
 
+  public DoFn getDoFn() {
+    return doFn;
+  }
+
   @Override
   public void prepare(final Context context, final OutputCollector<O> p) {
     this.outputCollector = p;
@@ -97,7 +101,7 @@ public final class DoTransform<I, O> implements Transform<I, O> {
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder();
-    sb.append("DoTransform:" + doFn);
+    sb.append("DoTransform:").append(doFn);
     return sb.toString();
   }
 
