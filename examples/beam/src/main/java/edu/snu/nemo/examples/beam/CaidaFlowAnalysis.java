@@ -20,7 +20,9 @@ import edu.snu.nemo.compiler.frontend.beam.NemoPipelineRunner;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.transforms.join.CoGbkResult;
 import org.apache.beam.sdk.transforms.join.CoGroupByKey;
@@ -28,6 +30,9 @@ import org.apache.beam.sdk.transforms.join.KeyedPCollectionTuple;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TupleTag;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * An app that analyzes data flow from Cadia network trace.
@@ -51,21 +56,31 @@ public final class CaidaFlowAnalysis {
     options.setRunner(NemoPipelineRunner.class);
     options.setJobName("CaidaFlowAnalysis");
 
+    final Pattern lengthPattern = Pattern.compile("Len=(\\d+)");
+
     final Pipeline p = Pipeline.create(options);
     final PCollection<KV<String, KV<String, Long>>> in0 = GenericSourceSink.read(p, input0FilePath)
-        .apply(MapElements.via(new SimpleFunction<String, KV<String, KV<String, Long>>>() {
-          @Override
-          public KV<String, KV<String, Long>> apply(final String line) {
+        .apply(ParDo.of(new DoFn<String, KV<String, KV<String, Long>>>() {
+          @ProcessElement
+          public void processElement(final ProcessContext c) {
+            final String line = c.element();
             final String[] words = line.trim().split(" +");
-            return KV.of(words[4], KV.of(words[2], 5L));
+            final Matcher lengthMatcher = lengthPattern.matcher(line);
+            if (lengthMatcher.find()) {
+              c.output(KV.of(words[4], KV.of(words[2], Long.valueOf(lengthMatcher.group(1)))));
+            }
           }
         }));
     final PCollection<KV<String, KV<String, Long>>> in1 = GenericSourceSink.read(p, input1FilePath)
-        .apply(MapElements.via(new SimpleFunction<String, KV<String, KV<String, Long>>>() {
-          @Override
-          public KV<String, KV<String, Long>> apply(final String line) {
+        .apply(ParDo.of(new DoFn<String, KV<String, KV<String, Long>>>() {
+          @ProcessElement
+          public void processElement(final ProcessContext c) {
+            final String line = c.element();
             final String[] words = line.trim().split(" +");
-            return KV.of(words[2], KV.of(words[4], 5L));
+            final Matcher lengthMatcher = lengthPattern.matcher(line);
+            if (lengthMatcher.find()) {
+              c.output(KV.of(words[2], KV.of(words[4], Long.valueOf(lengthMatcher.group(1)))));
+            }
           }
         }));
     final TupleTag<KV<String, Long>> tag0 = new TupleTag<>();
@@ -79,10 +94,26 @@ public final class CaidaFlowAnalysis {
             final Iterable<KV<String, Long>> source = kv.getValue().getAll(tag0);
             final Iterable<KV<String, Long>> destination = kv.getValue().getAll(tag1);
             final String intermediate = kv.getKey();
-            return intermediate;
+            return new StringBuilder(intermediate).append(",").append(stdev(source)).append(",")
+                .append(stdev(destination)).toString();
           }
         }));
     GenericSourceSink.write(result, outputFilePath);
     p.run();
+  }
+
+  private static double stdev(final Iterable<KV<String, Long>> data) {
+    long num = 0;
+    long sum = 0;
+    long squareSum = 0;
+    for (final KV<String, Long> e : data) {
+      final long element = e.getValue();
+      num++;
+      sum += element;
+      squareSum += (element * element);
+    }
+    final double average = ((double) sum) / num;
+    final double squareAverage = ((double) squareSum) / num;
+    return Math.sqrt(squareAverage - average * average);
   }
 }
