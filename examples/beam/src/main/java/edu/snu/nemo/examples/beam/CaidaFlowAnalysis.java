@@ -112,6 +112,9 @@ public final class CaidaFlowAnalysis {
       sum += element;
       squareSum += (element * element);
     }
+    if (num == 0) {
+      return Double.NaN;
+    }
     final double average = ((double) sum) / num;
     final double squareAverage = ((double) squareSum) / num;
     return Math.sqrt(squareAverage - average * average);
