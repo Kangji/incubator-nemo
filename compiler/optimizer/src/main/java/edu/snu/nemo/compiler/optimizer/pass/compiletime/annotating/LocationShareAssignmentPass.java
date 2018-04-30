@@ -106,8 +106,8 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
         // We have already computed LocationSharesProperty for this stage
         return;
       }
-      if (stageIdToParentStageIds.get(stageId).size() != 1) {
-        // The stage is root stage, or has multiple parent stages.
+      if (stageIdToParentStageIds.get(stageId).size() == 0) {
+        // The stage is root stage.
         // Fall back to setting even distribution
         final Map<String, Integer> shares = new HashMap<>();
         final List<String> locations = bandwidthSpecification.getLocations();
@@ -119,8 +119,15 @@ public final class LocationShareAssignmentPass extends AnnotatingPass {
         stageIdToLocationToNumTaskGroups.put(stageId, shares);
         return;
       }
-      final int parentStageId = stageIdToParentStageIds.get(stageId).iterator().next();
-      final Map<String, Integer> parentLocationShares = stageIdToLocationToNumTaskGroups.get(parentStageId);
+      final Map<String, Integer> parentLocationShares = new HashMap<>();
+      for (final int parentStageId : stageIdToParentStageIds.get(stageId)) {
+        final Map<String, Integer> shares = stageIdToLocationToNumTaskGroups.get(parentStageId);
+        for (final Map.Entry<String, Integer> element : shares.entrySet()) {
+          parentLocationShares.putIfAbsent(element.getKey(), 0);
+          parentLocationShares.put(element.getKey(),
+              element.getValue() + parentLocationShares.get(element.getKey()));
+        }
+      }
       final double[] ratios = optimize(bandwidthSpecification, parentLocationShares);
       final Map<String, Integer> shares = new HashMap<>();
       for (int i = 0; i < bandwidthSpecification.getLocations().size(); i++) {
