@@ -57,14 +57,17 @@ public final class CaidaFlowAnalysis {
 
     final Pipeline p = Pipeline.create(options);
     final PCollection<KV<String, Double>> in0 = GenericSourceSink.read(p, input0FilePath)
-        .apply(ParDo.of(new DoFn<String, KV<String, KV<String, Long>>>() {
-          @ProcessElement
-          public void processElement(final ProcessContext c) {
-            final String line = c.element();
+        .apply(Filter.by(new SimpleFunction<String, Boolean>() {
+          @Override
+          public Boolean apply(final String line) {
+            return pattern.matcher(line).find();
+          }
+        }))
+        .apply(MapElements.via(new SimpleFunction<String, KV<String, KV<String, Long>>>() {
+          @Override
+          public KV<String, KV<String, Long>> apply(final String line) {
             final Matcher matcher = pattern.matcher(line);
-            if (matcher.find()) {
-              c.output(KV.of(matcher.group(2), KV.of(matcher.group(1), Long.valueOf(matcher.group(3)))));
-            }
+            return KV.of(matcher.group(2), KV.of(matcher.group(1), Long.valueOf(matcher.group(3))));
           }
         }))
         .apply(GroupByKey.create())
@@ -75,14 +78,17 @@ public final class CaidaFlowAnalysis {
           }
         }));
     final PCollection<KV<String, Double>> in1 = GenericSourceSink.read(p, input1FilePath)
-        .apply(ParDo.of(new DoFn<String, KV<String, KV<String, Long>>>() {
-          @ProcessElement
-          public void processElement(final ProcessContext c) {
-            final String line = c.element();
+        .apply(Filter.by(new SimpleFunction<String, Boolean>() {
+          @Override
+          public Boolean apply(final String line) {
+            return pattern.matcher(line).find();
+          }
+        }))
+        .apply(MapElements.via(new SimpleFunction<String, KV<String, KV<String, Long>>>() {
+          @Override
+          public KV<String, KV<String, Long>> apply(final String line) {
             final Matcher matcher = pattern.matcher(line);
-            if (matcher.find()) {
-              c.output(KV.of(matcher.group(1), KV.of(matcher.group(2), Long.valueOf(matcher.group(3)))));
-            }
+            return KV.of(matcher.group(1), KV.of(matcher.group(2), Long.valueOf(matcher.group(3))));
           }
         }))
         .apply(GroupByKey.create())
