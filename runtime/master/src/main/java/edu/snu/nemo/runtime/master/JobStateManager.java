@@ -289,8 +289,8 @@ public final class JobStateManager {
 
       if (stageIdToRemainingTaskGroupSet.containsKey(stageId)) {
         final Set<String> remainingTaskGroups = stageIdToRemainingTaskGroupSet.get(stageId);
-        LOG.info("{}: {} TaskGroup(s) to go", stageId, remainingTaskGroups.size());
         remainingTaskGroups.remove(taskGroupId);
+        LOG.info("{}: {} TaskGroup(s) to go", stageId, remainingTaskGroups.size());
 
         if (remainingTaskGroups.isEmpty()) {
           onStageStateChanged(stageId, StageState.State.COMPLETE);
