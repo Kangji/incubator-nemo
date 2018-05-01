@@ -18,6 +18,7 @@ package edu.snu.nemo.examples.beam;
 import edu.snu.nemo.client.JobLauncher;
 import edu.snu.nemo.common.test.ArgBuilder;
 import edu.snu.nemo.compiler.optimizer.policy.DefaultPolicy;
+import edu.snu.nemo.examples.beam.policy.DefaultPolicyParallelismFive;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,7 +51,7 @@ public final class MultinomialLogisticRegressionITCase {
         .addJobId(MultinomialLogisticRegressionITCase.class.getSimpleName())
         .addUserMain(MultinomialLogisticRegression.class.getCanonicalName())
         .addUserArgs(input, numFeatures, numClasses, numIteration)
-        .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+        .addOptimizationPolicy(DefaultPolicyParallelismFive.class.getCanonicalName())
         .build());
   }
 }

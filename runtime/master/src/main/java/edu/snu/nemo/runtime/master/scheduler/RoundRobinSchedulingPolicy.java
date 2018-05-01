@@ -106,11 +106,13 @@ public final class RoundRobinSchedulingPolicy implements SchedulingPolicy {
         ? executors
         : executors.stream().filter(executor -> executor.getContainerType().equals(containerType))
         .collect(Collectors.toList());
-
-    if (!candidateExecutors.isEmpty()) {
-      Random random = new Random();
-      int idx = random.nextInt(candidateExecutors.size());
-      final ExecutorRepresenter chosenExecutor = candidateExecutors.get(idx);
+    
+    Optional<ExecutorRepresenter> executorWithMinOccupancy = candidateExecutors.stream()
+        .min(Comparator.comparingInt(executor -> executor.getRunningTaskGroups().size()));
+    
+    if (executorWithMinOccupancy.isPresent()) {
+      LOG.info("MinOccupancy: {}/8", executorWithMinOccupancy.get().getRunningTaskGroups().size());
+      final ExecutorRepresenter chosenExecutor = executorWithMinOccupancy.get();
       return Optional.of(chosenExecutor.getExecutorId());
     } else {
       return Optional.empty();
@@ -125,6 +127,7 @@ public final class RoundRobinSchedulingPolicy implements SchedulingPolicy {
     for (int i = 0; i < scheduledTaskGroup.getTaskGroupIncomingEdges().size(); i++) {
       PhysicalStageEdge edge = scheduledTaskGroup.getTaskGroupIncomingEdges().get(i);
       if (edge.getTaskGroupIdxToKeyRange().get(scheduledTaskGroupIdx).right()) {
+        LOG.info("{} has Hot Hash", scheduledTaskGroupIdx);
         isHotHash = true;
         break;
       }
@@ -182,6 +185,9 @@ public final class RoundRobinSchedulingPolicy implements SchedulingPolicy {
   }
 
   private static boolean hasFreeSlot(final ExecutorRepresenter executor) {
+    LOG.info("{} Cores: {} occupied among {}", executor.getExecutorId(),
+        executor.getRunningTaskGroups().size() - executor.getSmallTaskGroups().size(),
+        executor.getExecutorCapacity());
     return executor.getRunningTaskGroups().size() - executor.getSmallTaskGroups().size()
         < executor.getExecutorCapacity();
   }

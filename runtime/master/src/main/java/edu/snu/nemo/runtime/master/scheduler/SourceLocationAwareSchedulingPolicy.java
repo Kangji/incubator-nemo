@@ -87,7 +87,6 @@ public final class SourceLocationAwareSchedulingPolicy implements SchedulingPoli
       LOG.warn(String.format("Exception while trying to get source location for %s",
           scheduledTaskGroup.getTaskGroupId()), e);
     }
-    LOG.info("{} source location {}", scheduledTaskGroup.getTaskGroupId(), sourceLocations);
 
     if (sourceLocations.size() == 0) {
       if (scheduledTaskGroup.getTaskGroupIncomingEdges().size() == 1) {
@@ -114,7 +113,6 @@ public final class SourceLocationAwareSchedulingPolicy implements SchedulingPoli
           }
         }
       }
-      LOG.info("{} source location not found, falling back to RR", scheduledTaskGroup.getTaskGroupId());
       // No source location information found, fall back to the RoundRobinSchedulingPolicy
       return roundRobinSchedulingPolicy.scheduleTaskGroup(scheduledTaskGroup, jobStateManager);
     }
