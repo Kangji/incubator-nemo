@@ -40,6 +40,6 @@ public final class HashPartitioner implements Partitioner<Integer> {
 
   @Override
   public Integer partition(final Object element) {
-    return Math.abs((keyExtractor.extractKey(element).hashCode() + 7) % dstParallelism);
+    return Math.abs(keyExtractor.extractKey(element).hashCode() % dstParallelism);
   }
 }
