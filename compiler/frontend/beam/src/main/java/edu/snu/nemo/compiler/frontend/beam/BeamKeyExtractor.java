@@ -22,7 +22,7 @@ import org.apache.beam.sdk.values.KV;
  * Extracts the key from a KV element.
  * For non-KV elements, the elements themselves become the key.
  */
-final class BeamKeyExtractor implements KeyExtractor {
+public final class BeamKeyExtractor implements KeyExtractor {
   @Override
   public Object extractKey(final Object element) {
     if (element instanceof KV) {

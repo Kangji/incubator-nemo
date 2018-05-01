@@ -25,7 +25,7 @@ import java.io.InputStream;
  */
 public final class LimitedInputStream extends InputStream {
   private final InputStream in;
-  private long limit;
+  private int limit;
 
   /**
    * Constructor.
@@ -33,7 +33,7 @@ public final class LimitedInputStream extends InputStream {
    * @param in    {@link InputStream} that should be limited.
    * @param limit bytes to limit.
    */
-  public LimitedInputStream(final InputStream in, final long limit) {
+  public LimitedInputStream(final InputStream in, final int limit) {
     this.in = in;
     this.limit = limit;
   }
@@ -46,5 +46,38 @@ public final class LimitedInputStream extends InputStream {
     } else {
       return -1;
     }
+  }
+
+  @Override
+  public int read(final byte[] b) throws IOException {
+    if (limit > 0) {
+      final int readBytes = in.read(b);
+      if (readBytes > 0) {
+        limit -= readBytes;
+      }
+
+      return readBytes;
+    } else {
+      return -1;
+    }
+  }
+
+  @Override
+  public int read(final byte[] b, final int off, final int len) throws IOException {
+    if (limit > 0) {
+      final int readBytes = in.read(b, off, len);
+      if (readBytes > 0) {
+        limit -= readBytes;
+      }
+
+      return readBytes;
+    } else {
+      return -1;
+    }
+  }
+
+  @Override
+  public int available() {
+    return limit;
   }
 }

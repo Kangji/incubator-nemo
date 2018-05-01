@@ -16,6 +16,8 @@
 package edu.snu.nemo.runtime.executor.datatransfer;
 
 import com.google.common.annotations.VisibleForTesting;
+import edu.snu.nemo.common.exception.UnsupportedPartitionerException;
+import edu.snu.nemo.common.ir.edge.executionproperty.AsBytesProperty;
 import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
 import edu.snu.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import edu.snu.nemo.common.ir.edge.executionproperty.DuplicateEdgeGroupPropertyValue;
@@ -25,47 +27,66 @@ import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
 import edu.snu.nemo.runtime.common.data.KeyRange;
 import edu.snu.nemo.runtime.common.plan.RuntimeEdge;
 import edu.snu.nemo.runtime.common.plan.physical.PhysicalStageEdge;
-import edu.snu.nemo.runtime.common.plan.physical.Task;
 import edu.snu.nemo.common.exception.BlockFetchException;
 import edu.snu.nemo.common.exception.UnsupportedCommPatternException;
 import edu.snu.nemo.runtime.common.data.HashRange;
 import edu.snu.nemo.runtime.executor.data.BlockManagerWorker;
 import edu.snu.nemo.runtime.executor.data.DataUtil;
 
-import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents the input data transfer to a task.
  * TODO #492: Modularize the data communication pattern.
  */
 public final class InputReader extends DataTransfer {
+  private static final Logger LOG = LoggerFactory.getLogger(InputReader.class.getName());
   private final int dstTaskIndex;
+  private final boolean readAsBytes;
   private final BlockManagerWorker blockManagerWorker;
 
   /**
    * Attributes that specify how we should read the input.
    */
-  @Nullable
   private final IRVertex srcVertex;
   private final RuntimeEdge runtimeEdge;
 
   public InputReader(final int dstTaskIndex,
-                     // TODO #717: Remove nullable.
-                     // (If the source is not an IR vertex, do not make InputReader.)
-                     @Nullable final IRVertex srcVertex, // null if the source vertex is not an IR vertex.
-                     final RuntimeEdge runtimeEdge,
+                     final IRVertex srcVertex,
+                     final RuntimeEdge<?> runtimeEdge,
                      final BlockManagerWorker blockManagerWorker) {
     super(runtimeEdge.getId());
     this.dstTaskIndex = dstTaskIndex;
     this.srcVertex = srcVertex;
     this.runtimeEdge = runtimeEdge;
     this.blockManagerWorker = blockManagerWorker;
+
+    final AsBytesProperty.Value asBytesPropertyValue = runtimeEdge.getProperty(ExecutionProperty.Key.AsBytes);
+    if (asBytesPropertyValue == null) {
+      this.readAsBytes = false;
+    } else {
+      switch (asBytesPropertyValue) {
+        case ReadAsBytes:
+          this.readAsBytes = true;
+          break;
+        case WriteAsBytes:
+          this.readAsBytes = false;
+          break;
+        case ReadWriteAsBytes:
+          this.readAsBytes = true;
+          break;
+        default:
+          throw new UnsupportedPartitionerException(
+              new Throwable("AsBytes " + asBytesPropertyValue + " is not supported."));
+      }
+    }
   }
 
   /**
@@ -93,7 +114,7 @@ public final class InputReader extends DataTransfer {
 
   private CompletableFuture<DataUtil.IteratorWithNumBytes> readOneToOne() {
     final String blockId = getBlockId(dstTaskIndex);
-    return blockManagerWorker.queryBlock(blockId, getId(),
+    return blockManagerWorker.queryBlock(blockId, getId(), readAsBytes,
         (DataStoreProperty.Value) runtimeEdge.getProperty(ExecutionProperty.Key.DataStore),
         HashRange.all());
   }
@@ -104,7 +125,7 @@ public final class InputReader extends DataTransfer {
     final List<CompletableFuture<DataUtil.IteratorWithNumBytes>> futures = new ArrayList<>();
     for (int srcTaskIdx = 0; srcTaskIdx < numSrcTasks; srcTaskIdx++) {
       final String blockId = getBlockId(srcTaskIdx);
-      futures.add(blockManagerWorker.queryBlock(blockId, getId(),
+      futures.add(blockManagerWorker.queryBlock(blockId, getId(), readAsBytes,
           (DataStoreProperty.Value) runtimeEdge.getProperty(ExecutionProperty.Key.DataStore),
           HashRange.all()));
     }
@@ -114,8 +135,6 @@ public final class InputReader extends DataTransfer {
 
   /**
    * Read data in the assigned range of hash value.
-   * Constraint: If a block is written by {@link OutputWriter#dataSkewWrite(List)}
-   * or {@link OutputWriter#writeShuffle(List)}, it must be read using this method.
    *
    * @return the list of the completable future of the data.
    */
@@ -133,7 +152,7 @@ public final class InputReader extends DataTransfer {
     for (int srcTaskIdx = 0; srcTaskIdx < numSrcTasks; srcTaskIdx++) {
       final String blockId = getBlockId(srcTaskIdx);
       futures.add(
-          blockManagerWorker.queryBlock(blockId, getId(),
+          blockManagerWorker.queryBlock(blockId, getId(), readAsBytes,
               (DataStoreProperty.Value) runtimeEdge.getProperty(ExecutionProperty.Key.DataStore),
               hashRangeToRead));
     }
@@ -162,12 +181,7 @@ public final class InputReader extends DataTransfer {
   }
 
   public String getSrcIrVertexId() {
-    // this src vertex can be either a real vertex or a task. we must check!
-    if (srcVertex != null) {
-      return srcVertex.getId();
-    }
-
-    return ((Task) runtimeEdge.getSrc()).getIrVertexId();
+    return srcVertex.getId();
   }
 
   public boolean isSideInputReader() {
@@ -180,17 +194,12 @@ public final class InputReader extends DataTransfer {
    * @return the parallelism of the source task.
    */
   public int getSourceParallelism() {
-    if (srcVertex != null) {
-      if (DataCommunicationPatternProperty.Value.OneToOne
-          .equals(runtimeEdge.getProperty(ExecutionProperty.Key.DataCommunicationPattern))) {
-        return 1;
-      } else {
-        final Integer numSrcTasks = srcVertex.getProperty(ExecutionProperty.Key.Parallelism);
-        return numSrcTasks;
-      }
-    } else {
-      // Memory input reader
+    if (DataCommunicationPatternProperty.Value.OneToOne
+        .equals(runtimeEdge.getProperty(ExecutionProperty.Key.DataCommunicationPattern))) {
       return 1;
+    } else {
+      final Integer numSrcTasks = srcVertex.getProperty(ExecutionProperty.Key.Parallelism);
+      return numSrcTasks;
     }
   }
 

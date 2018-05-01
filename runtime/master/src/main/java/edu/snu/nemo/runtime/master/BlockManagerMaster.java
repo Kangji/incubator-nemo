@@ -17,9 +17,9 @@ package edu.snu.nemo.runtime.master;
 
 import edu.snu.nemo.common.exception.IllegalMessageException;
 import edu.snu.nemo.common.exception.UnknownExecutionStateException;
+import edu.snu.nemo.runtime.common.comm.ControlMessage;
 import edu.snu.nemo.runtime.common.exception.AbsentBlockException;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
-import edu.snu.nemo.runtime.common.comm.ControlMessage;
 import edu.snu.nemo.runtime.common.message.MessageContext;
 import edu.snu.nemo.runtime.common.message.MessageEnvironment;
 import edu.snu.nemo.runtime.common.message.MessageListener;
@@ -303,8 +303,8 @@ public final class BlockManagerMaster {
    * @param message        the request message.
    * @param messageContext the message context which will be used for response.
    */
-  void onRequestBlockLocation(final ControlMessage.Message message,
-                              final MessageContext messageContext) {
+  private void onRequestBlockLocation(final ControlMessage.Message message,
+                                      final MessageContext messageContext) {
     assert (message.getType() == ControlMessage.MessageType.RequestBlockLocation);
     final String blockId = message.getRequestBlockLocationMsg().getBlockId();
     final long requestId = message.getId();

@@ -38,23 +38,33 @@ public final class RemoteFileMetadata<K extends Serializable> extends FileMetada
 
   /**
    * Constructor for creating a non-committed new file metadata.
+   * If write (or read) as bytes is enabled, data written to (read from) the block does not (de)serialized.
    *
    * @param metaFilePath the metadata file path.
+   * @param readAsBytes  whether read data from this file as arrays of bytes or not.
+   * @param writeAsBytes whether write data to this file as arrays of bytes or not.
    */
-  private RemoteFileMetadata(final String metaFilePath) {
-    super();
+  private RemoteFileMetadata(final String metaFilePath,
+                             final boolean readAsBytes,
+                             final boolean writeAsBytes) {
+    super(readAsBytes, writeAsBytes);
     this.metaFilePath = metaFilePath;
   }
 
   /**
    * Constructor for opening a existing file metadata.
+   * If write (or read) as bytes is enabled, data written to (read from) the block does not (de)serialized.
    *
    * @param metaFilePath          the metadata file path.
    * @param partitionMetadataList the partition metadata list.
+   * @param readAsBytes  whether read data from this file as arrays of bytes or not.
+   * @param writeAsBytes whether write data to this file as arrays of bytes or not.
    */
   private RemoteFileMetadata(final String metaFilePath,
-                             final List<PartitionMetadata<K>> partitionMetadataList) {
-    super(partitionMetadataList);
+                             final List<PartitionMetadata<K>> partitionMetadataList,
+                             final boolean readAsBytes,
+                             final boolean writeAsBytes) {
+    super(partitionMetadataList, readAsBytes, writeAsBytes);
     this.metaFilePath = metaFilePath;
   }
 
@@ -72,11 +82,13 @@ public final class RemoteFileMetadata<K extends Serializable> extends FileMetada
    */
   @Override
   public synchronized void commitBlock() throws IOException {
-    final Iterable<PartitionMetadata<K>> partitionMetadataItr = getPartitionMetadataIterable();
+    final Iterable<PartitionMetadata<K>> partitionMetadataItr = getPartitionMetadataList();
     try (
         final FileOutputStream metafileOutputStream = new FileOutputStream(metaFilePath, false);
         final DataOutputStream dataOutputStream = new DataOutputStream(metafileOutputStream)
     ) {
+      dataOutputStream.writeBoolean(isReadAsBytes());
+      dataOutputStream.writeBoolean(isWriteAsBytes());
       for (PartitionMetadata<K> partitionMetadata : partitionMetadataItr) {
         final byte[] key = SerializationUtils.serialize(partitionMetadata.getKey());
         dataOutputStream.writeInt(key.length);
@@ -91,13 +103,18 @@ public final class RemoteFileMetadata<K extends Serializable> extends FileMetada
 
   /**
    * Creates a new block metadata.
+   * If write (or read) as bytes is enabled, data written to (read from) the block does not (de)serialized.
    *
    * @param metaFilePath the path of the file to write metadata.
+   * @param readAsBytes  whether read data from this file as arrays of bytes or not.
+   * @param writeAsBytes whether write data to this file as arrays of bytes or not.
    * @param <T>          the key type of the block's partitions.
    * @return the created block metadata.
    */
-  public static <T extends Serializable> RemoteFileMetadata<T> create(final String metaFilePath) {
-    return new RemoteFileMetadata<>(metaFilePath);
+  public static <T extends Serializable> RemoteFileMetadata<T> create(final String metaFilePath,
+                                                                      final boolean readAsBytes,
+                                                                      final boolean writeAsBytes) {
+    return new RemoteFileMetadata<>(metaFilePath, readAsBytes, writeAsBytes);
   }
 
   /**
@@ -113,10 +130,14 @@ public final class RemoteFileMetadata<K extends Serializable> extends FileMetada
       throw new IOException("File " + metaFilePath + " does not exist!");
     }
     final List<PartitionMetadata<T>> partitionMetadataList = new ArrayList<>();
+    final boolean readAsBytes;
+    final boolean writeAsBytes;
     try (
         final FileInputStream metafileInputStream = new FileInputStream(metaFilePath);
         final DataInputStream dataInputStream = new DataInputStream(metafileInputStream)
     ) {
+      readAsBytes = dataInputStream.readBoolean();
+      writeAsBytes = dataInputStream.readBoolean();
       while (dataInputStream.available() > 0) {
         final int keyLength = dataInputStream.readInt();
         final byte[] desKey = new byte[keyLength];
@@ -133,6 +154,6 @@ public final class RemoteFileMetadata<K extends Serializable> extends FileMetada
         partitionMetadataList.add(partitionMetadata);
       }
     }
-    return new RemoteFileMetadata<>(metaFilePath, partitionMetadataList);
+    return new RemoteFileMetadata<>(metaFilePath, partitionMetadataList, readAsBytes, writeAsBytes);
   }
 }

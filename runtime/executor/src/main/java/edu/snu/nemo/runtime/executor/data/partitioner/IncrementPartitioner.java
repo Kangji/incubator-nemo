@@ -13,24 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.snu.nemo.runtime.executor.data.stores;
+package edu.snu.nemo.runtime.executor.data.partitioner;
 
-import edu.snu.nemo.runtime.common.data.KeyRange;
-import edu.snu.nemo.runtime.executor.data.FileArea;
-
-import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Stores blocks in (local or remote) files.
+ * An implementation of {@link Partitioner} which assigns a key per an output data from a source task.
+ * WARNING: This partitioner should be used for very specific case such as AsBytes write.
  */
-public interface FileStore extends BlockStore {
+public final class IncrementPartitioner implements Partitioner<Integer> {
+  private final AtomicInteger key;
 
   /**
-   * Gets the list of {@link FileArea}s for the specified block.
-   *
-   * @param blockId   the partition id
-   * @param keyRange the key range
-   * @return the list of file areas
+   * Constructor.
    */
-  List<FileArea> getFileAreas(final String blockId, final KeyRange keyRange);
+  public IncrementPartitioner() {
+    this.key = new AtomicInteger();
+  }
+
+  @Override
+  public Integer partition(final Object element) {
+    return key.getAndIncrement();
+  }
 }

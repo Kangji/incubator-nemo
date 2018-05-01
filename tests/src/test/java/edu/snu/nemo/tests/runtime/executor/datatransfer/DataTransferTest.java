@@ -22,6 +22,7 @@ import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.SourceVertex;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import edu.snu.nemo.compiler.frontend.beam.BeamKeyExtractor;
 import edu.snu.nemo.compiler.optimizer.examples.EmptyComponents;
 import edu.snu.nemo.conf.JobConf;
 import edu.snu.nemo.common.Pair;
@@ -128,17 +129,19 @@ public final class DataTransferTest {
     injector.bindVolatileInstance(EvaluatorRequestor.class, mock(EvaluatorRequestor.class));
     injector.bindVolatileInstance(MessageEnvironment.class, messageEnvironment);
     final ContainerManager containerManager = injector.getInstance(ContainerManager.class);
+    final ExecutorRegistry executorRegistry = injector.getInstance(ExecutorRegistry.class);
 
     final MetricMessageHandler metricMessageHandler = mock(MetricMessageHandler.class);
     final PubSubEventHandlerWrapper pubSubEventHandler = mock(PubSubEventHandlerWrapper.class);
     final UpdatePhysicalPlanEventHandler updatePhysicalPlanEventHandler = mock(UpdatePhysicalPlanEventHandler.class);
     final SchedulingPolicy schedulingPolicy = new RoundRobinSchedulingPolicy(
         injector.getInstance(ExecutorRegistry.class));
-    final PendingTaskGroupCollection taskGroupQueue = new SingleJobTaskGroupCollection();
-    final SchedulerRunner schedulerRunner = new SchedulerRunner(schedulingPolicy, taskGroupQueue);
+    final PendingTaskGroupCollection taskGroupCollection = new SingleJobTaskGroupCollection();
+    final SchedulerRunner schedulerRunner = new SchedulerRunner(schedulingPolicy, taskGroupCollection,
+        executorRegistry);
     final Scheduler scheduler =
-        new BatchSingleJobScheduler(schedulingPolicy, schedulerRunner, taskGroupQueue, master,
-            pubSubEventHandler, updatePhysicalPlanEventHandler);
+        new BatchSingleJobScheduler(schedulingPolicy, schedulerRunner, taskGroupCollection, master,
+            pubSubEventHandler, updatePhysicalPlanEventHandler, executorRegistry);
     final AtomicInteger executorCount = new AtomicInteger(0);
 
     // Necessary for wiring up the message environments
@@ -314,6 +317,7 @@ public final class DataTransferTest {
     final ExecutionPropertyMap edgeProperties = dummyIREdge.getExecutionProperties();
     edgeProperties.put(DataCommunicationPatternProperty.of(commPattern));
     edgeProperties.put(PartitionerProperty.of(PartitionerProperty.Value.HashPartitioner));
+    edgeProperties.put(KeyExtractorProperty.of(new BeamKeyExtractor()));
 
     edgeProperties.put(DataStoreProperty.of(store));
     edgeProperties.put(UsedDataHandlingProperty.of(UsedDataHandlingProperty.Value.Keep));
@@ -339,7 +343,7 @@ public final class DataTransferTest {
       final List dataWritten = getRangedNumList(0, PARALLELISM_TEN);
       final OutputWriter writer = new OutputWriter(HASH_RANGE_MULTIPLIER, srcTaskIndex, srcVertex.getId(), dstVertex,
           dummyEdge, sender);
-      writer.write(dataWritten);
+      dataWritten.iterator().forEachRemaining(writer::writeElement);
       writer.close();
       dataWrittenList.add(dataWritten);
     });
@@ -433,13 +437,13 @@ public final class DataTransferTest {
       final List dataWritten = getRangedNumList(0, PARALLELISM_TEN);
       final OutputWriter writer = new OutputWriter(HASH_RANGE_MULTIPLIER, srcTaskIndex, srcVertex.getId(), dstVertex,
           dummyEdge, sender);
-      writer.write(dataWritten);
+      dataWritten.iterator().forEachRemaining(writer::writeElement);
       writer.close();
       dataWrittenList.add(dataWritten);
 
       final OutputWriter writer2 = new OutputWriter(HASH_RANGE_MULTIPLIER, srcTaskIndex, srcVertex.getId(), dstVertex,
           dummyEdge2, sender);
-      writer2.write(dataWritten);
+      dataWritten.iterator().forEachRemaining(writer2::writeElement);
       writer2.close();
     });
 
@@ -545,6 +549,6 @@ public final class DataTransferTest {
   private PhysicalStage setupStages(final String stageId) {
     final DAG<Task, RuntimeEdge<Task>> emptyDag = new DAGBuilder<Task, RuntimeEdge<Task>>().build();
 
-    return new PhysicalStage(stageId, emptyDag, PARALLELISM_TEN, 0, "Not_used", Collections.emptyList());
+    return new PhysicalStage(stageId, emptyDag, PARALLELISM_TEN, 0, "Not_used", Collections.emptyList(), Collections.emptyMap());
   }
 }
