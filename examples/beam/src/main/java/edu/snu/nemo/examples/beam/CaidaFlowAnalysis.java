@@ -53,7 +53,7 @@ public final class CaidaFlowAnalysis {
     options.setRunner(NemoPipelineRunner.class);
     options.setJobName("CaidaFlowAnalysis");
 
-    final Pattern lengthPattern = Pattern.compile("Len=(\\d+)");
+    final Pattern pattern = Pattern.compile(" *\\d+ +[0-9.]+ +([0-9.]+) -> ([0-9.]+) +.*Len=(\\d+)");
 
     final Pipeline p = Pipeline.create(options);
     final PCollection<KV<String, Double>> in0 = GenericSourceSink.read(p, input0FilePath)
@@ -61,10 +61,9 @@ public final class CaidaFlowAnalysis {
           @ProcessElement
           public void processElement(final ProcessContext c) {
             final String line = c.element();
-            final String[] words = line.trim().split(" +");
-            final Matcher lengthMatcher = lengthPattern.matcher(line);
-            if (lengthMatcher.find()) {
-              c.output(KV.of(words[4], KV.of(words[2], Long.valueOf(lengthMatcher.group(1)))));
+            final Matcher matcher = pattern.matcher(line);
+            if (matcher.find()) {
+              c.output(KV.of(matcher.group(2), KV.of(matcher.group(1), Long.valueOf(matcher.group(3)))));
             }
           }
         }))
@@ -80,10 +79,9 @@ public final class CaidaFlowAnalysis {
           @ProcessElement
           public void processElement(final ProcessContext c) {
             final String line = c.element();
-            final String[] words = line.trim().split(" +");
-            final Matcher lengthMatcher = lengthPattern.matcher(line);
-            if (lengthMatcher.find()) {
-              c.output(KV.of(words[2], KV.of(words[4], Long.valueOf(lengthMatcher.group(1)))));
+            final Matcher matcher = pattern.matcher(line);
+            if (matcher.find()) {
+              c.output(KV.of(matcher.group(1), KV.of(matcher.group(2), Long.valueOf(matcher.group(3)))));
             }
           }
         }))
