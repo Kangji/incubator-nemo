@@ -23,6 +23,7 @@ import java.util.function.BiFunction;
 
 /**
  * Wrapper for {@link RuntimePass} that provides conditional triggering.
+ * @param <T> type of the metric data
  */
 public final class ConditionalRuntimePass<T> implements RuntimePass<T> {
   private final BiFunction<PhysicalPlan, T, Boolean> predicate;

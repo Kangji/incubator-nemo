@@ -22,8 +22,12 @@ import edu.snu.nemo.compiler.optimizer.pass.compiletime.ConditionalCompileTimePa
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.ShuffleLocationAssignmentPass;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.PrimitiveCompositePass;
 
+/**
+ * Iridium policy.
+ */
 public final class IridiumPolicy {
   private final Policy policy;
+  private static final double THRESHOLD = 0;
 
   public IridiumPolicy() {
     this.policy = new PolicyBuilder(false)
@@ -33,8 +37,7 @@ public final class IridiumPolicy {
         .build();
   }
 
-  private static double THRESHOLD = 0;
-  
+
   private static double getBandwidthHeterogeneity(final DAG<IRVertex, IREdge> irDag) {
     // TODO #??: Implement THIS.
     return 0;

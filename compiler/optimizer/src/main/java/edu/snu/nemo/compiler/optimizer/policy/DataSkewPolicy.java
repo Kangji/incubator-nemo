@@ -37,7 +37,8 @@ public final class DataSkewPolicy implements Policy {
   public DataSkewPolicy() {
     this.policy = new PolicyBuilder(true)
         .registerCompileTimePass(new DataSkewCompositePass())
-        .registerRuntimePass(new ConditionalRuntimePass<>((dag, metric) -> getSkewness(metric) > SKEWNESS_THRESHOLD, new DataSkewRuntimePass()))
+        .registerRuntimePass(new ConditionalRuntimePass<>((dag, metric) -> getSkewness(metric) > SKEWNESS_THRESHOLD,
+            new DataSkewRuntimePass()))
         .registerCompileTimePass(new LoopOptimizationCompositePass())
         .registerCompileTimePass(new PrimitiveCompositePass())
         .build();
