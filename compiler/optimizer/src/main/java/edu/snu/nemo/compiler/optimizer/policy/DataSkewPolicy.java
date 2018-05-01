@@ -19,6 +19,7 @@ import edu.snu.nemo.compiler.optimizer.pass.compiletime.CompileTimePass;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.DataSkewCompositePass;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.LoopOptimizationCompositePass;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.PrimitiveCompositePass;
+import edu.snu.nemo.runtime.common.optimizer.pass.runtime.ConditionalRuntimePass;
 import edu.snu.nemo.runtime.common.optimizer.pass.runtime.DataSkewRuntimePass;
 import edu.snu.nemo.runtime.common.optimizer.pass.runtime.RuntimePass;
 
@@ -35,10 +36,18 @@ public final class DataSkewPolicy implements Policy {
    */
   public DataSkewPolicy() {
     this.policy = new PolicyBuilder(true)
-        .registerRuntimePass(new DataSkewRuntimePass(), new DataSkewCompositePass())
+        .registerCompileTimePass(new DataSkewCompositePass())
+        .registerRuntimePass(new ConditionalRuntimePass<>((dag, metric) -> getSkewness(metric) > SKEWNESS_THRESHOLD, new DataSkewRuntimePass()))
         .registerCompileTimePass(new LoopOptimizationCompositePass())
         .registerCompileTimePass(new PrimitiveCompositePass())
         .build();
+  }
+
+  private static final double SKEWNESS_THRESHOLD = 0;
+
+  private static double getSkewness(final Object metric) {
+    // TODO #??: Implement THIS.
+    return 0;
   }
 
   @Override

@@ -104,13 +104,23 @@ public final class PolicyBuilder {
   /**
    * Register run time passes.
    * @param runtimePass the runtime pass to register.
+   * @return the PolicyBuilder which registers runtimePass and runtimePassRegistrator.
+   */
+  public PolicyBuilder registerRuntimePass(final RuntimePass<?> runtimePass) {
+    this.runtimePasses.add(runtimePass);
+    return this;
+  }
+
+  /**
+   * Register run time passes.
+   * @param runtimePass the runtime pass to register.
    * @param runtimePassRegistrator the compile time pass that triggers the runtime pass.
    * @return the PolicyBuilder which registers runtimePass and runtimePassRegistrator.
    */
   public PolicyBuilder registerRuntimePass(final RuntimePass<?> runtimePass,
                                            final CompileTimePass runtimePassRegistrator) {
     registerCompileTimePass(runtimePassRegistrator);
-    this.runtimePasses.add(runtimePass);
+    registerRuntimePass(runtimePass);
     return this;
   }
 

@@ -15,13 +15,19 @@
  */
 package edu.snu.nemo.compiler.optimizer.policy;
 
+import edu.snu.nemo.common.dag.DAG;
+import edu.snu.nemo.common.ir.edge.IREdge;
+import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.CompileTimePass;
+import edu.snu.nemo.compiler.optimizer.pass.compiletime.ConditionalCompileTimePass;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.PrimitiveCompositePass;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.LoopOptimizationCompositePass;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.composite.SailfishPass;
 import edu.snu.nemo.runtime.common.optimizer.pass.runtime.RuntimePass;
 
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 /**
  * A policy to demonstrate the Sailfish optimization, that batches disk seek during data shuffle.
@@ -34,7 +40,7 @@ public final class SailfishPolicy implements Policy {
    */
   public SailfishPolicy() {
     this.policy = new PolicyBuilder(false)
-        .registerCompileTimePass(new SailfishPass())
+        .registerCompileTimePass(new ConditionalCompileTimePass(dag -> getReducerParallelisms(dag).max().orElse(0) > 300, new SailfishPass()))
         .registerCompileTimePass(new LoopOptimizationCompositePass())
         .registerCompileTimePass(new PrimitiveCompositePass())
         .build();
@@ -48,5 +54,10 @@ public final class SailfishPolicy implements Policy {
   @Override
   public List<RuntimePass<?>> getRuntimePasses() {
     return this.policy.getRuntimePasses();
+  }
+
+  private static IntStream getReducerParallelisms(final DAG<IRVertex, IREdge> irDag) {
+    // TODO #??: Implement THIS.
+    return IntStream.builder().build();
   }
 }
