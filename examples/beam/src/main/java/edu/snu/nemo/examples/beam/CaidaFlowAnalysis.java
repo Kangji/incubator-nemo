@@ -102,15 +102,22 @@ public final class CaidaFlowAnalysis {
         .apply(MapElements.via(new SimpleFunction<KV<String, CoGbkResult>, String>() {
           @Override
           public String apply(final KV<String, CoGbkResult> kv) {
-            final Iterable<Double> source = kv.getValue().getAll(tag0);
-            final Iterable<Double> destination = kv.getValue().getAll(tag1);
+            final double source = getDouble(kv.getValue().getAll(tag0));
+            final double destination = getDouble(kv.getValue().getAll(tag1));
             final String intermediate = kv.getKey();
-            return new StringBuilder(intermediate).append(",").append(source.iterator().next().toString()).append(",")
-                .append(destination.iterator().next().toString()).toString();
+            return new StringBuilder(intermediate).append(",").append(source).append(",")
+                .append(destination).toString();
           }
         }));
     GenericSourceSink.write(result, outputFilePath);
     p.run();
+  }
+
+  private static double getDouble(final Iterable<Double> data) {
+    for (final double datum : data) {
+      return datum;
+    }
+    return Double.NaN;
   }
 
   private static double stdev(final Iterable<KV<String, Long>> data) {
