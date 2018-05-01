@@ -16,7 +16,7 @@
 package edu.snu.nemo.driver;
 
 import edu.snu.nemo.common.ir.IdManager;
-import edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.LocationShareAssignmentPass;
+import edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.ShuffleLocationAssignmentPass;
 import edu.snu.nemo.conf.JobConf;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
 import edu.snu.nemo.runtime.common.message.MessageParameters;
@@ -95,7 +95,7 @@ public final class NemoDriver {
     this.glusterDirectory = glusterDirectory;
     this.client = client;
     this.handler = new RemoteClientMessageLoggingHandler(client);
-    LocationShareAssignmentPass.setBandwidthSpecificationString(bandwidthSpecificationString);
+    ShuffleLocationAssignmentPass.setBandwidthSpecificationString(bandwidthSpecificationString);
   }
 
   /**

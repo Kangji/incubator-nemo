@@ -46,17 +46,17 @@ import java.util.stream.Stream;
  * Also, this pass assumes network bandwidth to be the bottleneck. Each location should have enough capacity to run
  * TaskGroups immediately as scheduler attempts to schedule a TaskGroup.
  */
-public final class LocationShareAssignmentPass extends AnnotatingPass {
+public final class ShuffleLocationAssignmentPass extends AnnotatingPass {
 
   private static final int OBJECTIVE_COEFFICIENT_INDEX = 0;
-  private static final Logger LOG = LoggerFactory.getLogger(LocationShareAssignmentPass.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ShuffleLocationAssignmentPass.class);
 
   private static String bandwidthSpecificationString = "";
 
   /**
    * Default constructor.
    */
-  public LocationShareAssignmentPass() {
+  public ShuffleLocationAssignmentPass() {
     super(ExecutionProperty.Key.LocationShares,
         Stream.of(ExecutionProperty.Key.StageId, ExecutionProperty.Key.Parallelism).collect(Collectors.toSet()));
   }
