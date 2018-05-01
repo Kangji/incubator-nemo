@@ -67,6 +67,7 @@ public final class CaidaFlowAnalysis {
           @Override
           public KV<String, KV<String, Long>> apply(final String line) {
             final Matcher matcher = pattern.matcher(line);
+            matcher.find();
             return KV.of(matcher.group(2), KV.of(matcher.group(1), Long.valueOf(matcher.group(3))));
           }
         }))
@@ -88,6 +89,7 @@ public final class CaidaFlowAnalysis {
           @Override
           public KV<String, KV<String, Long>> apply(final String line) {
             final Matcher matcher = pattern.matcher(line);
+            matcher.find();
             return KV.of(matcher.group(1), KV.of(matcher.group(2), Long.valueOf(matcher.group(3))));
           }
         }))
