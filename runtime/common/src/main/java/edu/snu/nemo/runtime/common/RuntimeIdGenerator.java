@@ -43,7 +43,8 @@ public final class RuntimeIdGenerator {
    * @return the generated ID
    */
   public static String generatePhysicalPlanId() {
-    return "Plan-" + physicalPlanIdGenerator.getAndIncrement();
+    // TODO #??: FIX THIS.
+    return "Plan-" + physicalPlanIdGenerator.get();
   }
 
   /**
@@ -73,6 +74,10 @@ public final class RuntimeIdGenerator {
    */
   public static String generateStageId(final Integer stageId) {
     return "Stage-" + stageId;
+  }
+
+  public static String getIrEdgeIdFromRuntimeEdgeId(final String runtimeEdgeId) {
+    return runtimeEdgeId.substring(6);
   }
 
   /**
