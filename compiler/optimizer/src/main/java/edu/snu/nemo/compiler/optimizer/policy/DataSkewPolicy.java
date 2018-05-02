@@ -48,7 +48,7 @@ public final class DataSkewPolicy implements Policy {
 
   private static double getSkewness(final Object metric) {
     // TODO #??: Implement THIS.
-    return 0;
+    return 10;
   }
 
   @Override
