@@ -51,6 +51,6 @@ public final class DefaultKeyRangePass extends AnnotatingPass {
         }
       });
     });
-    return null;
+    return dag;
   }
 }
