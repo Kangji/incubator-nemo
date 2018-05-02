@@ -16,11 +16,12 @@
 package edu.snu.nemo.runtime.common.plan.physical;
 
 import edu.snu.nemo.common.coder.Coder;
+import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.executionproperty.ExecutionPropertyMap;
-import edu.snu.nemo.runtime.common.data.KeyRange;
+import edu.snu.nemo.common.data.KeyRange;
 import edu.snu.nemo.runtime.common.plan.RuntimeEdge;
-import edu.snu.nemo.runtime.common.data.HashRange;
+import edu.snu.nemo.common.data.HashRange;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,14 +106,6 @@ public final class PhysicalStageEdge extends RuntimeEdge<PhysicalStage> {
    * @return the list between the task group idx and key range to read.
    */
   public List<KeyRange> getTaskGroupIdxToKeyRange() {
-    return taskGroupIdxToKeyRange;
-  }
-
-  /**
-   * Sets the task group idx to key range list.
-   * @param taskGroupIdxToKeyRange the list to set.
-   */
-  public void setTaskGroupIdxToKeyRange(final List<KeyRange> taskGroupIdxToKeyRange) {
-    this.taskGroupIdxToKeyRange = taskGroupIdxToKeyRange;
+    return getExecutionProperties().get(ExecutionProperty.Key.KeyRange);
   }
 }

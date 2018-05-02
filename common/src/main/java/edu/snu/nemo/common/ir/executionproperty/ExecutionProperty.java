@@ -74,6 +74,7 @@ public abstract class ExecutionProperty<T> implements Serializable {
     Compression,
     DuplicateEdgeGroup,
     AsBytes,
+    KeyRange,
 
     // Applies to IRVertex
     DynamicOptimizationType,

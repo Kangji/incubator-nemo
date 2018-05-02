@@ -212,7 +212,8 @@ public final class BatchSingleJobSchedulerTest {
   private void scheduleAndCheckJobTermination(final DAG<IRVertex, IREdge> irDAG) throws InjectionException {
     final DAG<PhysicalStage, PhysicalStageEdge> physicalDAG = irDAG.convert(physicalPlanGenerator);
 
-    final PhysicalPlan plan = new PhysicalPlan("TestPlan", physicalDAG, physicalPlanGenerator.getTaskIRVertexMap());
+    final PhysicalPlan plan = new PhysicalPlan("TestPlan", irDAG,
+        physicalDAG, physicalPlanGenerator.getTaskIRVertexMap());
     final JobStateManager jobStateManager = new JobStateManager(plan, blockManagerMaster, metricMessageHandler, 1);
     scheduler.scheduleJob(plan, jobStateManager);
 

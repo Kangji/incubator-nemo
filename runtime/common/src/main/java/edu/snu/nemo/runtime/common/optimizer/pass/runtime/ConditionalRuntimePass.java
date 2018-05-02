@@ -15,8 +15,10 @@
  */
 package edu.snu.nemo.runtime.common.optimizer.pass.runtime;
 
+import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.eventhandler.RuntimeEventHandler;
-import edu.snu.nemo.runtime.common.plan.physical.PhysicalPlan;
+import edu.snu.nemo.common.ir.edge.IREdge;
+import edu.snu.nemo.common.ir.vertex.IRVertex;
 
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -26,17 +28,18 @@ import java.util.function.BiFunction;
  * @param <T> type of the metric data
  */
 public final class ConditionalRuntimePass<T> implements RuntimePass<T> {
-  private final BiFunction<PhysicalPlan, T, Boolean> predicate;
+  private final BiFunction<DAG<IRVertex, IREdge>, T, Boolean> predicate;
   private final RuntimePass<T> innerPass;
 
-  public ConditionalRuntimePass(final BiFunction<PhysicalPlan, T, Boolean> predicate, final RuntimePass<T> innerPass) {
+  public ConditionalRuntimePass(final BiFunction<DAG<IRVertex, IREdge>, T, Boolean> predicate,
+                                final RuntimePass<T> innerPass) {
     this.predicate = predicate;
     this.innerPass = innerPass;
   }
 
   @Override
-  public PhysicalPlan apply(final PhysicalPlan physicalPlan, final T metric) {
-    return predicate.apply(physicalPlan, metric) ? innerPass.apply(physicalPlan, metric) : physicalPlan;
+  public DAG<IRVertex, IREdge> apply(final DAG<IRVertex, IREdge> dag, final T metric) {
+    return predicate.apply(dag, metric) ? innerPass.apply(dag, metric) : dag;
   }
 
   @Override

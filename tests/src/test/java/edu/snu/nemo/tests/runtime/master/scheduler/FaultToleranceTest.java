@@ -172,7 +172,7 @@ public final class FaultToleranceTest {
         CompiletimeOptimizer.optimize(irDAGBuilder.buildWithoutSourceSinkCheck(), new TestPolicy(), "");
     final DAG<PhysicalStage, PhysicalStageEdge> physicalDAG = irDAG.convert(physicalPlanGenerator);
 
-    return new PhysicalPlan("TestPlan", physicalDAG, physicalPlanGenerator.getTaskIRVertexMap());
+    return new PhysicalPlan("TestPlan", irDAG, physicalDAG, physicalPlanGenerator.getTaskIRVertexMap());
   }
 
   /**

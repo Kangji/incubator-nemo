@@ -106,7 +106,7 @@ public final class SingleTaskGroupQueueTest {
     final DAG<PhysicalStage, PhysicalStageEdge> physicalDAG = irDAG.convert(physicalPlanGenerator);
 
     pendingTaskGroupPriorityQueue.onJobScheduled(
-        new PhysicalPlan("TestPlan", physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
+        new PhysicalPlan("TestPlan", irDAG, physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
 
     final List<PhysicalStage> dagOf2Stages = physicalDAG.getTopologicalSort();
 
@@ -189,7 +189,7 @@ public final class SingleTaskGroupQueueTest {
     final DAG<PhysicalStage, PhysicalStageEdge> physicalDAG = irDAG.convert(physicalPlanGenerator);
 
     pendingTaskGroupPriorityQueue.onJobScheduled(
-        new PhysicalPlan("TestPlan", physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
+        new PhysicalPlan("TestPlan", irDAG, physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
 
     final List<PhysicalStage> dagOf2Stages = physicalDAG.getTopologicalSort();
 
@@ -269,7 +269,7 @@ public final class SingleTaskGroupQueueTest {
     final DAG<PhysicalStage, PhysicalStageEdge> physicalDAG = irDAG.convert(physicalPlanGenerator);
 
     pendingTaskGroupPriorityQueue.onJobScheduled(
-        new PhysicalPlan("TestPlan", physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
+        new PhysicalPlan("TestPlan", irDAG, physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
 
     final List<PhysicalStage> dagOf2Stages = physicalDAG.getTopologicalSort();
 
