@@ -102,7 +102,7 @@ public final class DataSkewRuntimePass implements RuntimePass<Pair<List<String>,
         .collect(Collectors.toList());
 
     List<Integer> hotHashes = new ArrayList<>();
-    for (int i = 0; i < sortedMetricDataMap.size(); i++) {
+    for (int i = 0; i < Math.min(10, sortedMetricDataMap.size()); i++) {
       hotHashes.add(sortedMetricDataMap.get(i).getKey());
       LOG.info("HotHash: Hash {} Size {}", sortedMetricDataMap.get(i).getKey(),
           sortedMetricDataMap.get(i).getValue());
