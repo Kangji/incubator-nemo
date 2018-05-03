@@ -16,7 +16,7 @@
 package edu.snu.nemo.tests.runtime.common.optimizer.pass.runtime;
 
 import edu.snu.nemo.common.Pair;
-import edu.snu.nemo.runtime.common.data.KeyRange;
+import edu.snu.nemo.common.data.KeyRange;
 import edu.snu.nemo.runtime.common.optimizer.pass.runtime.DataSkewRuntimePass;
 import org.junit.Before;
 import org.junit.Test;

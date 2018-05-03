@@ -108,6 +108,14 @@ public final class JobConf extends ConfigurationModuleBuilder {
   }
 
   /**
+   * Path to the JSON file that specifies bandwidth between locations.
+   */
+  @NamedParameter(doc = "Path to the JSON file that specifies bandwidth between locations",
+      short_name = "bandwidth_json", default_value = "")
+  public final class BandwidthJsonPath implements Name<String> {
+  }
+
+  /**
    * The fraction of container memory not to use fo the JVM heap.
    */
   @NamedParameter(doc = "The fraction of the container memory not to use for the JVM heap", short_name = "heap_slack",
@@ -120,6 +128,13 @@ public final class JobConf extends ConfigurationModuleBuilder {
    */
   @NamedParameter(doc = "Contents of JSON file that specifies resources for executors")
   public final class ExecutorJsonContents implements Name<String> {
+  }
+
+  /**
+   * Contents of the JSON file that specifies bandwidth between locations.
+   */
+  @NamedParameter(doc = "Contents of JSON file that specifies bandwidth between locations")
+  public final class BandwidthJsonContents implements Name<String> {
   }
 
   /**

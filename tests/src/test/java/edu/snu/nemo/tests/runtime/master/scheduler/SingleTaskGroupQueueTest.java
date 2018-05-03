@@ -29,7 +29,7 @@ import edu.snu.nemo.compiler.optimizer.CompiletimeOptimizer;
 import edu.snu.nemo.conf.JobConf;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
 import edu.snu.nemo.runtime.common.plan.physical.*;
-import edu.snu.nemo.runtime.master.scheduler.SingleJobTaskGroupQueue;
+import edu.snu.nemo.runtime.master.scheduler.SingleJobTaskGroupCollection;
 import edu.snu.nemo.tests.compiler.optimizer.policy.TestPolicy;
 import org.apache.reef.tang.Injector;
 import org.apache.reef.tang.Tang;
@@ -49,11 +49,11 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests {@link SingleJobTaskGroupQueue}.
+ * Tests {@link SingleJobTaskGroupCollection}.
  */
 public final class SingleTaskGroupQueueTest {
   private DAGBuilder<IRVertex, IREdge> irDAGBuilder;
-  private SingleJobTaskGroupQueue pendingTaskGroupPriorityQueue;
+  private SingleJobTaskGroupCollection pendingTaskGroupPriorityQueue;
   private PhysicalPlanGenerator physicalPlanGenerator;
 
   /**
@@ -64,7 +64,7 @@ public final class SingleTaskGroupQueueTest {
   @Before
   public void setUp() throws Exception{
     irDAGBuilder = new DAGBuilder<>();
-    pendingTaskGroupPriorityQueue = new SingleJobTaskGroupQueue();
+    pendingTaskGroupPriorityQueue = new SingleJobTaskGroupCollection();
     executorService = Executors.newFixedThreadPool(2);
 
     final Injector injector = Tang.Factory.getTang().newInjector();
@@ -73,7 +73,7 @@ public final class SingleTaskGroupQueueTest {
   }
 
   /**
-   * This method builds a physical DAG starting from an IR DAG and submits it to {@link SingleJobTaskGroupQueue}.
+   * This method builds a physical DAG starting from an IR DAG and submits it to {@link SingleJobTaskGroupCollection}.
    * Tests whether the dequeued TaskGroups are according to the stage-dependency priority.
    */
   @Test
@@ -106,7 +106,7 @@ public final class SingleTaskGroupQueueTest {
     final DAG<PhysicalStage, PhysicalStageEdge> physicalDAG = irDAG.convert(physicalPlanGenerator);
 
     pendingTaskGroupPriorityQueue.onJobScheduled(
-        new PhysicalPlan("TestPlan", physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
+        new PhysicalPlan("TestPlan", irDAG, physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
 
     final List<PhysicalStage> dagOf2Stages = physicalDAG.getTopologicalSort();
 
@@ -156,7 +156,7 @@ public final class SingleTaskGroupQueueTest {
   }
 
   /**
-   * This method builds a physical DAG starting from an IR DAG and submits it to {@link SingleJobTaskGroupQueue}.
+   * This method builds a physical DAG starting from an IR DAG and submits it to {@link SingleJobTaskGroupCollection}.
    * Tests whether the dequeued TaskGroups are according to the stage-dependency priority.
    */
   @Test
@@ -189,7 +189,7 @@ public final class SingleTaskGroupQueueTest {
     final DAG<PhysicalStage, PhysicalStageEdge> physicalDAG = irDAG.convert(physicalPlanGenerator);
 
     pendingTaskGroupPriorityQueue.onJobScheduled(
-        new PhysicalPlan("TestPlan", physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
+        new PhysicalPlan("TestPlan", irDAG, physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
 
     final List<PhysicalStage> dagOf2Stages = physicalDAG.getTopologicalSort();
 
@@ -235,7 +235,7 @@ public final class SingleTaskGroupQueueTest {
   }
 
   /**
-   * This method builds a physical DAG starting from an IR DAG and submits it to {@link SingleJobTaskGroupQueue}.
+   * This method builds a physical DAG starting from an IR DAG and submits it to {@link SingleJobTaskGroupCollection}.
    * Tests whether the dequeued TaskGroups are according to the stage-dependency priority,
    * while concurrently scheduling TaskGroups that have dependencies, but are of different container types.
    */
@@ -269,7 +269,7 @@ public final class SingleTaskGroupQueueTest {
     final DAG<PhysicalStage, PhysicalStageEdge> physicalDAG = irDAG.convert(physicalPlanGenerator);
 
     pendingTaskGroupPriorityQueue.onJobScheduled(
-        new PhysicalPlan("TestPlan", physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
+        new PhysicalPlan("TestPlan", irDAG, physicalDAG, physicalPlanGenerator.getTaskIRVertexMap()));
 
     final List<PhysicalStage> dagOf2Stages = physicalDAG.getTopologicalSort();
 
@@ -316,7 +316,7 @@ public final class SingleTaskGroupQueueTest {
     stage.getTaskGroupIds().forEach(taskGroupId ->
         pendingTaskGroupPriorityQueue.add(new ScheduledTaskGroup(
             "TestPlan", stage.getSerializedTaskGroupDag(), taskGroupId, Collections.emptyList(),
-            Collections.emptyList(), 0, stage.getContainerType(), Collections.emptyMap(), false)));
+            Collections.emptyList(), 0, stage.getContainerType(), Collections.emptyMap(), null, false)));
   }
 
   /**

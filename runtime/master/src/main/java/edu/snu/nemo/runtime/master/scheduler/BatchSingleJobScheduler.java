@@ -63,7 +63,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
    */
   private final SchedulingPolicy schedulingPolicy;
   private final SchedulerRunner schedulerRunner;
-  private final PendingTaskGroupQueue pendingTaskGroupQueue;
+  private final PendingTaskGroupCollection pendingTaskGroupCollection;
   private final ExecutorRegistry executorRegistry;
 
   /**
@@ -82,14 +82,14 @@ public final class BatchSingleJobScheduler implements Scheduler {
   @Inject
   public BatchSingleJobScheduler(final SchedulingPolicy schedulingPolicy,
                                  final SchedulerRunner schedulerRunner,
-                                 final PendingTaskGroupQueue pendingTaskGroupQueue,
+                                 final PendingTaskGroupCollection pendingTaskGroupCollection,
                                  final BlockManagerMaster blockManagerMaster,
                                  final PubSubEventHandlerWrapper pubSubEventHandlerWrapper,
                                  final UpdatePhysicalPlanEventHandler updatePhysicalPlanEventHandler,
                                  final ExecutorRegistry executorRegistry) {
     this.schedulingPolicy = schedulingPolicy;
     this.schedulerRunner = schedulerRunner;
-    this.pendingTaskGroupQueue = pendingTaskGroupQueue;
+    this.pendingTaskGroupCollection = pendingTaskGroupCollection;
     this.blockManagerMaster = blockManagerMaster;
     this.pubSubEventHandlerWrapper = pubSubEventHandlerWrapper;
     this.executorRegistry = executorRegistry;
@@ -111,7 +111,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
     this.jobStateManager = scheduledJobStateManager;
 
     schedulerRunner.scheduleJob(scheduledJobStateManager);
-    pendingTaskGroupQueue.onJobScheduled(physicalPlan);
+    pendingTaskGroupCollection.onJobScheduled(physicalPlan);
 
     LOG.info("Job to schedule: {}", jobToSchedule.getId());
 
@@ -186,7 +186,6 @@ public final class BatchSingleJobScheduler implements Scheduler {
     executorRegistry.setRepresenterAsFailed(executorId);
     final ExecutorRepresenter executor = executorRegistry.getFailedExecutorRepresenter(executorId);
     executor.onExecutorFailed();
-
     // TaskGroups executing on the removed executor
     taskGroupsToReExecute.addAll(schedulingPolicy.onExecutorRemoved(executorId));
 
@@ -206,7 +205,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
   @Override
   public void terminate() {
     this.schedulerRunner.terminate();
-    this.pendingTaskGroupQueue.close();
+    this.pendingTaskGroupCollection.close();
   }
 
   /**
@@ -240,7 +239,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
   }
 
   /**
-   * Selects the list of stages to schedule, in the order they must be added to {@link PendingTaskGroupQueue}.
+   * Selects the list of stages to schedule, in the order they must be added to {@link PendingTaskGroupCollection}.
    *
    * This is a recursive function that decides which schedule group to schedule upon a stage completion, or a failure.
    * It takes the currentScheduleGroupIndex as a reference point to begin looking for the stages to execute:
@@ -256,7 +255,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
    * @param currentScheduleGroupIndex
    *      the index of the schedule group that is executing/has executed when this method is called.
    * @return an optional of the (possibly empty) list of next schedulable stages, in the order they should be
-   * enqueued to {@link PendingTaskGroupQueue}.
+   * enqueued to {@link PendingTaskGroupCollection}.
    */
   private Optional<List<PhysicalStage>> selectNextStagesToSchedule(final int currentScheduleGroupIndex) {
     if (currentScheduleGroupIndex > initialScheduleGroup) {
@@ -386,15 +385,39 @@ public final class BatchSingleJobScheduler implements Scheduler {
     // each readable and source task will be bounded in executor.
     final List<Map<String, Readable>> logicalTaskIdToReadables = stageToSchedule.getLogicalTaskIdToReadables();
 
+    // Follow location restriction
+    final Map<Integer, String> taskGroupIndexToLocation = getTaskGroupIndexToLocation(
+        stageToSchedule.getLocationToNumTaskGroups());
+
     taskGroupIdsToSchedule.forEach(taskGroupId -> {
-      blockManagerMaster.onProducerTaskGroupScheduled(taskGroupId);
       final int taskGroupIdx = RuntimeIdGenerator.getIndexFromTaskGroupId(taskGroupId);
+      final String location = taskGroupIndexToLocation.get(taskGroupIdx);
+      blockManagerMaster.onProducerTaskGroupScheduled(taskGroupId);
       LOG.debug("Enquing {}", taskGroupId);
-      pendingTaskGroupQueue.add(new ScheduledTaskGroup(physicalPlan.getId(),
+      pendingTaskGroupCollection.add(new ScheduledTaskGroup(physicalPlan.getId(),
           stageToSchedule.getSerializedTaskGroupDag(), taskGroupId, stageIncomingEdges, stageOutgoingEdges, attemptIdx,
-          stageToSchedule.getContainerType(), logicalTaskIdToReadables.get(taskGroupIdx), isSmall));
+          stageToSchedule.getContainerType(), logicalTaskIdToReadables.get(taskGroupIdx), location, isSmall));
     });
     schedulerRunner.onATaskGroupAvailable();
+  }
+
+  /**
+   * @param locationToNumTaskGroups the map from location to the number of TaskGroups
+   *                                that must be executed in that location
+   * @return a map from taskGroupIndex to appropriate location
+   * @see RuntimeIdGenerator#generateTaskGroupId(int, String)
+   */
+  private static Map<Integer, String> getTaskGroupIndexToLocation(
+      final Map<String, Integer> locationToNumTaskGroups) {
+    final Map<Integer, String> taskGroupIndexToLocation = new HashMap<>();
+    int nextTaskGroupIndex = 0;
+    for (final Map.Entry<String, Integer> range : locationToNumTaskGroups.entrySet()) {
+      for (int i = 0; i < range.getValue(); i++) {
+        taskGroupIndexToLocation.put(nextTaskGroupIndex, range.getKey());
+        nextTaskGroupIndex++;
+      }
+    }
+    return taskGroupIndexToLocation;
   }
 
   /**
@@ -445,6 +468,8 @@ public final class BatchSingleJobScheduler implements Scheduler {
     if (!isOnHoldToComplete) {
       final ExecutorRepresenter executor = executorRegistry.getRunningExecutorRepresenter(executorId);
       executor.onTaskGroupExecutionComplete(taskGroupId);
+      LOG.info("{" + taskGroupId + "} completed in [" + executorId + "]");
+      LOG.info(String.format("%s completed at %s(%s)", taskGroupId, executorId, executor.getNodeName()));
       schedulingPolicy.onTaskGroupExecutionComplete(executorId, taskGroupId);
     }
 
@@ -469,7 +494,6 @@ public final class BatchSingleJobScheduler implements Scheduler {
                                           final String taskPutOnHold) {
     final ExecutorRepresenter executor = executorRegistry.getRunningExecutorRepresenter(executorId);
     executor.onTaskGroupExecutionComplete(taskGroupId);
-
     LOG.info("{} put on hold in {}", new Object[]{taskGroupId, executorId});
     schedulingPolicy.onTaskGroupExecutionComplete(executorId, taskGroupId);
     final String stageIdForTaskGroupUponCompletion = RuntimeIdGenerator.getStageIdFromTaskGroupId(taskGroupId);
@@ -513,6 +537,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
     LOG.info("{} failed in {} by {}", new Object[]{taskGroupId, executorId, failureCause});
     final ExecutorRepresenter executor = executorRegistry.getExecutorRepresenter(executorId);
     executor.onTaskGroupExecutionFailed(taskGroupId);
+    LOG.info("{" + taskGroupId + "} failed in [" + executorId + "]");
     schedulingPolicy.onTaskGroupExecutionFailed(executorId, taskGroupId);
 
     final String stageId = RuntimeIdGenerator.getStageIdFromTaskGroupId(taskGroupId);
@@ -528,7 +553,7 @@ public final class BatchSingleJobScheduler implements Scheduler {
           for (final PhysicalStage stage : physicalPlan.getStageDAG().getTopologicalSort()) {
             if (stage.getId().equals(stageId)) {
               LOG.info("Removing TaskGroups for {} before they are scheduled to an executor", stage.getId());
-              pendingTaskGroupQueue.removeTaskGroupsAndDescendants(stage.getId());
+              pendingTaskGroupCollection.removeTaskGroupsAndDescendants(stage.getId());
               stage.getTaskGroupIds().forEach(dstTaskGroupId -> {
                 if (jobStateManager.getTaskGroupState(dstTaskGroupId).getStateMachine().getCurrentState()
                     != TaskGroupState.State.COMPLETE) {

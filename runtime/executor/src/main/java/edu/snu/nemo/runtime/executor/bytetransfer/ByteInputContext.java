@@ -17,11 +17,14 @@ package edu.snu.nemo.runtime.executor.bytetransfer;
 
 import edu.snu.nemo.runtime.executor.data.LimitedInputStream;
 import io.netty.buffer.ByteBuf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -35,6 +38,8 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class ByteInputContext extends ByteTransferContext {
 
+  private static final Logger LOG = LoggerFactory.getLogger(ByteInputContext.class.getName());
+
   private final CompletableFuture<Iterator<InputStream>> completedFuture = new CompletableFuture<>();
   private final ClosableBlockingQueue<LimitedInputStream> byteBufInputStreams = new ClosableBlockingQueue<>();
   private volatile ByteBufInputStream currentByteBufInputStream = null;
@@ -45,6 +50,7 @@ public final class ByteInputContext extends ByteTransferContext {
       try {
         return byteBufInputStreams.peek() != null;
       } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
     }
@@ -54,7 +60,9 @@ public final class ByteInputContext extends ByteTransferContext {
       try {
         return byteBufInputStreams.take();
       } catch (final InterruptedException e) {
-        throw new RuntimeException(e);
+        Thread.currentThread().interrupt();
+        LOG.error("Interrupted while taking byte buf.", e);
+        throw new NoSuchElementException();
       }
     }
   };
@@ -166,6 +174,7 @@ public final class ByteInputContext extends ByteTransferContext {
         }
         return b;
       } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new IOException(e);
       }
     }
@@ -200,6 +209,7 @@ public final class ByteInputContext extends ByteTransferContext {
         }
         return readBytes;
       } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new IOException(e);
       }
     }
@@ -234,6 +244,7 @@ public final class ByteInputContext extends ByteTransferContext {
         }
         return skippedBytes;
       } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new IOException(e);
       }
     }
@@ -248,6 +259,7 @@ public final class ByteInputContext extends ByteTransferContext {
           return head.readableBytes();
         }
       } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new IOException(e);
       }
     }

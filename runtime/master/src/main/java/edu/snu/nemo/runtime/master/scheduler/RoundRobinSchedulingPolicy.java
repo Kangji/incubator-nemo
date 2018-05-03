@@ -106,10 +106,8 @@ public final class RoundRobinSchedulingPolicy implements SchedulingPolicy {
         ? executors
         : executors.stream().filter(executor -> executor.getContainerType().equals(containerType))
         .collect(Collectors.toList());
-    
     Optional<ExecutorRepresenter> executorWithMinOccupancy = candidateExecutors.stream()
         .min(Comparator.comparingInt(executor -> executor.getRunningTaskGroups().size()));
-    
     if (executorWithMinOccupancy.isPresent()) {
       LOG.info("MinOccupancy: {}/8", executorWithMinOccupancy.get().getRunningTaskGroups().size());
       final ExecutorRepresenter chosenExecutor = executorWithMinOccupancy.get();
@@ -179,8 +177,8 @@ public final class RoundRobinSchedulingPolicy implements SchedulingPolicy {
     jobStateManager.onTaskGroupStateChanged(scheduledTaskGroup.getTaskGroupId(), TaskGroupState.State.EXECUTING);
 
     final ExecutorRepresenter executor = executorRegistry.getRunningExecutorRepresenter(executorId);
-    LOG.info("Scheduling {} to {}",
-        new Object[]{scheduledTaskGroup.getTaskGroupId(), executorId});
+    LOG.info("Scheduling {} to {}({})",
+        new Object[]{scheduledTaskGroup.getTaskGroupId(), executorId, executor.getNodeName()});
     executor.onTaskGroupScheduled(scheduledTaskGroup);
   }
 

@@ -17,14 +17,15 @@ package edu.snu.nemo.runtime.common.plan.physical;
 
 import edu.snu.nemo.common.Pair;
 import edu.snu.nemo.common.coder.Coder;
+import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.executionproperty.ExecutionPropertyMap;
-import edu.snu.nemo.runtime.common.data.KeyRange;
+import edu.snu.nemo.common.data.KeyRange;
 import edu.snu.nemo.runtime.common.plan.RuntimeEdge;
-import edu.snu.nemo.runtime.common.data.HashRange;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Contains information stage boundary {@link edu.snu.nemo.runtime.common.plan.stage.StageEdge}.
@@ -42,10 +43,7 @@ public final class PhysicalStageEdge extends RuntimeEdge<PhysicalStage> {
    */
   private final IRVertex dstVertex;
 
-  /**
-   * The list between the task group idx and key range to read.
-   */
-  private List<Pair<KeyRange, Boolean>> taskGroupIdxToKeyRange;
+  private final PhysicalStage dstStage;
 
   /**
    * Constructor.
@@ -69,11 +67,7 @@ public final class PhysicalStageEdge extends RuntimeEdge<PhysicalStage> {
     super(runtimeEdgeId, edgeProperties, srcStage, dstStage, coder, isSideInput);
     this.srcVertex = srcVertex;
     this.dstVertex = dstVertex;
-    // Initialize the key range of each dst task.
-    this.taskGroupIdxToKeyRange = new ArrayList<>();
-    for (int taskIdx = 0; taskIdx < dstStage.getTaskGroupIds().size(); taskIdx++) {
-      taskGroupIdxToKeyRange.add(Pair.of(HashRange.of(taskIdx, taskIdx + 1), false));
-    }
+    this.dstStage = dstStage;
   }
 
   /**
@@ -106,14 +100,12 @@ public final class PhysicalStageEdge extends RuntimeEdge<PhysicalStage> {
    * @return the list between the task group idx and key range to read.
    */
   public List<Pair<KeyRange, Boolean>> getTaskGroupIdxToKeyRange() {
+    final Map<Integer, Pair<KeyRange, Boolean>> keyRanges
+        = getExecutionProperties().get(ExecutionProperty.Key.KeyRange);
+    final List<Pair<KeyRange, Boolean>> taskGroupIdxToKeyRange = new ArrayList<>();
+    for (int taskIdx = 0; taskIdx < dstStage.getTaskGroupIds().size(); taskIdx++) {
+      taskGroupIdxToKeyRange.add(keyRanges.get(taskIdx));
+    }
     return taskGroupIdxToKeyRange;
-  }
-
-  /**
-   * Sets the task group idx to key range list.
-   * @param taskGroupIdxToKeyRange the list to set.
-   */
-  public void setTaskGroupIdxToKeyRange(final List<Pair<KeyRange, Boolean>> taskGroupIdxToKeyRange) {
-    this.taskGroupIdxToKeyRange = taskGroupIdxToKeyRange;
   }
 }

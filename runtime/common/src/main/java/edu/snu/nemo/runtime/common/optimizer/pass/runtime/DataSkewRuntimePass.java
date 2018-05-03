@@ -18,16 +18,16 @@ package edu.snu.nemo.runtime.common.optimizer.pass.runtime;
 import com.google.common.annotations.VisibleForTesting;
 import edu.snu.nemo.common.Pair;
 import edu.snu.nemo.common.dag.DAG;
-import edu.snu.nemo.common.dag.DAGBuilder;
 import edu.snu.nemo.common.eventhandler.RuntimeEventHandler;
 import edu.snu.nemo.common.exception.DynamicOptimizationException;
 
+import edu.snu.nemo.common.ir.edge.IREdge;
+import edu.snu.nemo.common.ir.edge.executionproperty.KeyRangeProperty;
+import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
+import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
-import edu.snu.nemo.runtime.common.data.KeyRange;
-import edu.snu.nemo.runtime.common.plan.physical.PhysicalPlan;
-import edu.snu.nemo.runtime.common.plan.physical.PhysicalStage;
-import edu.snu.nemo.runtime.common.plan.physical.PhysicalStageEdge;
-import edu.snu.nemo.runtime.common.data.HashRange;
+import edu.snu.nemo.common.data.KeyRange;
+import edu.snu.nemo.common.data.HashRange;
 import edu.snu.nemo.runtime.common.eventhandler.DynamicOptimizationEventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,41 +56,29 @@ public final class DataSkewRuntimePass implements RuntimePass<Pair<List<String>,
   }
 
   @Override
-  public PhysicalPlan apply(final PhysicalPlan originalPlan,
-                            final Pair<List<String>, Map<Integer, Long>> metricData) {
-    // Builder to create new stages.
-    final DAGBuilder<PhysicalStage, PhysicalStageEdge> physicalDAGBuilder =
-        new DAGBuilder<>(originalPlan.getStageDAG());
-    final List<String> blockIds = metricData.left();
-
+  public DAG<IRVertex, IREdge> apply(final DAG<IRVertex, IREdge> dagToOptimize,
+                                     final Pair<List<String>, Map<Integer, Long>> metricData) {
     // get edges to optimize
-    final List<String> optimizationEdgeIds = blockIds.stream().map(blockId ->
-        RuntimeIdGenerator.getRuntimeEdgeIdFromBlockId(blockId)).collect(Collectors.toList());
-    final DAG<PhysicalStage, PhysicalStageEdge> stageDAG = originalPlan.getStageDAG();
-    final List<PhysicalStageEdge> optimizationEdges = stageDAG.getVertices().stream()
-        .flatMap(physicalStage -> stageDAG.getIncomingEdgesOf(physicalStage).stream())
-        .filter(physicalStageEdge -> optimizationEdgeIds.contains(physicalStageEdge.getId()))
+    final List<String> optimizationEdgeIds = metricData.left().stream().map(blockId ->
+        RuntimeIdGenerator.getRuntimeEdgeIdFromBlockId(blockId))
+        .map(RuntimeIdGenerator::getIrEdgeIdFromRuntimeEdgeId)
+        .collect(Collectors.toList());
+    final List<IREdge> optimizationEdges = dagToOptimize.getVertices().stream()
+        .flatMap(irVertex -> dagToOptimize.getIncomingEdgesOf(irVertex).stream())
+        .filter(irEdge -> optimizationEdgeIds.contains(irEdge.getId()))
         .collect(Collectors.toList());
 
     // Get number of evaluators of the next stage (number of blocks).
-    final Integer taskGroupListSize = optimizationEdges.stream().findFirst().orElseThrow(() ->
-        new RuntimeException("optimization edges are empty")).getDst().getTaskGroupIds().size();
+    final IREdge targetEdge = optimizationEdges.stream().findFirst()
+        .orElseThrow(() -> new RuntimeException("optimization edges are empty"));
+    final Integer dstParallelism = targetEdge.getDst().getProperty(ExecutionProperty.Key.Parallelism);
 
     // Calculate keyRanges.
-    final Map<Integer, Pair<KeyRange, Boolean>> keyRanges =
-        calculateHashRanges(metricData.right(), taskGroupListSize);
+    final Map<Integer, Pair<KeyRange, Boolean>> keyRanges = calculateHashRanges(metricData.right(), dstParallelism);
 
     // Overwrite the previously assigned hash value range in the physical DAG with the new range.
-    optimizationEdges.forEach(optimizationEdge -> {
-      // Update the information.
-      final List<Pair<KeyRange, Boolean>> taskGroupIdxToHashRange = new ArrayList<>();
-      for (int i = 0; i < taskGroupListSize; i++) {
-        taskGroupIdxToHashRange.add(keyRanges.get(i));
-      }
-      optimizationEdge.setTaskGroupIdxToKeyRange(taskGroupIdxToHashRange);
-    });
-
-    return new PhysicalPlan(originalPlan.getId(), physicalDAGBuilder.build(), originalPlan.getTaskIRVertexMap());
+    targetEdge.setProperty(KeyRangeProperty.of(keyRanges));
+    return dagToOptimize;
   }
 
   /**
@@ -114,7 +102,7 @@ public final class DataSkewRuntimePass implements RuntimePass<Pair<List<String>,
         .collect(Collectors.toList());
 
     List<Integer> hotHashes = new ArrayList<>();
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < sortedMetricDataMap.size(); i++) {
       hotHashes.add(sortedMetricDataMap.get(i).getKey());
       LOG.info("HotHash: Hash {} Size {}", sortedMetricDataMap.get(i).getKey(),
           sortedMetricDataMap.get(i).getValue());

@@ -120,7 +120,7 @@ public final class TaskGroupExecutorTest {
     final String taskGroupId = RuntimeIdGenerator.generateTaskGroupId(0, stageId);
     final ScheduledTaskGroup scheduledTaskGroup =
         new ScheduledTaskGroup("testSourceTask", new byte[0], taskGroupId, Collections.emptyList(),
-            Collections.singletonList(stageOutEdge), 0, CONTAINER_TYPE, logicalIdToReadable,false);
+            Collections.singletonList(stageOutEdge), 0, CONTAINER_TYPE, logicalIdToReadable, null, false);
 
     // Execute the task group.
     final TaskGroupExecutor taskGroupExecutor = new TaskGroupExecutor(
@@ -176,7 +176,7 @@ public final class TaskGroupExecutorTest {
     when(stageOutEdge.getSrcVertex()).thenReturn(operatorIRVertex2);
     final ScheduledTaskGroup scheduledTaskGroup =
         new ScheduledTaskGroup("testSourceTask", new byte[0], taskGroupId, Collections.singletonList(stageInEdge),
-            Collections.singletonList(stageOutEdge), 0, CONTAINER_TYPE, Collections.emptyMap(), false);
+            Collections.singletonList(stageOutEdge), 0, CONTAINER_TYPE, Collections.emptyMap(), null, false);
 
     // Execute the task group.
     final TaskGroupExecutor taskGroupExecutor = new TaskGroupExecutor(

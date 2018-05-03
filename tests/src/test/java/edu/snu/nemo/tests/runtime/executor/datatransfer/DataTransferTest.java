@@ -136,10 +136,11 @@ public final class DataTransferTest {
     final UpdatePhysicalPlanEventHandler updatePhysicalPlanEventHandler = mock(UpdatePhysicalPlanEventHandler.class);
     final SchedulingPolicy schedulingPolicy = new RoundRobinSchedulingPolicy(
         injector.getInstance(ExecutorRegistry.class));
-    final PendingTaskGroupQueue taskGroupQueue = new SingleJobTaskGroupQueue();
-    final SchedulerRunner schedulerRunner = new SchedulerRunner(schedulingPolicy, taskGroupQueue, executorRegistry);
+    final PendingTaskGroupCollection taskGroupCollection = new SingleJobTaskGroupCollection();
+    final SchedulerRunner schedulerRunner = new SchedulerRunner(schedulingPolicy, taskGroupCollection,
+        executorRegistry);
     final Scheduler scheduler =
-        new BatchSingleJobScheduler(schedulingPolicy, schedulerRunner, taskGroupQueue, master,
+        new BatchSingleJobScheduler(schedulingPolicy, schedulerRunner, taskGroupCollection, master,
             pubSubEventHandler, updatePhysicalPlanEventHandler, executorRegistry);
     final AtomicInteger executorCount = new AtomicInteger(0);
 
@@ -548,6 +549,6 @@ public final class DataTransferTest {
   private PhysicalStage setupStages(final String stageId) {
     final DAG<Task, RuntimeEdge<Task>> emptyDag = new DAGBuilder<Task, RuntimeEdge<Task>>().build();
 
-    return new PhysicalStage(stageId, emptyDag, PARALLELISM_TEN, 0, "Not_used", Collections.emptyList());
+    return new PhysicalStage(stageId, emptyDag, PARALLELISM_TEN, 0, "Not_used", Collections.emptyList(), Collections.emptyMap());
   }
 }

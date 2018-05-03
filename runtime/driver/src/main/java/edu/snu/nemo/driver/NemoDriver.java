@@ -16,6 +16,7 @@
 package edu.snu.nemo.driver;
 
 import edu.snu.nemo.common.ir.IdManager;
+import edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.ShuffleLocationAssignmentPass;
 import edu.snu.nemo.conf.JobConf;
 import edu.snu.nemo.runtime.common.RuntimeIdGenerator;
 import edu.snu.nemo.runtime.common.message.MessageParameters;
@@ -79,6 +80,7 @@ public final class NemoDriver {
                      final LocalAddressProvider localAddressProvider,
                      final JobMessageObserver client,
                      @Parameter(JobConf.ExecutorJsonContents.class) final String resourceSpecificationString,
+                     @Parameter(JobConf.BandwidthJsonContents.class) final String bandwidthSpecificationString,
                      @Parameter(JobConf.JobId.class) final String jobId,
                      @Parameter(JobConf.FileDirectory.class) final String localDirectory,
                      @Parameter(JobConf.GlusterVolumeDirectory.class) final String glusterDirectory) {
@@ -93,6 +95,7 @@ public final class NemoDriver {
     this.glusterDirectory = glusterDirectory;
     this.client = client;
     this.handler = new RemoteClientMessageLoggingHandler(client);
+    ShuffleLocationAssignmentPass.setBandwidthSpecificationString(bandwidthSpecificationString);
   }
 
   /**
