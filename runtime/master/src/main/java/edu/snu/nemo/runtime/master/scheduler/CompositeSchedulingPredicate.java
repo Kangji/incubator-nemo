@@ -29,16 +29,16 @@ import java.util.Set;
  * when Nemo supports job-wide execution property.
  * TODO #69: Support job-wide execution property.
  */
-public final class CompositeSchedulingPolicy implements SchedulingPolicy {
-  private final List<SchedulingPolicy> schedulingPolicies;
+public final class CompositeSchedulingPredicate implements SchedulingPredicate {
+  private final List<SchedulingPredicate> schedulingPolicies;
 
   @Inject
-  private CompositeSchedulingPolicy(final SourceLocationAwareSchedulingPolicy sourceLocationAwareSchedulingPolicy,
-                                    final RoundRobinSchedulingPolicy roundRobinSchedulingPolicy,
-                                    final FreeSlotSchedulingPolicy freeSlotSchedulingPolicy,
-                                    final ContainerTypeAwareSchedulingPolicy containerTypeAwareSchedulingPolicy) {
+  private CompositeSchedulingPredicate(final SourceLocationAwareSchedulingPredicate sourceLocationAwareSchedulingPolicy,
+                                       final RoundRobinSchedulingPredicate roundRobinSchedulingPolicy,
+                                       final ExecutorSlotComplianceSchedulingPredicate executorSlotComplianceSchedulingPolicy,
+                                       final ContainerTypeAwareSchedulingPredicate containerTypeAwareSchedulingPolicy) {
     schedulingPolicies = Arrays.asList(
-        freeSlotSchedulingPolicy,
+        executorSlotComplianceSchedulingPolicy,
         containerTypeAwareSchedulingPolicy,
         sourceLocationAwareSchedulingPolicy,
         roundRobinSchedulingPolicy);
@@ -48,8 +48,8 @@ public final class CompositeSchedulingPolicy implements SchedulingPolicy {
   public Set<ExecutorRepresenter> filterExecutorRepresenters(final Set<ExecutorRepresenter> executorRepresenterSet,
                                                              final Task task) {
     Set<ExecutorRepresenter> candidates = executorRepresenterSet;
-    for (final SchedulingPolicy schedulingPolicy : schedulingPolicies) {
-      candidates = schedulingPolicy.filterExecutorRepresenters(candidates, task);
+    for (final SchedulingPredicate schedulingPredicate : schedulingPolicies) {
+      candidates = schedulingPredicate.filterExecutorRepresenters(candidates, task);
     }
     return candidates;
   }

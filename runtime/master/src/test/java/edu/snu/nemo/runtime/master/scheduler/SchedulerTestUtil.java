@@ -101,12 +101,12 @@ final class SchedulerTestUtil {
   }
 
   static void mockSchedulerRunner(final PendingTaskCollection pendingTaskCollection,
-                                  final SchedulingPolicy schedulingPolicy,
+                                  final SchedulingPredicate schedulingPredicate,
                                   final JobStateManager jobStateManager,
                                   final ExecutorRegistry executorRegistry,
                                   final boolean isPartialSchedule) {
     final SchedulerRunner schedulerRunner =
-        new SchedulerRunner(schedulingPolicy, pendingTaskCollection, executorRegistry);
+        new SchedulerRunner(schedulingPredicate, pendingTaskCollection, executorRegistry);
     schedulerRunner.scheduleJob(jobStateManager);
     while (!pendingTaskCollection.isEmpty()) {
       schedulerRunner.doScheduleStage();

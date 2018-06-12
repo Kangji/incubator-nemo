@@ -75,10 +75,18 @@ public abstract class ExecutionProperty<T> implements Serializable {
     DuplicateEdgeGroup,
 
     // Applies to IRVertex
+    SchedulingPolicy,
     DynamicOptimizationType,
     ExecutorPlacement,
     Parallelism,
     ScheduleGroupIndex,
     StageId,
+
+    // SchedulingPredicates
+    ExecutorSlotCompliance,
+    SourceLocationAware,
+
+    // SchedulingPolicies
+    MinOccupancySchedulingPolicy,
   }
 }

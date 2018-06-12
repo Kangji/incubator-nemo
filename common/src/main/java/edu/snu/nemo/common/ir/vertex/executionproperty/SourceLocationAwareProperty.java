@@ -13,22 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.snu.nemo.runtime.master.scheduler;
+package edu.snu.nemo.common.ir.vertex.executionproperty;
 
 import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
-import edu.snu.nemo.runtime.master.resource.ExecutorRepresenter;
-import org.apache.reef.annotations.audience.DriverSide;
-
-import javax.annotation.concurrent.ThreadSafe;
-import java.util.Optional;
-import java.util.Set;
 
 /**
- * Scheduling policy.
+ * Source location aware property.
  */
-@DriverSide
-@ThreadSafe
-@FunctionalInterface
-public interface SchedulingPolicy<T extends ExecutionProperty> {
-  Optional<ExecutorRepresenter> selectExecutor(T property, Set<ExecutorRepresenter> executors);
+public final class SourceLocationAwareProperty extends ExecutionProperty<Boolean> {
+  /**
+   * Default constructor.
+   * @param value value of the ExecutionProperty.
+   */
+  private SourceLocationAwareProperty(final boolean value) {
+    super(Key.ExecutorSlotCompliance, value);
+  }
+
+  /**
+   * Static method exposing the constructor.
+   * @param value value of the new execution property.
+   * @return the newly created execution property.
+   */
+  public static SourceLocationAwareProperty of(final boolean value) {
+    return new SourceLocationAwareProperty(value);
+  }
 }

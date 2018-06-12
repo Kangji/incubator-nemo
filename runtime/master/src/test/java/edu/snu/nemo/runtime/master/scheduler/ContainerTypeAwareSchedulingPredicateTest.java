@@ -29,11 +29,11 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests {@link ContainerTypeAwareSchedulingPolicy}.
+ * Tests {@link ContainerTypeAwareSchedulingPredicate}.
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ExecutorRepresenter.class, Task.class})
-public final class ContainerTypeAwareSchedulingPolicyTest {
+public final class ContainerTypeAwareSchedulingPredicateTest {
 
   private static ExecutorRepresenter mockExecutorRepresenter(final String containerType) {
     final ExecutorRepresenter executorRepresenter = mock(ExecutorRepresenter.class);
@@ -43,7 +43,7 @@ public final class ContainerTypeAwareSchedulingPolicyTest {
 
   @Test
   public void testContainerTypeAware() {
-    final SchedulingPolicy schedulingPolicy = new ContainerTypeAwareSchedulingPolicy();
+    final SchedulingPredicate schedulingPredicate = new ContainerTypeAwareSchedulingPredicate();
     final ExecutorRepresenter a0 = mockExecutorRepresenter(ExecutorPlacementProperty.TRANSIENT);
     final ExecutorRepresenter a1 = mockExecutorRepresenter(ExecutorPlacementProperty.RESERVED);
     final ExecutorRepresenter a2 = mockExecutorRepresenter(ExecutorPlacementProperty.NONE);
@@ -54,7 +54,7 @@ public final class ContainerTypeAwareSchedulingPolicyTest {
     final Set<ExecutorRepresenter> executorRepresenterList1 = new HashSet<>(Arrays.asList(a0, a1, a2));
 
     final Set<ExecutorRepresenter> candidateExecutors1 =
-        schedulingPolicy.filterExecutorRepresenters(executorRepresenterList1, task1);
+        schedulingPredicate.filterExecutorRepresenters(executorRepresenterList1, task1);
 
     final Set<ExecutorRepresenter> expectedExecutors1 = new HashSet<>(Arrays.asList(a1));
     assertEquals(expectedExecutors1, candidateExecutors1);
@@ -65,7 +65,7 @@ public final class ContainerTypeAwareSchedulingPolicyTest {
     final Set<ExecutorRepresenter> executorRepresenterList2 = new HashSet<>(Arrays.asList(a0, a1, a2));
 
     final Set<ExecutorRepresenter> candidateExecutors2 =
-        schedulingPolicy.filterExecutorRepresenters(executorRepresenterList2, task2);
+        schedulingPredicate.filterExecutorRepresenters(executorRepresenterList2, task2);
 
     final Set<ExecutorRepresenter> expectedExecutors2 = new HashSet<>(Arrays.asList(a0, a1, a2));
     assertEquals(expectedExecutors2, candidateExecutors2);

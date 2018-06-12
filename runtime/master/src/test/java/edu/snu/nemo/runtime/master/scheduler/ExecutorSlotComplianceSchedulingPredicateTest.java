@@ -29,11 +29,11 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests {@link FreeSlotSchedulingPolicy}.
+ * Tests {@link ExecutorSlotComplianceSchedulingPredicate}.
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ExecutorRepresenter.class, Task.class})
-public final class FreeSlotSchedulingPolicyTest {
+public final class ExecutorSlotComplianceSchedulingPredicateTest {
 
   private static ExecutorRepresenter mockExecutorRepresenter(final int numRunningTasks,
                                                              final int capacity) {
@@ -47,7 +47,7 @@ public final class FreeSlotSchedulingPolicyTest {
 
   @Test
   public void testFreeSlot() {
-    final SchedulingPolicy schedulingPolicy = new FreeSlotSchedulingPolicy();
+    final SchedulingPredicate schedulingPredicate = new ExecutorSlotComplianceSchedulingPredicate();
     final ExecutorRepresenter a0 = mockExecutorRepresenter(1, 1);
     final ExecutorRepresenter a1 = mockExecutorRepresenter(2, 3);
 
@@ -56,7 +56,7 @@ public final class FreeSlotSchedulingPolicyTest {
     final Set<ExecutorRepresenter> executorRepresenterList = new HashSet<>(Arrays.asList(a0, a1));
 
     final Set<ExecutorRepresenter> candidateExecutors =
-        schedulingPolicy.filterExecutorRepresenters(executorRepresenterList, task);
+        schedulingPredicate.filterExecutorRepresenters(executorRepresenterList, task);
 
     final Set<ExecutorRepresenter> expectedExecutors = new HashSet<>(Arrays.asList(a1));
     assertEquals(expectedExecutors, candidateExecutors);

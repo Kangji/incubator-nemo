@@ -13,22 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.snu.nemo.runtime.master.scheduler;
+package edu.snu.nemo.common.ir.vertex.executionproperty;
 
 import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
-import edu.snu.nemo.runtime.master.resource.ExecutorRepresenter;
-import org.apache.reef.annotations.audience.DriverSide;
-
-import javax.annotation.concurrent.ThreadSafe;
-import java.util.Optional;
-import java.util.Set;
 
 /**
- * Scheduling policy.
+ * Strategy to select an executor.
  */
-@DriverSide
-@ThreadSafe
-@FunctionalInterface
-public interface SchedulingPolicy<T extends ExecutionProperty> {
-  Optional<ExecutorRepresenter> selectExecutor(T property, Set<ExecutorRepresenter> executors);
+public final class SchedulingPolicyProperty extends ExecutionProperty<ExecutionProperty<?>> {
+  /**
+   * Default constructor.
+   * @param value value of the ExecutionProperty.
+   */
+  private SchedulingPolicyProperty(final ExecutionProperty<?> value) {
+    super(Key.SchedulingPolicy, value);
+  }
+
+  /**
+   * Static method exposing the constructor.
+   * @param value value of the new execution property.
+   * @return the newly created execution property.
+   */
+  public static SchedulingPolicyProperty of(final ExecutionProperty<?> value) {
+    return new SchedulingPolicyProperty(value);
+  }
 }

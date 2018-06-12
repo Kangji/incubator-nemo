@@ -30,11 +30,11 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
- * Test cases for {@link SourceLocationAwareSchedulingPolicy}.
+ * Test cases for {@link SourceLocationAwareSchedulingPredicate}.
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ExecutorRepresenter.class, Task.class, Readable.class})
-public final class SourceLocationAwareSchedulingPolicyTest {
+public final class SourceLocationAwareSchedulingPredicateTest {
   private static final String SITE_0 = "SEOUL";
   private static final String SITE_1 = "JINJU";
   private static final String SITE_2 = "BUSAN";
@@ -46,12 +46,12 @@ public final class SourceLocationAwareSchedulingPolicyTest {
   }
 
   /**
-   * {@link SourceLocationAwareSchedulingPolicy} should fail to schedule a {@link Task} when
+   * {@link SourceLocationAwareSchedulingPredicate} should fail to schedule a {@link Task} when
    * there are no executors in appropriate location(s).
    */
   @Test
   public void testSourceLocationAwareSchedulingNotAvailable() {
-    final SchedulingPolicy schedulingPolicy = new SourceLocationAwareSchedulingPolicy();
+    final SchedulingPredicate schedulingPredicate = new SourceLocationAwareSchedulingPredicate();
 
     // Prepare test scenario
     final Task task = CreateTask.withReadablesWithSourceLocations(
@@ -60,15 +60,15 @@ public final class SourceLocationAwareSchedulingPolicyTest {
     final ExecutorRepresenter e1 = mockExecutorRepresenter(SITE_1);
 
     assertEquals(Collections.emptySet(),
-        schedulingPolicy.filterExecutorRepresenters(new HashSet<>(Arrays.asList(e0, e1)), task));
+        schedulingPredicate.filterExecutorRepresenters(new HashSet<>(Arrays.asList(e0, e1)), task));
   }
 
   /**
-   * {@link SourceLocationAwareSchedulingPolicy} should properly schedule TGs with multiple source locations.
+   * {@link SourceLocationAwareSchedulingPredicate} should properly schedule TGs with multiple source locations.
    */
   @Test
   public void testSourceLocationAwareSchedulingWithMultiSource() {
-    final SchedulingPolicy schedulingPolicy = new SourceLocationAwareSchedulingPolicy();
+    final SchedulingPredicate schedulingPredicate = new SourceLocationAwareSchedulingPredicate();
     // Prepare test scenario
     final Task task0 = CreateTask.withReadablesWithSourceLocations(
         Collections.singletonList(Collections.singletonList(SITE_1)));
@@ -83,7 +83,7 @@ public final class SourceLocationAwareSchedulingPolicyTest {
 
     final ExecutorRepresenter e = mockExecutorRepresenter(SITE_1);
     for (final Task task : new HashSet<>(Arrays.asList(task0, task1, task2, task3))) {
-      assertEquals(new HashSet<>(Collections.singletonList(e)), schedulingPolicy.filterExecutorRepresenters(
+      assertEquals(new HashSet<>(Collections.singletonList(e)), schedulingPredicate.filterExecutorRepresenters(
           new HashSet<>(Collections.singletonList(e)), task));
     }
   }

@@ -29,11 +29,11 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests {@link RoundRobinSchedulingPolicy}
+ * Tests {@link RoundRobinSchedulingPredicate}
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ExecutorRepresenter.class, Task.class})
-public final class RoundRobinSchedulingPolicyTest {
+public final class RoundRobinSchedulingPredicateTest {
 
   private static ExecutorRepresenter mockExecutorRepresenter(final int numRunningTasks) {
     final ExecutorRepresenter executorRepresenter = mock(ExecutorRepresenter.class);
@@ -45,7 +45,7 @@ public final class RoundRobinSchedulingPolicyTest {
 
   @Test
   public void testRoundRobin() {
-    final SchedulingPolicy schedulingPolicy = new RoundRobinSchedulingPolicy();
+    final SchedulingPredicate schedulingPredicate = new RoundRobinSchedulingPredicate();
     final ExecutorRepresenter a0 = mockExecutorRepresenter(1);
     final ExecutorRepresenter a1 = mockExecutorRepresenter(2);
     final ExecutorRepresenter a2 = mockExecutorRepresenter(2);
@@ -55,7 +55,7 @@ public final class RoundRobinSchedulingPolicyTest {
     final Set<ExecutorRepresenter> executorRepresenterList = new HashSet<>(Arrays.asList(a0, a1, a2));
 
     final Set<ExecutorRepresenter> candidateExecutors =
-        schedulingPolicy.filterExecutorRepresenters(executorRepresenterList, task);
+        schedulingPredicate.filterExecutorRepresenters(executorRepresenterList, task);
 
     final Set<ExecutorRepresenter> expectedExecutors = new HashSet<>(Arrays.asList(a0));
     assertEquals(expectedExecutors, candidateExecutors);

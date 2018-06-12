@@ -54,11 +54,11 @@ public final class SchedulerRunner {
   // (available executor AND available task to schedule) OR the scheduler has terminated
   private final DelayedSignalingCondition canScheduleOrTerminated = new DelayedSignalingCondition();
   private ExecutorRegistry executorRegistry;
-  private SchedulingPolicy schedulingPolicy;
+  private SchedulingPredicate schedulingPredicate;
 
   @VisibleForTesting
   @Inject
-  public SchedulerRunner(final SchedulingPolicy schedulingPolicy,
+  public SchedulerRunner(final SchedulingPredicate schedulingPredicate,
                          final PendingTaskCollection pendingTaskCollection,
                          final ExecutorRegistry executorRegistry) {
     this.jobStateManagers = new HashMap<>();
@@ -67,7 +67,7 @@ public final class SchedulerRunner {
     this.isSchedulerRunning = new AtomicBoolean(false);
     this.isTerminated = false;
     this.executorRegistry = executorRegistry;
-    this.schedulingPolicy = schedulingPolicy;
+    this.schedulingPredicate = schedulingPredicate;
   }
 
   /**
@@ -126,7 +126,7 @@ public final class SchedulerRunner {
 
       executorRegistry.viewExecutors(executors -> {
         final Set<ExecutorRepresenter> candidateExecutors =
-            schedulingPolicy.filterExecutorRepresenters(executors, task);
+            schedulingPredicate.filterExecutorRepresenters(executors, task);
         final Optional<ExecutorRepresenter> firstCandidate = candidateExecutors.stream().findFirst();
 
         if (firstCandidate.isPresent()) {

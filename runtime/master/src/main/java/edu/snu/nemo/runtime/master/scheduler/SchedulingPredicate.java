@@ -16,19 +16,20 @@
 package edu.snu.nemo.runtime.master.scheduler;
 
 import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
+import edu.snu.nemo.runtime.common.plan.Task;
 import edu.snu.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
+import org.apache.reef.tang.annotations.DefaultImplementation;
 
 import javax.annotation.concurrent.ThreadSafe;
-import java.util.Optional;
-import java.util.Set;
 
 /**
- * Scheduling policy.
+ * Scheduling predicate.
  */
 @DriverSide
 @ThreadSafe
 @FunctionalInterface
-public interface SchedulingPolicy<T extends ExecutionProperty> {
-  Optional<ExecutorRepresenter> selectExecutor(T property, Set<ExecutorRepresenter> executors);
+@DefaultImplementation(CompositeSchedulingPredicate.class)
+public interface SchedulingPredicate<T extends ExecutionProperty> {
+  boolean testSchedulability(Task task, T property, ExecutorRepresenter executor);
 }
