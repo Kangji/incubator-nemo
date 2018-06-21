@@ -23,6 +23,8 @@ import edu.snu.nemo.common.ir.edge.IREdge;
 import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.edge.executionproperty.DataFlowModelProperty;
+import edu.snu.nemo.common.ir.vertex.executionproperty.ExecutorPlacementProperty;
+import edu.snu.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import edu.snu.nemo.common.ir.vertex.executionproperty.ScheduleGroupIndexProperty;
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -207,11 +209,20 @@ public final class ScheduleGroupPass extends AnnotatingPass {
         .forEach(dst -> scheduleGroupDAGBuilder.connectVertices(new ScheduleGroupEdge(src, dst))));
     scheduleGroupDAGBuilder.build().topologicalDo(scheduleGroup -> {
       boolean usedCurrentIndex = false;
+      final Map<String, Integer> placementToParallelism = new HashMap<>();
       for (final IRVertex irVertex : scheduleGroup.vertices) {
         if (!irVertex.getPropertyValue(ScheduleGroupIndexProperty.class).isPresent()) {
           irVertex.getExecutionProperties().put(ScheduleGroupIndexProperty.of(currentScheduleGroupIndex.getValue()));
           usedCurrentIndex = true;
+          final String placement = irVertex.getPropertyValue(ExecutorPlacementProperty.class).orElse("None");
+          placementToParallelism.putIfAbsent(placement, 0);
+          placementToParallelism.put(placement, placementToParallelism.get(placement)
+              + irVertex.getPropertyValue(ParallelismProperty.class).get());
         }
+      }
+      for (final Map.Entry<String, Integer> e : placementToParallelism.entrySet()) {
+        System.out.println(String.format("SGENTRY: %s: %d (SG %d)", e.getKey(), e.getValue(),
+            currentScheduleGroupIndex.getValue()));
       }
       if (usedCurrentIndex) {
         currentScheduleGroupIndex.increment();
