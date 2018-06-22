@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,10 @@ package edu.snu.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.dag.DAGBuilder;
+import edu.snu.nemo.common.ir.edge.executionproperty.DecoderProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.EncoderProperty;
 import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
 import edu.snu.nemo.common.ir.edge.IREdge;
-import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.OperatorVertex;
 import edu.snu.nemo.common.ir.vertex.transform.RelayTransform;
@@ -38,7 +39,7 @@ public final class SailfishRelayReshapingPass extends ReshapingPass {
    * Default constructor.
    */
   public SailfishRelayReshapingPass() {
-    super(Collections.singleton(ExecutionProperty.Key.DataCommunicationPattern));
+    super(Collections.singleton(DataCommunicationPatternProperty.class));
   }
 
   @Override
@@ -50,19 +51,21 @@ public final class SailfishRelayReshapingPass extends ReshapingPass {
       // has Shuffle as data communication pattern.
       if (v instanceof OperatorVertex && dag.getIncomingEdgesOf(v).stream().anyMatch(irEdge ->
               DataCommunicationPatternProperty.Value.Shuffle
-          .equals(irEdge.getProperty(ExecutionProperty.Key.DataCommunicationPattern)))) {
+          .equals(irEdge.getPropertyValue(DataCommunicationPatternProperty.class).get()))) {
         dag.getIncomingEdgesOf(v).forEach(edge -> {
           if (DataCommunicationPatternProperty.Value.Shuffle
-                .equals(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern))) {
+                .equals(edge.getPropertyValue(DataCommunicationPatternProperty.class).get())) {
             // Insert a merger vertex having transform that write received data immediately
             // before the vertex receiving shuffled data.
             final OperatorVertex iFileMergerVertex = new OperatorVertex(new RelayTransform());
             builder.addVertex(iFileMergerVertex);
             final IREdge newEdgeToMerger = new IREdge(DataCommunicationPatternProperty.Value.Shuffle,
-                edge.getSrc(), iFileMergerVertex, edge.getCoder(), edge.isSideInput());
-            final IREdge newEdgeFromMerger = new IREdge(DataCommunicationPatternProperty.Value.OneToOne,
-                iFileMergerVertex, v, edge.getCoder());
+                edge.getSrc(), iFileMergerVertex, edge.isSideInput());
             edge.copyExecutionPropertiesTo(newEdgeToMerger);
+            final IREdge newEdgeFromMerger = new IREdge(DataCommunicationPatternProperty.Value.OneToOne,
+                iFileMergerVertex, v);
+            newEdgeFromMerger.setProperty(EncoderProperty.of(edge.getPropertyValue(EncoderProperty.class).get()));
+            newEdgeFromMerger.setProperty(DecoderProperty.of(edge.getPropertyValue(DecoderProperty.class).get()));
             builder.connectVertices(newEdgeToMerger);
             builder.connectVertices(newEdgeFromMerger);
           } else {

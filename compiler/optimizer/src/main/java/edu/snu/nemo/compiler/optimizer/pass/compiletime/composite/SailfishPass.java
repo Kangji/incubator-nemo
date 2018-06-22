@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  */
 package edu.snu.nemo.compiler.optimizer.pass.compiletime.composite;
 
-import edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.SailfishEdgeDataFlowModelPass;
-import edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.SailfishEdgeDataStorePass;
-import edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.SailfishEdgeUsedDataHandlingPass;
+import edu.snu.nemo.compiler.optimizer.pass.compiletime.annotating.*;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.reshaping.SailfishRelayReshapingPass;
 
 import java.util.Arrays;
@@ -34,6 +32,8 @@ public final class SailfishPass extends CompositePass {
         new SailfishRelayReshapingPass(),
         new SailfishEdgeDataFlowModelPass(),
         new SailfishEdgeDataStorePass(),
+        new SailfishEdgeDecoderPass(),
+        new SailfishEdgeEncoderPass(),
         new SailfishEdgeUsedDataHandlingPass()
     ));
   }

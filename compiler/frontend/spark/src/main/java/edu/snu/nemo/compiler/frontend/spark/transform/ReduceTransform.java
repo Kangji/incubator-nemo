@@ -19,7 +19,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 import edu.snu.nemo.common.ir.OutputCollector;
 import edu.snu.nemo.common.ir.vertex.transform.Transform;
-import edu.snu.nemo.compiler.frontend.spark.core.java.JavaRDD;
+import edu.snu.nemo.compiler.frontend.spark.core.rdd.JavaRDD;
 import org.apache.spark.api.java.function.Function2;
 
 import javax.annotation.Nullable;
@@ -99,7 +99,7 @@ public final class ReduceTransform<T> implements Transform<T, T> {
   @Override
   public void close() {
     // Write result to a temporary file.
-    // TODO #711: remove this part, and make it properly write to sink.
+    // TODO #16: Implement collection of data from executor to client.
     try {
       final Kryo kryo = new Kryo();
       final Output output = new Output(new FileOutputStream(filename));

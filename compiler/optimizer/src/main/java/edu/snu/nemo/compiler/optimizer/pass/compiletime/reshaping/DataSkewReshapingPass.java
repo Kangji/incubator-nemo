@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,15 @@
  */
 package edu.snu.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
-import edu.snu.nemo.common.Pair;
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.dag.DAGBuilder;
 import edu.snu.nemo.common.ir.edge.IREdge;
+import edu.snu.nemo.common.ir.edge.executionproperty.DecoderProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.EncoderProperty;
 import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.MetricCollectionBarrierVertex;
 import edu.snu.nemo.common.ir.vertex.OperatorVertex;
-import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,7 +42,7 @@ public final class DataSkewReshapingPass extends ReshapingPass {
    * Default constructor.
    */
   public DataSkewReshapingPass() {
-    super(Collections.singleton(ExecutionProperty.Key.DataCommunicationPattern));
+    super(Collections.singleton(DataCommunicationPatternProperty.class));
   }
 
   @Override
@@ -54,8 +54,8 @@ public final class DataSkewReshapingPass extends ReshapingPass {
       // We care about OperatorVertices that have any incoming edges that are of type Shuffle.
       if (v instanceof OperatorVertex && dag.getIncomingEdgesOf(v).stream().anyMatch(irEdge ->
           DataCommunicationPatternProperty.Value.Shuffle
-          .equals(irEdge.getProperty(ExecutionProperty.Key.DataCommunicationPattern)))) {
-        final MetricCollectionBarrierVertex<Pair<Integer, Long>> metricCollectionBarrierVertex
+          .equals(irEdge.getPropertyValue(DataCommunicationPatternProperty.class).get()))) {
+        final MetricCollectionBarrierVertex<Integer, Long> metricCollectionBarrierVertex
             = new MetricCollectionBarrierVertex<>();
         metricCollectionVertices.add(metricCollectionBarrierVertex);
         builder.addVertex(v);
@@ -63,13 +63,15 @@ public final class DataSkewReshapingPass extends ReshapingPass {
         dag.getIncomingEdgesOf(v).forEach(edge -> {
           // we insert the metric collection vertex when we meet a shuffle edge
           if (DataCommunicationPatternProperty.Value.Shuffle
-                .equals(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern))) {
+                .equals(edge.getPropertyValue(DataCommunicationPatternProperty.class).get())) {
             // We then insert the dynamicOptimizationVertex between the vertex and incoming vertices.
             final IREdge newEdge = new IREdge(DataCommunicationPatternProperty.Value.OneToOne,
-                edge.getSrc(), metricCollectionBarrierVertex, edge.getCoder());
+                edge.getSrc(), metricCollectionBarrierVertex);
+            newEdge.setProperty(EncoderProperty.of(edge.getPropertyValue(EncoderProperty.class).get()));
+            newEdge.setProperty(DecoderProperty.of(edge.getPropertyValue(DecoderProperty.class).get()));
 
-            final IREdge edgeToGbK = new IREdge(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                metricCollectionBarrierVertex, v, edge.getCoder(), edge.isSideInput());
+            final IREdge edgeToGbK = new IREdge(edge.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+                metricCollectionBarrierVertex, v, edge.isSideInput());
             edge.copyExecutionPropertiesTo(edgeToGbK);
             builder.connectVertices(newEdge);
             builder.connectVertices(edgeToGbK);

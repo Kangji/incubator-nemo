@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,12 +60,12 @@ public final class CompilerTestUtil {
   }
 
   public static DAG<IRVertex, IREdge> compileMRDAG() throws Exception {
-    final String input = rootDir + "/../examples/resources/sample_input_mr";
+    final String input = rootDir + "/../examples/resources/sample_input_wordcount";
     final String output = rootDir + "/../examples/resources/sample_output";
-    final String main = "edu.snu.nemo.examples.beam.MapReduce";
+    final String main = "edu.snu.nemo.examples.beam.WordCount";
 
     final ArgBuilder mrArgBuilder = new ArgBuilder()
-        .addJobId("MapReduce")
+        .addJobId("WordCount")
         .addUserMain(main)
         .addUserArgs(input, output);
     return compileDAG(mrArgBuilder.build());

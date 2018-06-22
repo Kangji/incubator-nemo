@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,13 @@
 package edu.snu.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
 import edu.snu.nemo.common.ir.edge.IREdge;
+import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.DecoderProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.EncoderProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.LoopVertex;
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.dag.DAGBuilder;
-import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 
 import java.util.*;
 import java.util.function.IntPredicate;
@@ -101,7 +103,7 @@ public final class LoopOptimizations {
      * Default constructor.
      */
     public LoopFusionPass() {
-      super(Collections.singleton(ExecutionProperty.Key.DataCommunicationPattern));
+      super(Collections.singleton(DataCommunicationPatternProperty.class));
     }
 
     @Override
@@ -158,8 +160,8 @@ public final class LoopOptimizations {
             // inEdges.
             inEdges.getOrDefault(loopVertex, new ArrayList<>()).forEach(irEdge -> {
               if (builder.contains(irEdge.getSrc())) {
-                final IREdge newIREdge = new IREdge(irEdge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                    irEdge.getSrc(), newLoopVertex, irEdge.getCoder(), irEdge.isSideInput());
+                final IREdge newIREdge = new IREdge(irEdge.getPropertyValue(DataCommunicationPatternProperty.class)
+                    .get(), irEdge.getSrc(), newLoopVertex, irEdge.isSideInput());
                 irEdge.copyExecutionPropertiesTo(newIREdge);
                 builder.connectVertices(newIREdge);
               }
@@ -167,8 +169,8 @@ public final class LoopOptimizations {
             // outEdges.
             outEdges.getOrDefault(loopVertex, new ArrayList<>()).forEach(irEdge -> {
               if (builder.contains(irEdge.getDst())) {
-                final IREdge newIREdge = new IREdge(irEdge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                    newLoopVertex, irEdge.getDst(), irEdge.getCoder(), irEdge.isSideInput());
+                final IREdge newIREdge = new IREdge(irEdge.getPropertyValue(DataCommunicationPatternProperty.class)
+                    .get(), newLoopVertex, irEdge.getDst(), irEdge.isSideInput());
                 irEdge.copyExecutionPropertiesTo(newIREdge);
                 builder.connectVertices(newIREdge);
               }
@@ -230,7 +232,7 @@ public final class LoopOptimizations {
      */
     private Boolean checkEqualityOfIntPredicates(final IntPredicate predicate1, final IntPredicate predicate2,
                                                  final Integer numberToTestUntil) {
-      // TODO #223: strengthen this bit of code where terminationCondition has to be checked for convergence.
+      // TODO #11: Generalize Equality of Int Predicates for Loops.
       if (numberToTestUntil.equals(0)) {
         return predicate1.test(numberToTestUntil) == predicate2.test(numberToTestUntil);
       } else if (predicate1.test(numberToTestUntil) != predicate2.test(numberToTestUntil)) {
@@ -249,7 +251,7 @@ public final class LoopOptimizations {
      * Default constructor.
      */
     public LoopInvariantCodeMotionPass() {
-      super(Collections.singleton(ExecutionProperty.Key.DataCommunicationPattern));
+      super(Collections.singleton(DataCommunicationPatternProperty.class));
     }
 
     @Override
@@ -285,8 +287,11 @@ public final class LoopOptimizations {
               candidate.getValue().stream().map(IREdge::getSrc).anyMatch(edgeSrc -> edgeSrc.equals(e.getSrc())))
               .forEach(edge -> {
                 edgesToRemove.add(edge);
-                edgesToAdd.add(new IREdge(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                    candidate.getKey(), edge.getDst(), edge.getCoder(), edge.isSideInput()));
+                final IREdge newEdge = new IREdge(edge.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+                    candidate.getKey(), edge.getDst(), edge.isSideInput());
+                newEdge.setProperty(EncoderProperty.of(edge.getPropertyValue(EncoderProperty.class).get()));
+                newEdge.setProperty(DecoderProperty.of(edge.getPropertyValue(DecoderProperty.class).get()));
+                edgesToAdd.add(newEdge);
               });
           final List<IREdge> listToModify = inEdges.getOrDefault(loopVertex, new ArrayList<>());
           listToModify.removeAll(edgesToRemove);

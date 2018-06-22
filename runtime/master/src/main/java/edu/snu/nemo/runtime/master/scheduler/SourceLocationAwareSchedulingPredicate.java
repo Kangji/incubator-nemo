@@ -21,17 +21,13 @@ import edu.snu.nemo.common.ir.vertex.executionproperty.SourceLocationAwareProper
 import edu.snu.nemo.runtime.common.plan.Task;
 import edu.snu.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
- * Tries to pick one of the executors
- * where the corresponding data resides.
+ * It tries to pick one of the executors where the corresponding data resides.
  */
 @ThreadSafe
 @DriverSide

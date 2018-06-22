@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,6 +77,7 @@ public final class RuntimeMaster {
   private final BlockManagerMaster blockManagerMaster;
   private final MetricMessageHandler metricMessageHandler;
   private final MessageEnvironment masterMessageEnvironment;
+  private final Map<Integer, Long> aggregatedMetricData;
 
   // For converting json data. This is a thread safe.
   private final ObjectMapper objectMapper;
@@ -110,6 +111,7 @@ public final class RuntimeMaster {
     this.irVertices = new HashSet<>();
     this.resourceRequestCount = new AtomicInteger(0);
     this.objectMapper = new ObjectMapper();
+    this.aggregatedMetricData = new HashMap<>();
   }
 
   /**
@@ -289,7 +291,7 @@ public final class RuntimeMaster {
         throw new RuntimeException(exception);
       case DataSizeMetric:
         final ControlMessage.DataSizeMetricMsg dataSizeMetricMsg = message.getDataSizeMetricMsg();
-        // TODO #511: Refactor metric aggregation for (general) run-rime optimization.
+        // TODO #96: Modularize DataSkewPolicy to use MetricVertex and BarrierVertex.
         accumulateBarrierMetric(dataSizeMetricMsg.getPartitionSizeList(),
             dataSizeMetricMsg.getSrcIRVertexId(), dataSizeMetricMsg.getBlockId());
         break;
@@ -307,8 +309,8 @@ public final class RuntimeMaster {
 
   /**
    * Accumulates the metric data for a barrier vertex.
-   * TODO #511: Refactor metric aggregation for (general) run-rime optimization.
-   * TODO #513: Replace MetricCollectionBarrierVertex with a Customizable IRVertex.
+   * TODO #96: Modularize DataSkewPolicy to use MetricVertex and BarrierVertex.
+   * TODO #98: Implement MetricVertex that collect metric used for dynamic optimization.
    *
    * @param partitionSizeInfo the size of partitions in a block to accumulate.
    * @param srcVertexId       the ID of the source vertex.
@@ -321,21 +323,27 @@ public final class RuntimeMaster {
         .filter(irVertex -> irVertex.getId().equals(srcVertexId)).findFirst()
         .orElseThrow(() -> new RuntimeException(srcVertexId + " doesn't exist in the submitted Physical Plan"));
 
-    final List<Pair<Integer, Long>> partitionSizes = new ArrayList<>();
+    // For each hash range index, aggregate the metric data as they arrive.
     partitionSizeInfo.forEach(partitionSizeEntry -> {
-      partitionSizes.add(Pair.of(partitionSizeEntry.getKey(), partitionSizeEntry.getSize()));
+      final int key = partitionSizeEntry.getKey();
+      final long size = partitionSizeEntry.getSize();
+      if (aggregatedMetricData.containsKey(key)) {
+        aggregatedMetricData.compute(key, (existKey, existValue) -> existValue + size);
+      } else {
+        aggregatedMetricData.put(key, size);
+      }
     });
 
     if (vertexToSendMetricDataTo instanceof MetricCollectionBarrierVertex) {
-      final MetricCollectionBarrierVertex<Pair<Integer, Long>> metricCollectionBarrierVertex =
+      final MetricCollectionBarrierVertex<Integer, Long> metricCollectionBarrierVertex =
           (MetricCollectionBarrierVertex) vertexToSendMetricDataTo;
-      metricCollectionBarrierVertex.accumulateMetric(blockId, partitionSizes);
+      metricCollectionBarrierVertex.addBlockId(blockId);
+      metricCollectionBarrierVertex.setMetricData(aggregatedMetricData);
     } else {
       throw new RuntimeException("Something wrong happened at DataSkewCompositePass.");
     }
   }
 
-  // TODO #164: Cleanup Protobuf Usage
   private static TaskState.State convertTaskState(final ControlMessage.TaskStateFromExecutor state) {
     switch (state) {
       case READY:
@@ -370,9 +378,8 @@ public final class RuntimeMaster {
 
   /**
    * Schedules a periodic DAG logging thread.
-   * TODO #58: Web UI (Real-time visualization)
    * @param jobStateManager for the job the DAG should be logged.
-   *
+   * TODO #20: RESTful APIs to Access Job State and Metric.
    * @return the scheduled executor service.
    */
   private ScheduledExecutorService scheduleDagLogging(final JobStateManager jobStateManager) {

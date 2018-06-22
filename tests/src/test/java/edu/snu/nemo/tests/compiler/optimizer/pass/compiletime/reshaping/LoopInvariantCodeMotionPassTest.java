@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ import edu.snu.nemo.client.JobLauncher;
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.dag.DAGBuilder;
 import edu.snu.nemo.common.ir.edge.IREdge;
-import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.DecoderProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.EncoderProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.LoopVertex;
 import edu.snu.nemo.compiler.optimizer.pass.compiletime.reshaping.LoopExtractionPass;
@@ -87,11 +89,12 @@ public class LoopInvariantCodeMotionPassTest {
           if (!e.getSrc().equals(vertex7)) {
             builder.connectVertices(e);
           } else {
-            final Optional<IREdge> theIncomingEdge = newDAGIncomingEdge.stream().findFirst();
-            assertTrue(theIncomingEdge.isPresent());
-            final IREdge newIREdge =
-                new IREdge(theIncomingEdge.get().getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                    theIncomingEdge.get().getSrc(), alsLoop, theIncomingEdge.get().getCoder());
+            final Optional<IREdge> incomingEdge = newDAGIncomingEdge.stream().findFirst();
+            assertTrue(incomingEdge.isPresent());
+            final IREdge newIREdge = new IREdge(incomingEdge.get().getPropertyValue(
+                DataCommunicationPatternProperty.class).get(), incomingEdge.get().getSrc(), alsLoop);
+            newIREdge.setProperty(EncoderProperty.of(incomingEdge.get().getPropertyValue(EncoderProperty.class).get()));
+            newIREdge.setProperty(DecoderProperty.of(incomingEdge.get().getPropertyValue(DecoderProperty.class).get()));
             builder.connectVertices(newIREdge);
           }
         });

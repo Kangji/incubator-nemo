@@ -21,6 +21,7 @@ import org.apache.spark.*;
 import org.apache.spark.rdd.RDD;
 import scala.collection.JavaConverters;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -93,6 +94,7 @@ public final class SparkTextFileBoundedSourceVertex extends SourceVertex<String>
      * @param partition      the partition to wrap.
      * @param sparkConf      configuration needed to build the SparkContext.
      * @param partitionIndex partition for this readable.
+     * @param inputPath      the input file path.
      * @param numPartitions  the total number of partitions.
      */
     private SparkTextFileBoundedSourceReadable(final Partition partition,
@@ -108,7 +110,7 @@ public final class SparkTextFileBoundedSourceVertex extends SourceVertex<String>
     }
 
     @Override
-    public Iterable<String> read() throws Exception {
+    public Iterable<String> read() throws IOException {
       // for setting up the same environment in the executors.
       final SparkContext sparkContext = SparkContext.getOrCreate(sparkConf);
 

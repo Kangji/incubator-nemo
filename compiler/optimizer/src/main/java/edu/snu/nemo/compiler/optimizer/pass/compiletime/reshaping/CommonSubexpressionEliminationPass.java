@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,17 @@
  */
 package edu.snu.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
+import edu.snu.nemo.common.coder.DecoderFactory;
+import edu.snu.nemo.common.coder.EncoderFactory;
 import edu.snu.nemo.common.ir.edge.IREdge;
+import edu.snu.nemo.common.ir.edge.executionproperty.DecoderProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.EncoderProperty;
+import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.vertex.OperatorVertex;
 import edu.snu.nemo.common.ir.vertex.transform.Transform;
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.dag.DAGBuilder;
-import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,7 +41,7 @@ public final class CommonSubexpressionEliminationPass extends ReshapingPass {
    * Default constructor.
    */
   public CommonSubexpressionEliminationPass() {
-    super(Collections.singleton(ExecutionProperty.Key.DataCommunicationPattern));
+    super(Collections.singleton(DataCommunicationPatternProperty.class));
   }
 
   @Override
@@ -146,8 +150,16 @@ public final class CommonSubexpressionEliminationPass extends ReshapingPass {
             final Set<IREdge> outListToModify = outEdges.get(ov);
             outEdges.getOrDefault(ov, new HashSet<>()).forEach(e -> {
               outListToModify.remove(e);
-              final IREdge newIrEdge = new IREdge(e.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                  operatorVertexToUse, e.getDst(), e.getCoder());
+              final IREdge newIrEdge = new IREdge(e.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+                  operatorVertexToUse, e.getDst());
+              final Optional<EncoderFactory> encoderProperty = e.getPropertyValue(EncoderProperty.class);
+              if (encoderProperty.isPresent()) {
+                newIrEdge.setProperty(EncoderProperty.of(encoderProperty.get()));
+              }
+              final Optional<DecoderFactory> decoderProperty = e.getPropertyValue(DecoderProperty.class);
+              if (decoderProperty.isPresent()) {
+                newIrEdge.setProperty(DecoderProperty.of(decoderProperty.get()));
+              }
               outListToModify.add(newIrEdge);
             });
             outEdges.remove(ov);

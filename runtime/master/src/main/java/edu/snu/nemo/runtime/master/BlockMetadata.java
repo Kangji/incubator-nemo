@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,19 +60,17 @@ final class BlockMetadata {
     LOG.debug("Block State Transition: id {} from {} to {}", new Object[]{blockId, oldState, newState});
 
     switch (newState) {
-      case SCHEDULED:
+      case IN_PROGRESS:
         stateMachine.setState(newState);
         break;
-      case LOST:
+      case NOT_AVAILABLE:
         LOG.info("Block {} lost in {}", new Object[]{blockId, location});
-      case LOST_BEFORE_COMMIT:
-      case REMOVED:
         // Reset the block location and committer information.
         locationHandler.completeExceptionally(new AbsentBlockException(blockId, newState));
         locationHandler = new BlockManagerMaster.BlockLocationRequestHandler(blockId);
         stateMachine.setState(newState);
         break;
-      case COMMITTED:
+      case AVAILABLE:
         assert (location != null);
         locationHandler.complete(location);
         stateMachine.setState(newState);

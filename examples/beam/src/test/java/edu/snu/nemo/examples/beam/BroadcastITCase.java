@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ public final class BroadcastITCase {
   private static ArgBuilder builder;
   private static final String fileBasePath = System.getProperty("user.dir") + "/../resources/";
 
-  private static final String inputFileName = "sample_input_mr";
+  private static final String inputFileName = "sample_input_wordcount";
   private static final String outputFileName = "sample_output_broadcast";
   private static final String testResourceFileName = "test_output_broadcast";
   private static final String executorResourceFileName = fileBasePath + "beam_sample_executor_resources.json";

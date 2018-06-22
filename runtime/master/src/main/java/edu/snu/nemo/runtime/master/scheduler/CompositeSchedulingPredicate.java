@@ -27,26 +27,24 @@ import java.util.Set;
  * Temporary class to implement stacked scheduling policy.
  * At now, policies are injected through Tang, but have to be configurable by users
  * when Nemo supports job-wide execution property.
- * TODO #69: Support job-wide execution property.
  */
 public final class CompositeSchedulingPredicate implements SchedulingPredicate {
   private final List<SchedulingPredicate> schedulingPolicies;
 
   @Inject
-  private CompositeSchedulingPredicate(final SourceLocationAwareSchedulingPredicate sourceLocationAwareSchedulingPolicy,
-                                       final RoundRobinSchedulingPredicate roundRobinSchedulingPolicy,
-                                       final ExecutorSlotComplianceSchedulingPredicate executorSlotComplianceSchedulingPolicy,
-                                       final ContainerTypeAwareSchedulingPredicate containerTypeAwareSchedulingPolicy) {
+  private CompositeSchedulingPredicate(
+      final SourceLocationAwareSchedulingPredicate sourceLocationAwareSchedulingPolicy,
+      final ExecutorSlotComplianceSchedulingPredicate executorSlotComplianceSchedulingPolicy,
+      final ContainerTypeAwareSchedulingPredicate containerTypeAwareSchedulingPolicy) {
     schedulingPolicies = Arrays.asList(
         executorSlotComplianceSchedulingPolicy,
         containerTypeAwareSchedulingPolicy,
-        sourceLocationAwareSchedulingPolicy,
-        roundRobinSchedulingPolicy);
+        sourceLocationAwareSchedulingPolicy);
   }
 
   @Override
-  public Set<ExecutorRepresenter> filterExecutorRepresenters(final Set<ExecutorRepresenter> executorRepresenterSet,
-                                                             final Task task) {
+  public boolean testSchedulability(final Set<ExecutorRepresenter> executorRepresenterSet,
+                                    final Task task) {
     Set<ExecutorRepresenter> candidates = executorRepresenterSet;
     for (final SchedulingPredicate schedulingPredicate : schedulingPolicies) {
       candidates = schedulingPredicate.filterExecutorRepresenters(candidates, task);

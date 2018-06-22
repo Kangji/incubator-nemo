@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Seoul National University
+ * Copyright (C) 2018 Seoul National University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 package edu.snu.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
 import edu.snu.nemo.common.ir.edge.IREdge;
+import edu.snu.nemo.common.ir.edge.executionproperty.DataCommunicationPatternProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.dag.DAG;
 import edu.snu.nemo.common.dag.DAGBuilder;
-import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.LoopVertex;
 import edu.snu.nemo.common.ir.vertex.OperatorVertex;
 import edu.snu.nemo.common.ir.vertex.SourceVertex;
@@ -37,7 +37,7 @@ public final class LoopExtractionPass extends ReshapingPass {
    * Default constructor.
    */
   public LoopExtractionPass() {
-    super(Collections.singleton(ExecutionProperty.Key.DataCommunicationPattern));
+    super(Collections.singleton(DataCommunicationPatternProperty.class));
   }
 
   @Override
@@ -61,7 +61,7 @@ public final class LoopExtractionPass extends ReshapingPass {
 
   /**
    * This part groups each iteration of loops together by observing the LoopVertex assigned to primitive operators,
-   * which is assigned by the {@link edu.snu.nemo.client.beam.NemoPipelineVisitor}. This also shows in which depth of
+   * which is assigned by the NemoPipelineVisitor. This also shows in which depth of
    * nested loops the function handles. It recursively calls itself from the maximum depth until 0.
    * @param dag DAG to process
    * @param depth the depth of the stack to process. Must be greater than 0.
@@ -99,8 +99,8 @@ public final class LoopExtractionPass extends ReshapingPass {
                 final LoopVertex srcLoopVertex = dag.getAssignedLoopVertexOf(irEdge.getSrc());
                 srcLoopVertex.addDagOutgoingEdge(irEdge);
                 final IREdge edgeFromLoop =
-                    new IREdge(irEdge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                        srcLoopVertex, operatorVertex, irEdge.getCoder(), irEdge.isSideInput());
+                    new IREdge(irEdge.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+                        srcLoopVertex, operatorVertex, irEdge.isSideInput());
                 irEdge.copyExecutionPropertiesTo(edgeFromLoop);
                 builder.connectVertices(edgeFromLoop);
                 srcLoopVertex.mapEdgeWithLoop(edgeFromLoop, irEdge);
@@ -147,16 +147,16 @@ public final class LoopExtractionPass extends ReshapingPass {
           assignedLoopVertex.getBuilder().connectVertices(irEdge);
         } else { // loop -> loop connection
           assignedLoopVertex.addDagIncomingEdge(irEdge);
-          final IREdge edgeToLoop = new IREdge(irEdge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-              srcLoopVertex, assignedLoopVertex, irEdge.getCoder(), irEdge.isSideInput());
+          final IREdge edgeToLoop = new IREdge(irEdge.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+              srcLoopVertex, assignedLoopVertex, irEdge.isSideInput());
           irEdge.copyExecutionPropertiesTo(edgeToLoop);
           builder.connectVertices(edgeToLoop);
           assignedLoopVertex.mapEdgeWithLoop(edgeToLoop, irEdge);
         }
       } else { // operator -> loop
         assignedLoopVertex.addDagIncomingEdge(irEdge);
-        final IREdge edgeToLoop = new IREdge(irEdge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-            irEdge.getSrc(), assignedLoopVertex, irEdge.getCoder(), irEdge.isSideInput());
+        final IREdge edgeToLoop = new IREdge(irEdge.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+            irEdge.getSrc(), assignedLoopVertex, irEdge.isSideInput());
         irEdge.copyExecutionPropertiesTo(edgeToLoop);
         builder.connectVertices(edgeToLoop);
         assignedLoopVertex.mapEdgeWithLoop(edgeToLoop, irEdge);
@@ -226,14 +226,14 @@ public final class LoopExtractionPass extends ReshapingPass {
               final IRVertex equivalentSrcVertex = equivalentVertices.get(srcVertex);
 
               // add the new IREdge to the iterative incoming edges list.
-              final IREdge newIrEdge = new IREdge(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                  equivalentSrcVertex, equivalentDstVertex, edge.getCoder(), edge.isSideInput());
+              final IREdge newIrEdge = new IREdge(edge.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+                  equivalentSrcVertex, equivalentDstVertex, edge.isSideInput());
               edge.copyExecutionPropertiesTo(newIrEdge);
               finalRootLoopVertex.addIterativeIncomingEdge(newIrEdge);
             } else {
               // src is from outside the previous loop. vertex outside previous loop -> DAG.
-              final IREdge newIrEdge = new IREdge(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                  srcVertex, equivalentDstVertex, edge.getCoder(), edge.isSideInput());
+              final IREdge newIrEdge = new IREdge(edge.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+                  srcVertex, equivalentDstVertex, edge.isSideInput());
               edge.copyExecutionPropertiesTo(newIrEdge);
               finalRootLoopVertex.addNonIterativeIncomingEdge(newIrEdge);
             }
@@ -245,8 +245,8 @@ public final class LoopExtractionPass extends ReshapingPass {
             final IRVertex dstVertex = edge.getDst();
             final IRVertex equivalentSrcVertex = equivalentVertices.get(srcVertex);
 
-            final IREdge newIrEdge = new IREdge(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-                equivalentSrcVertex, dstVertex, edge.getCoder(), edge.isSideInput());
+            final IREdge newIrEdge = new IREdge(edge.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+                equivalentSrcVertex, dstVertex, edge.isSideInput());
             edge.copyExecutionPropertiesTo(newIrEdge);
             finalRootLoopVertex.addDagOutgoingEdge(newIrEdge);
             finalRootLoopVertex.mapEdgeWithLoop(loopVertex.getEdgeWithLoop(edge), newIrEdge);
@@ -290,8 +290,8 @@ public final class LoopExtractionPass extends ReshapingPass {
       if (edge.getSrc().equals(firstEquivalentVertex)) {
         builder.connectVertices(edge);
       } else {
-        final IREdge newIrEdge = new IREdge(edge.getProperty(ExecutionProperty.Key.DataCommunicationPattern),
-            firstEquivalentVertex, irVertex, edge.getCoder(), edge.isSideInput());
+        final IREdge newIrEdge = new IREdge(edge.getPropertyValue(DataCommunicationPatternProperty.class).get(),
+            firstEquivalentVertex, irVertex, edge.isSideInput());
         edge.copyExecutionPropertiesTo(newIrEdge);
         builder.connectVertices(newIrEdge);
       }
