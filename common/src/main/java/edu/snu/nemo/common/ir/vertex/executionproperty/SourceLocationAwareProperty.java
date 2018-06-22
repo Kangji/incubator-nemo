@@ -21,12 +21,15 @@ import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
  * Source location aware property.
  */
 public final class SourceLocationAwareProperty extends ExecutionProperty<Boolean> {
+  private static final SourceLocationAwareProperty AWARE_TRUE = new SourceLocationAwareProperty(true);
+  private static final SourceLocationAwareProperty AWARE_FALSE = new SourceLocationAwareProperty(false);
+
   /**
    * Default constructor.
    * @param value value of the ExecutionProperty.
    */
   private SourceLocationAwareProperty(final boolean value) {
-    super(Key.ExecutorSlotCompliance, value);
+    super(value);
   }
 
   /**
@@ -35,6 +38,6 @@ public final class SourceLocationAwareProperty extends ExecutionProperty<Boolean
    * @return the newly created execution property.
    */
   public static SourceLocationAwareProperty of(final boolean value) {
-    return new SourceLocationAwareProperty(value);
+    return value ? AWARE_TRUE : AWARE_FALSE;
   }
 }

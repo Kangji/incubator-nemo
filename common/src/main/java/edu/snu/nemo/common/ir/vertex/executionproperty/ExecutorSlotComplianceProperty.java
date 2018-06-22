@@ -21,12 +21,17 @@ import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
  * Whether or not to comply to slot restrictions when scheduling this vertex.
  */
 public final class ExecutorSlotComplianceProperty extends ExecutionProperty<Boolean> {
+  private static final ExecutorSlotComplianceProperty COMPLIANCE_TRUE
+      = new ExecutorSlotComplianceProperty(true);
+  private static final ExecutorSlotComplianceProperty COMPLIANCE_FALSE
+      = new ExecutorSlotComplianceProperty(false);
+
   /**
    * Default constructor.
    * @param value value of the ExecutionProperty.
    */
   private ExecutorSlotComplianceProperty(final boolean value) {
-    super(Key.ExecutorSlotCompliance, value);
+    super(value);
   }
 
   /**
@@ -35,6 +40,6 @@ public final class ExecutorSlotComplianceProperty extends ExecutionProperty<Bool
    * @return the newly created execution property.
    */
   public static ExecutorSlotComplianceProperty of(final boolean value) {
-    return new ExecutorSlotComplianceProperty(value);
+    return value ? COMPLIANCE_TRUE : COMPLIANCE_FALSE;
   }
 }

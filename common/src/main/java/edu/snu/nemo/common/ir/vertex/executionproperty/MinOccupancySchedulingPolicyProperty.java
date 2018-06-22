@@ -16,19 +16,21 @@
 package edu.snu.nemo.common.ir.vertex.executionproperty;
 
 import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
+import org.apache.commons.lang3.ObjectUtils;
 
 /**
- * Selects MinOccupancySchedulingPolicy.
+ * Selects MinOccupancySchedulingPolicy for scheduling policy.
  */
-public final class MinOccupancySchedulingPolicyProperty extends ExecutionProperty<Void> {
+public final class MinOccupancySchedulingPolicyProperty extends ExecutionProperty<ObjectUtils.Null> {
 
+  private static final String NAME = "MinOccupancy";
   private static final MinOccupancySchedulingPolicyProperty PROPERTY = new MinOccupancySchedulingPolicyProperty();
 
   /**
    * Default constructor.
    */
   private MinOccupancySchedulingPolicyProperty() {
-    super(Key.MinOccupancySchedulingPolicy, null);
+    super(null);
   }
 
   /**
@@ -37,5 +39,10 @@ public final class MinOccupancySchedulingPolicyProperty extends ExecutionPropert
    */
   public static MinOccupancySchedulingPolicyProperty of() {
     return PROPERTY;
+  }
+
+  @Override
+  public String toString() {
+    return NAME;
   }
 }

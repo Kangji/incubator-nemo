@@ -26,7 +26,7 @@ public final class SchedulingPolicyProperty extends ExecutionProperty<ExecutionP
    * @param value value of the ExecutionProperty.
    */
   private SchedulingPolicyProperty(final ExecutionProperty<?> value) {
-    super(Key.SchedulingPolicy, value);
+    super(value);
   }
 
   /**

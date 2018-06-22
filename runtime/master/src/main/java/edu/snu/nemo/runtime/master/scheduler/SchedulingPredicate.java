@@ -19,7 +19,6 @@ import edu.snu.nemo.common.ir.executionproperty.ExecutionProperty;
 import edu.snu.nemo.runtime.common.plan.Task;
 import edu.snu.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
-import org.apache.reef.tang.annotations.DefaultImplementation;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -29,7 +28,6 @@ import javax.annotation.concurrent.ThreadSafe;
 @DriverSide
 @ThreadSafe
 @FunctionalInterface
-@DefaultImplementation(CompositeSchedulingPredicate.class)
 public interface SchedulingPredicate<T extends ExecutionProperty> {
   boolean testSchedulability(Task task, T property, ExecutorRepresenter executor);
 }
