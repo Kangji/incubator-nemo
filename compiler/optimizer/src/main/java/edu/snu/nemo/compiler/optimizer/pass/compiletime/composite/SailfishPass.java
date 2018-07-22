@@ -38,7 +38,8 @@ public final class SailfishPass extends CompositePass {
         new SailfishEdgeCompressionPass(),
         new SailfishEdgeDecompressionPass(),
         new SailfishEdgeUsedDataHandlingPass(),
-        new SailfishVertexExecutorSlotCompliancePass()
+        new SailfishVertexExecutorSlotCompliancePass(),
+        new SailfishVertexIntermediateLocationAwareSchedulingPass()
     ));
   }
 }
