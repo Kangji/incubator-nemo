@@ -16,88 +16,78 @@
 package edu.snu.nemo.runtime.common.data;
 
 /**
- * Descriptor for hash range.
+ * {@link KeyRange} implementation whose key domain is co-domain of a hash function, which returns non-negative integer.
  */
 public final class HashRange implements KeyRange<Integer> {
-  private static final HashRange ALL = new HashRange(0, Integer.MAX_VALUE, false);
+
+  private static final HashRange ALL = new HashRange(0, Integer.MAX_VALUE);
+
   private final int rangeBeginInclusive;
   private final int rangeEndExclusive;
-  private boolean isSkewed;
 
   /**
    * Private constructor.
-   * @param rangeBeginInclusive point at which the hash range starts (inclusive).
-   * @param rangeEndExclusive point at which the hash range ends (exclusive).
+   *
+   * @param rangeBeginInclusive point at which the hash range starts (inclusive)
+   * @param rangeEndExclusive point at which the hash range ends (exclusive)
    */
-  private HashRange(final int rangeBeginInclusive, final int rangeEndExclusive, final boolean isSkewed) {
-    if (rangeBeginInclusive < 0 || rangeEndExclusive < 0) {
-      throw new RuntimeException("Each boundary value of the range have to be non-negative.");
+  private HashRange(final int rangeBeginInclusive, final int rangeEndExclusive) {
+    try {
+      if (rangeBeginInclusive < 0 || rangeEndExclusive < 0) {
+        throw new IllegalArgumentException("Each boundary value of the HashRange has to be non-negative integer.");
+      }
+      if (rangeBeginInclusive > rangeEndExclusive) {
+        throw new IllegalArgumentException("rangeBeginInclusive should be no greater than rangeEndExclusive.");
+      }
+    } catch (final IllegalArgumentException e) {
+      throw new IllegalArgumentException(String.format("HashRange %s is invalid: %s", toString(), e.getMessage()));
     }
     this.rangeBeginInclusive = rangeBeginInclusive;
     this.rangeEndExclusive = rangeEndExclusive;
-    this.isSkewed = isSkewed;
   }
 
   /**
-   * @return Gets a hash range descriptor representing the whole data from a partition.
+   * @return a {@link HashRange} representing the whole range
    */
   public static HashRange all() {
     return ALL;
   }
 
   /**
+   * Static initializer for {@link HashRange}.
+   *
    * @param rangeStartInclusive the start of the range (inclusive)
    * @param rangeEndExclusive   the end of the range (exclusive)
-   * @return A hash range descriptor representing [{@code rangeBeginInclusive}, {@code rangeEndExclusive})
+   * @return A hash range representing [{@code rangeBeginInclusive}, {@code rangeEndExclusive})
    */
-  public static HashRange of(final int rangeStartInclusive, final int rangeEndExclusive, final boolean isSkewed) {
-    return new HashRange(rangeStartInclusive, rangeEndExclusive, isSkewed);
+  public static HashRange of(final int rangeStartInclusive, final int rangeEndExclusive) {
+    return new HashRange(rangeStartInclusive, rangeEndExclusive);
   }
 
-  /**
-   * @return whether this hash range descriptor represents the whole data or not.
-   */
   @Override
   public boolean isAll() {
-    return this.equals(ALL);
+    return equals(ALL);
   }
 
-  /**
-   * @return the beginning of this range (inclusive).
-   */
   @Override
   public Integer rangeBeginInclusive() {
     return rangeBeginInclusive;
   }
 
-  /**
-   * @return the end of the range (exclusive)
-   */
   @Override
   public Integer rangeEndExclusive() {
     return rangeEndExclusive;
   }
 
-  /**
-   * @param i the value to test
-   * @return {@code true} if this hash range includes the specified value, {@code false} otherwise
-   */
   @Override
   public boolean includes(final Integer i) {
     return i >= rangeBeginInclusive && i < rangeEndExclusive;
   }
 
-  /**
-   * {@inheritDoc}
-   * This method should be overridden for a readable representation of KeyRange.
-   * The generic type K should override {@link Object}'s toString() as well.
-   */
   @Override
   public String toString() {
-    final StringBuilder printableKeyRange = new StringBuilder("[");
-    printableKeyRange.append(rangeBeginInclusive()).append(", ").append(rangeEndExclusive()).append(")");
-
-    return printableKeyRange.toString();
+    return new StringBuilder("[").append(rangeBeginInclusive).append(", ")
+        .append(rangeEndExclusive).append(")").toString();
   }
 
   @Override
@@ -108,24 +98,12 @@ public final class HashRange implements KeyRange<Integer> {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final HashRange hashRange = (HashRange) o;
-    if (rangeBeginInclusive != hashRange.rangeBeginInclusive) {
-      return false;
-    }
-    return rangeEndExclusive == hashRange.rangeEndExclusive;
+    final HashRange other = (HashRange) o;
+    return rangeBeginInclusive == other.rangeBeginInclusive && rangeEndExclusive == other.rangeEndExclusive;
   }
 
   @Override
   public int hashCode() {
-    int result = rangeBeginInclusive;
-    result = 31 * result + rangeEndExclusive;
-    return result;
-  }
-
-  public void setAsSkewed() {
-    isSkewed = true;
-  }
-  public boolean isSkewed() {
-    return isSkewed;
+    return rangeBeginInclusive + 31 * rangeEndExclusive;
   }
 }

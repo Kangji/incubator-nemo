@@ -19,49 +19,51 @@ import java.io.Serializable;
 
 /**
  * Represents the key range of data partitions within a block.
- * @param <K> the type of key to assign for each partition.
+ *
+ * @param <K> the type of key to assign to each partition
  */
 public interface KeyRange<K extends Serializable> extends Serializable {
 
- /**
-   * @return whether this instance represents the entire range or not.
+  /**
+   * @return whether this represents the whole range or not
    */
   boolean isAll();
 
   /**
-   * @return the beginning of this range (inclusive).
+   * @return the beginning of this range (inclusive)
    */
   K rangeBeginInclusive();
 
   /**
-   * @return the end of this range (exclusive).
+   * @return the end of this range (exclusive)
    */
   K rangeEndExclusive();
 
   /**
-   * @param key the value to check
-   * @return {@code true} if this key range includes the specified value, {@code false} otherwise
+   * Tests whether this includes the specified key or not.
+   *
+   * @param key the key to test
+   * @return {@code true} if and only if this key range includes the specified value, {@code false} otherwise
    */
   boolean includes(final K key);
 
   /**
    * {@inheritDoc}
-   * This method should be overridden for a readable representation of KeyRange.
-   * The generic type K should override {@link Object}'s toString() as well.
+   * Implementations should override this method for a readable representation for this range.
    */
   @Override
   String toString();
 
   /**
    * {@inheritDoc}
-   * This method should be overridden for KeyRange comparisons.
+   * Implementations should override this method for comparison.
    */
   @Override
   boolean equals(final Object o);
 
   /**
    * {@inheritDoc}
-   * This method should be overridden for KeyRange comparisons.
+   * Implementations should override this method for comparison.
    */
   @Override
   int hashCode();
