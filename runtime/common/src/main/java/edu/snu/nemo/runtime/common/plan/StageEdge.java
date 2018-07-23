@@ -21,8 +21,8 @@ import edu.snu.nemo.common.ir.edge.executionproperty.DataFlowModelProperty;
 import edu.snu.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import edu.snu.nemo.common.ir.vertex.IRVertex;
 import edu.snu.nemo.common.ir.executionproperty.ExecutionPropertyMap;
-import edu.snu.nemo.runtime.common.data.KeyRange;
-import edu.snu.nemo.runtime.common.data.HashRange;
+import edu.snu.nemo.runtime.common.keyrange.KeyRange;
+import edu.snu.nemo.runtime.common.keyrange.HashRange;
 
 import java.util.HashMap;
 import java.util.Map;

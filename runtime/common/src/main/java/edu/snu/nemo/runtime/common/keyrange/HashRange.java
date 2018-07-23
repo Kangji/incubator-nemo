@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.snu.nemo.runtime.common.data;
+package edu.snu.nemo.runtime.common.keyrange;
 
 /**
  * {@link KeyRange} implementation whose key domain is co-domain of a hash function, which returns non-negative integer.

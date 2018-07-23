@@ -15,8 +15,8 @@
  */
 package edu.snu.nemo.runtime.common.optimizer.pass.runtime;
 
-import edu.snu.nemo.runtime.common.data.HashRange;
-import edu.snu.nemo.runtime.common.data.KeyRange;
+import edu.snu.nemo.runtime.common.keyrange.HashRange;
+import edu.snu.nemo.runtime.common.keyrange.KeyRange;
 import org.junit.Before;
 import org.junit.Test;
 
