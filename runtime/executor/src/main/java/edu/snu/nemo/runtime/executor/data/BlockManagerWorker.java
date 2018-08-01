@@ -62,7 +62,7 @@ import org.slf4j.LoggerFactory;
 public final class BlockManagerWorker {
   private static final Logger LOG = LoggerFactory.getLogger(BlockManagerWorker.class.getName());
   private static final String REMOTE_FILE_STORE = "REMOTE_FILE_STORE";
-  private static final int DISCARD_THRESHOLD = 50;
+  private static final int DISCARD_THRESHOLD = 40;
 
   private final String executorId;
   private final SerializerManager serializerManager;
