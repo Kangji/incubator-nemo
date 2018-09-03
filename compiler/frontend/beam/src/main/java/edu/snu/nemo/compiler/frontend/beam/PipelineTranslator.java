@@ -206,44 +206,6 @@ public final class PipelineTranslator
   }
 
   /**
-   * Translator for Combine transform. Implements local combining before shuffling key-value pairs.
-   *
-   * @param ctx provides translation context
-   * @param transformVertex the given CompositeTransform to translate
-   * @param transform transform which can be obtained from {@code transformVertex}
-   */
-  @CompositeTransformTranslator({Combine.Globally.class, Combine.PerKey.class, Combine.GroupedValues.class})
-  private static void combineTranslator(final TranslationContext ctx,
-                                        final CompositeTransformVertex transformVertex,
-                                        final PTransform<?, ?> transform) {
-    final List<TransformVertex> topologicalOrdering = transformVertex.getDAG().getTopologicalSort();
-    final TransformVertex first = topologicalOrdering.get(0);
-    final TransformVertex last = topologicalOrdering.get(topologicalOrdering.size() - 1);
-
-    if (first.getNode().getTransform() instanceof GroupByKey) {
-      // Translate the given CompositeTransform under OneToOneEdge-enforced context.
-      final TranslationContext oneToOneEdgeContext = new TranslationContext(ctx,
-          OneToOneCommunicationPatternSelector.INSTANCE);
-      transformVertex.getDAG().topologicalDo(oneToOneEdgeContext::translate);
-
-      // Attempt to translate the CompositeTransform again.
-      // Add GroupByKey, which is the first transform in the given CompositeTransform.
-      // Make sure it consumes the output from the last vertex in OneToOneEdge-translated hierarchy.
-      final IRVertex groupByKey = new OperatorVertex(new GroupByKeyTransform());
-      ctx.addVertex(groupByKey);
-      last.getNode().getOutputs().values().forEach(outputFromCombiner
-          -> ctx.addEdgeTo(groupByKey, outputFromCombiner, false));
-      first.getNode().getOutputs().values()
-          .forEach(outputFromGroupByKey -> ctx.registerMainOutputFrom(groupByKey, outputFromGroupByKey));
-
-      // Translate the remaining vertices.
-      topologicalOrdering.stream().skip(1).forEach(ctx::translate);
-    } else {
-      transformVertex.getDAG().topologicalDo(ctx::translate);
-    }
-  }
-
-  /**
    * Pushes the loop vertex to the stack before translating the inner DAG, and pops it after the translation.
    *
    * @param ctx provides translation context
