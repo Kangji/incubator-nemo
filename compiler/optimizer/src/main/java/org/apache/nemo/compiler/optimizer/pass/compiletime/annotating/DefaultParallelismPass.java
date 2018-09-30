@@ -34,26 +34,26 @@ import java.util.List;
 public final class DefaultParallelismPass extends AnnotatingPass {
   private final int desiredSourceParallelism;
   // we decrease the number of parallelism by this number on each shuffle boundary.
-  private final int shuffleDecreaseFactor;
+  private final int shuffleParallelism;
 
   /**
    * Default constructor with desired number of source parallelism 1, shuffle decreasing factor 2.
    */
   public DefaultParallelismPass() {
-    this(1, 2);
+    this(1, 80);
   }
 
   /**
    * Default constructor.
    *
    * @param desiredSourceParallelism the desired number of source parallelism.
-   * @param shuffleDecreaseFactor    the parallelism decrease factor for shuffle edge.
+   * @param shuffleParallelism    the parallelism decrease factor for shuffle edge.
    */
   public DefaultParallelismPass(final int desiredSourceParallelism,
-                                final int shuffleDecreaseFactor) {
+                                final int shuffleParallelism) {
     super(DefaultParallelismPass.class);
     this.desiredSourceParallelism = desiredSourceParallelism;
-    this.shuffleDecreaseFactor = shuffleDecreaseFactor;
+    this.shuffleParallelism = shuffleParallelism;
   }
 
   @Override
@@ -84,8 +84,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
           final Integer shuffleParallelism = inEdges.stream()
               .filter(edge -> CommunicationPatternProperty.Value.Shuffle
                   .equals(edge.getPropertyValue(CommunicationPatternProperty.class).get()))
-              .mapToInt(edge -> edge.getSrc().getPropertyValue(ParallelismProperty.class).get())
-              .map(i -> i / shuffleDecreaseFactor)
+              .mapToInt(edge -> this.shuffleParallelism)
               .max().orElse(1);
           // We set the greater value as the parallelism.
           final Integer parallelism = o2oParallelism > shuffleParallelism ? o2oParallelism : shuffleParallelism;
@@ -145,13 +144,13 @@ public final class DefaultParallelismPass extends AnnotatingPass {
     if (desiredSourceParallelism != that.desiredSourceParallelism) {
       return false;
     }
-    return shuffleDecreaseFactor == that.shuffleDecreaseFactor;
+    return shuffleParallelism == that.shuffleParallelism;
   }
 
   @Override
   public int hashCode() {
     int result = desiredSourceParallelism;
-    result = 31 * result + shuffleDecreaseFactor;
+    result = 31 * result + shuffleParallelism;
     return result;
   }
 }
