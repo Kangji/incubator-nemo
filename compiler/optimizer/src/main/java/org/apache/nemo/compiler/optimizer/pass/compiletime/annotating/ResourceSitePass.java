@@ -129,6 +129,8 @@ public final class ResourceSitePass extends AnnotatingPass {
         final HashMap<String, Integer> shares = new HashMap<>();
         for (int i = 0; i < bandwidthSpecification.getNodes().size(); i++) {
           shares.put(bandwidthSpecification.getNodes().get(i), (int) Math.round(ratios[i] * parallelism));
+          LOG.info(String.format("SHARE: %s %f %d", bandwidthSpecification.getNodes().get(i), ratios[i],
+            shares.get(bandwidthSpecification.getNodes().get(i))));
         }
         int remainder = parallelism - shares.values().stream().mapToInt(i -> i).sum();
         for (final String nodeName : shares.keySet()) {
