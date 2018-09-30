@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Computes and assigns appropriate share of nodes to each irVertex to minimize shuffle time,
@@ -133,7 +134,8 @@ public final class ResourceSitePass extends AnnotatingPass {
             shares.get(bandwidthSpecification.getNodes().get(i))));
         }
         int remainder = parallelism - shares.values().stream().mapToInt(i -> i).sum();
-        for (final String nodeName : shares.keySet()) {
+        for (final String nodeName : shares.entrySet().stream().sorted(Map.Entry.comparingByValue())
+            .map(e -> e.getKey()).sorted(Comparator.reverseOrder()).collect(Collectors.toList())) {
           if (remainder == 0) {
             break;
           }
