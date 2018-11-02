@@ -117,7 +117,7 @@ public final class JobLauncher {
 
     // Merge Job and Driver Confs
     jobAndDriverConf = Configurations.merge(builtJobConf, driverConf, driverNcsConf, driverMessageConfg, webuiConf,
-        executorResourceConfig, bandwidthConfig, driverRPCServer.getListeningConfiguration(), schedulerConf,);
+        executorResourceConfig, bandwidthConfig, driverRPCServer.getListeningConfiguration(), schedulerConf);
 
     // Get DeployMode Conf
     deployModeConf = Configurations.merge(getDeployModeConf(builtJobConf), clientConf);
