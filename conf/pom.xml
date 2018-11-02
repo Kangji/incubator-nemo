@@ -38,5 +38,10 @@ under the License.
             <artifactId>reef-common</artifactId>
             <version>${reef.version}</version>
         </dependency>
+      <dependency>
+        <groupId>org.apache.reef</groupId>
+        <artifactId>reef-webserver</artifactId>
+        <version>${reef.version}</version>
+      </dependency>
     </dependencies>
 </project>

@@ -43,6 +43,8 @@ import org.apache.reef.tang.formats.CommandLine;
 import org.apache.reef.util.EnvironmentUtils;
 import org.apache.reef.util.Optional;
 import org.apache.reef.wake.IdentifierFactory;
+import org.apache.reef.webserver.HttpServer;
+import org.apache.reef.webserver.HttpServerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +106,7 @@ public final class JobLauncher {
     builtJobConf = getJobConf(args);
     final Configuration driverConf = getDriverConf(builtJobConf);
     final Configuration driverNcsConf = getDriverNcsConf();
+    final Configuration webuiConf = getWebuiConf();
     final Configuration driverMessageConfg = getDriverMessageConf();
     final Configuration executorResourceConfig = getJSONConf(builtJobConf, JobConf.ExecutorJSONPath.class,
         JobConf.ExecutorJSONContents.class);
@@ -113,8 +116,8 @@ public final class JobLauncher {
     final Configuration schedulerConf = getSchedulerConf(builtJobConf);
 
     // Merge Job and Driver Confs
-    jobAndDriverConf = Configurations.merge(builtJobConf, driverConf, driverNcsConf, driverMessageConfg,
-        executorResourceConfig, bandwidthConfig, driverRPCServer.getListeningConfiguration(), schedulerConf);
+    jobAndDriverConf = Configurations.merge(builtJobConf, driverConf, driverNcsConf, driverMessageConfg, webuiConf,
+        executorResourceConfig, bandwidthConfig, driverRPCServer.getListeningConfiguration(), schedulerConf,);
 
     // Get DeployMode Conf
     deployModeConf = Configurations.merge(getDeployModeConf(builtJobConf), clientConf);
@@ -273,6 +276,17 @@ public final class JobLauncher {
         TANG.newConfigurationBuilder()
             .bindImplementation(IdentifierFactory.class, StringIdentifierFactory.class)
             .build());
+  }
+
+  /**
+   * Get webui configuraiton.
+   *
+   * @return web ui configuration
+   */
+  private static Configuration getWebuiConf() {
+    return TANG.newConfigurationBuilder()
+      .bindImplementation(HttpServer.class, HttpServerImpl.class)
+      .build();
   }
 
   /**
