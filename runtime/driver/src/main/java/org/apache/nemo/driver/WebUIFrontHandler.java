@@ -25,6 +25,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Supplies web ui frontend.
+ */
 public final class WebUIFrontHandler implements HttpHandler {
   private String uriSpecification = "webui";
 
