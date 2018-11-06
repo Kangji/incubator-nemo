@@ -67,5 +67,10 @@ under the License.
             <artifactId>nemo-conf</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+          <groupId>org.apache.reef</groupId>
+          <artifactId>reef-runtime-yarn</artifactId>
+          <version>${reef.version}</version>
+        </dependency>
     </dependencies>
 </project>
