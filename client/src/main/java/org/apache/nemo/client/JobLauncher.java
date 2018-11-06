@@ -23,6 +23,7 @@ import com.google.protobuf.ByteString;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.driver.NemoDriver;
+import org.apache.nemo.driver.WebUIFrontHandler;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.MessageParameters;
@@ -36,6 +37,7 @@ import org.apache.reef.io.network.naming.NameServerConfiguration;
 import org.apache.reef.io.network.util.StringIdentifierFactory;
 import org.apache.reef.runtime.local.client.LocalRuntimeConfiguration;
 import org.apache.reef.runtime.yarn.client.YarnClientConfiguration;
+import org.apache.reef.runtime.yarn.driver.TrackingURLProvider;
 import org.apache.reef.tang.*;
 import org.apache.reef.tang.annotations.Name;
 import org.apache.reef.tang.exceptions.InjectionException;
@@ -286,6 +288,7 @@ public final class JobLauncher {
   private static Configuration getWebuiConf() {
     return TANG.newConfigurationBuilder()
       .bindImplementation(HttpServer.class, HttpServerImpl.class)
+      .bindImplementation(TrackingURLProvider.class, WebUIFrontHandler.WebUITrackingURLProvider.class)
       .build();
   }
 

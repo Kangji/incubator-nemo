@@ -18,9 +18,13 @@
  */
 package org.apache.nemo.driver;
 
+import org.apache.reef.runtime.yarn.driver.TrackingURLProvider;
+import org.apache.reef.wake.remote.address.LocalAddressProvider;
 import org.apache.reef.webserver.HttpHandler;
+import org.apache.reef.webserver.HttpServer;
 import org.apache.reef.webserver.ParsedHttpRequest;
 
+import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,7 +33,7 @@ import java.nio.charset.StandardCharsets;
  * Supplies web ui frontend.
  */
 public final class WebUIFrontHandler implements HttpHandler {
-  private String uriSpecification = "webui";
+  private String uriSpecification = null;
 
   @Override
   public String getUriSpecification() {
@@ -45,5 +49,22 @@ public final class WebUIFrontHandler implements HttpHandler {
   public void onHttpRequest(final ParsedHttpRequest parsedHttpRequest, final HttpServletResponse httpServletResponse)
       throws IOException {
     httpServletResponse.getOutputStream().write("Hello from Nemo WebUI".getBytes(StandardCharsets.UTF_8));
+  }
+
+  /**
+   * Webui url provider.
+   */
+  public static final class WebUITrackingURLProvider implements TrackingURLProvider {
+    private final String url;
+
+    @Inject
+    public WebUITrackingURLProvider(final HttpServer httpServer,
+                                    final LocalAddressProvider localAddressProvider) {
+      url = String.format("%s:%d/webui/1", localAddressProvider.getLocalAddress(), httpServer.getPort());
+    }
+    @Override
+    public String getTrackingUrl() {
+      return url;
+    }
   }
 }
