@@ -33,7 +33,7 @@ import java.nio.charset.StandardCharsets;
  * Supplies web ui frontend.
  */
 public final class WebUIFrontHandler implements HttpHandler {
-  private String uriSpecification = null;
+  private String uriSpecification = "webui";
 
   @Override
   public String getUriSpecification() {
