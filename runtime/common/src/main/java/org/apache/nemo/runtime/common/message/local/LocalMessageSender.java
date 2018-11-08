@@ -15,6 +15,7 @@
  */
 package org.apache.nemo.runtime.common.message.local;
 
+import org.apache.nemo.runtime.common.ReplyFutureMap;
 import org.apache.nemo.runtime.common.message.MessageSender;
 
 import java.util.concurrent.CompletableFuture;
@@ -51,7 +52,7 @@ public final class LocalMessageSender<T> implements MessageSender<T> {
   }
 
   @Override
-  public <U> CompletableFuture<U> request(final T message) {
+  public <U> ReplyFutureMap.ReplyFuture<U> request(final T message) {
     if (isClosed) {
       throw new RuntimeException("Closed");
     }

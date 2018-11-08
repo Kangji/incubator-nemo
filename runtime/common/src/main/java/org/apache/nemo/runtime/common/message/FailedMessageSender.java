@@ -15,6 +15,7 @@
  */
 package org.apache.nemo.runtime.common.message;
 
+import org.apache.nemo.runtime.common.ReplyFutureMap;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 
 import java.util.concurrent.CompletableFuture;
@@ -29,9 +30,9 @@ public final class FailedMessageSender implements MessageSender<ControlMessage.M
   }
 
   @Override
-  public CompletableFuture<ControlMessage.Message> request(final ControlMessage.Message message) {
-    final CompletableFuture<ControlMessage.Message> failed = new CompletableFuture<>();
-    failed.completeExceptionally(new Throwable("Failed Message Sender"));
+  public ReplyFutureMap.ReplyFuture<ControlMessage.Message> request(final ControlMessage.Message message) {
+    final ReplyFutureMap.ReplyFuture<ControlMessage.Message> failed = new ReplyFutureMap.ReplyFuture<>();
+    failed.resolveExceptionally(new Throwable("Failed Message Sender"));
     return failed;
   }
 

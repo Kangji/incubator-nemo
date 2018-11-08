@@ -24,6 +24,7 @@ import org.apache.nemo.common.exception.UnsupportedExecutionPropertyException;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataPersistenceProperty;
 import org.apache.nemo.conf.JobConf;
+import org.apache.nemo.runtime.common.ReplyFutureMap;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.comm.ControlMessage.ByteTransferContextDescriptor;
@@ -75,7 +76,6 @@ public final class BlockManagerWorker {
 
   // To-Master connections
   private final PersistentConnectionToMasterMap persistentConnectionToMasterMap;
-  private final Map<String, CompletableFuture<ControlMessage.Message>> pendingBlockLocationRequest;
 
   // To-Executor connections
   private final ByteTransfer byteTransfer;
@@ -120,7 +120,6 @@ public final class BlockManagerWorker {
     this.backgroundExecutorService = Executors.newFixedThreadPool(numThreads);
     this.blockToRemainingRead = new ConcurrentHashMap<>();
     this.serializerManager = serializerManager;
-    this.pendingBlockLocationRequest = new ConcurrentHashMap<>();
     this.blockTransferThrottler = blockTransferThrottler;
   }
 
@@ -152,85 +151,81 @@ public final class BlockManagerWorker {
    * @return the {@link CompletableFuture} of the block.
    */
   public CompletableFuture<DataUtil.IteratorWithNumBytes> readBlock(
-      final String blockIdWildcard,
-      final String runtimeEdgeId,
-      final DataStoreProperty.Value blockStore,
-      final KeyRange keyRange) {
+    final String blockIdWildcard,
+    final String runtimeEdgeId,
+    final DataStoreProperty.Value blockStore,
+    final KeyRange keyRange) {
     // Let's see if a remote worker has it
-    final CompletableFuture<ControlMessage.Message> blockLocationFuture =
-        pendingBlockLocationRequest.computeIfAbsent(blockIdWildcard, blockIdToRequest -> {
-          // Ask Master for the location.
-          // (IMPORTANT): This 'request' effectively blocks the TaskExecutor thread if the block is IN_PROGRESS.
-          // We use this property to make the receiver task of a 'push' edge to wait in an Executor for its input data
-          // to become available.
-          final CompletableFuture<ControlMessage.Message> responseFromMasterFuture = persistentConnectionToMasterMap
-              .getMessageSender(MessageEnvironment.BLOCK_MANAGER_MASTER_MESSAGE_LISTENER_ID).request(
-                  ControlMessage.Message.newBuilder()
-                      .setId(RuntimeIdManager.generateMessageId())
-                      .setListenerId(MessageEnvironment.BLOCK_MANAGER_MASTER_MESSAGE_LISTENER_ID)
-                      .setType(ControlMessage.MessageType.RequestBlockLocation)
-                      .setRequestBlockLocationMsg(
-                          ControlMessage.RequestBlockLocationMsg.newBuilder()
-                              .setExecutorId(executorId)
-                              .setBlockIdWildcard(blockIdWildcard)
-                              .build())
-                      .build());
-          return responseFromMasterFuture;
-        });
-    blockLocationFuture.whenComplete((message, throwable) -> {
-      pendingBlockLocationRequest.remove(blockIdWildcard);
-    });
+    // Ask Master for the location.
+    // (IMPORTANT): This 'request' effectively blocks the TaskExecutor thread if the block is IN_PROGRESS.
+    // We use this property to make the receiver task of a 'push' edge to wait in an Executor for its input data
+    // to become available.
+    final ControlMessage.Message responseFromMaster;
+    try {
+      responseFromMaster = (ControlMessage.Message) persistentConnectionToMasterMap
+        .getMessageSender(MessageEnvironment.BLOCK_MANAGER_MASTER_MESSAGE_LISTENER_ID).request(
+          ControlMessage.Message.newBuilder()
+            .setId(RuntimeIdManager.generateMessageId())
+            .setListenerId(MessageEnvironment.BLOCK_MANAGER_MASTER_MESSAGE_LISTENER_ID)
+            .setType(ControlMessage.MessageType.RequestBlockLocation)
+            .setRequestBlockLocationMsg(
+              ControlMessage.RequestBlockLocationMsg.newBuilder()
+                .setExecutorId(executorId)
+                .setBlockIdWildcard(blockIdWildcard)
+                .build())
+            .build()).get();
+    } catch (final InterruptedException|ExecutionException e) {
+      throw new RuntimeException(e);
+    }
 
     // Using thenCompose so that fetching block data starts after getting response from master.
-    return blockLocationFuture.thenCompose(responseFromMaster -> {
-      if (responseFromMaster.getType() != ControlMessage.MessageType.BlockLocationInfo) {
-        throw new RuntimeException("Response message type mismatch!");
-      }
+    if (responseFromMaster.getType() != ControlMessage.MessageType.BlockLocationInfo) {
+      throw new RuntimeException("Response message type mismatch!");
+    }
 
-      final ControlMessage.BlockLocationInfoMsg blockLocationInfoMsg =
-          responseFromMaster.getBlockLocationInfoMsg();
-      if (!blockLocationInfoMsg.hasOwnerExecutorId()) {
-        throw new BlockFetchException(new Throwable(
-            "Block " + blockIdWildcard + " location unknown: "
-                + "The block state is " + blockLocationInfoMsg.getState()));
-      }
+    final ControlMessage.BlockLocationInfoMsg blockLocationInfoMsg =
+      responseFromMaster.getBlockLocationInfoMsg();
+    if (!blockLocationInfoMsg.hasOwnerExecutorId()) {
+      throw new BlockFetchException(new Throwable(
+        "Block " + blockIdWildcard + " location unknown: "
+          + "The block state is " + blockLocationInfoMsg.getState()));
+    }
 
-      // This is the executor id that we wanted to know
-      final String blockId = blockLocationInfoMsg.getBlockId();
-      final String targetExecutorId = blockLocationInfoMsg.getOwnerExecutorId();
-      if (targetExecutorId.equals(executorId) || targetExecutorId.equals(REMOTE_FILE_STORE)) {
-        // Block resides in the evaluator
-        return getDataFromLocalBlock(blockId, blockStore, keyRange);
-      } else {
-        final ByteTransferContextDescriptor descriptor = ByteTransferContextDescriptor.newBuilder()
-            .setBlockId(blockId)
-            .setBlockStore(convertBlockStore(blockStore))
-            .setRuntimeEdgeId(runtimeEdgeId)
-            .setKeyRange(ByteString.copyFrom(SerializationUtils.serialize(keyRange)))
-            .build();
-        final CompletableFuture<ByteInputContext> contextFuture = blockTransferThrottler
-            .requestTransferPermission(runtimeEdgeId)
-            .thenCompose(obj -> byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray()));
+    // This is the executor id that we wanted to know
+    final String blockId = blockLocationInfoMsg.getBlockId();
+    final String targetExecutorId = blockLocationInfoMsg.getOwnerExecutorId();
+    if (targetExecutorId.equals(executorId) || targetExecutorId.equals(REMOTE_FILE_STORE)) {
+      // Block resides in the evaluator
+      return getDataFromLocalBlock(blockId, blockStore, keyRange);
+    } else {
+      final ByteTransferContextDescriptor descriptor = ByteTransferContextDescriptor.newBuilder()
+        .setBlockId(blockId)
+        .setBlockStore(convertBlockStore(blockStore))
+        .setRuntimeEdgeId(runtimeEdgeId)
+        .setKeyRange(ByteString.copyFrom(SerializationUtils.serialize(keyRange)))
+        .build();
+      final CompletableFuture<ByteInputContext> contextFuture = blockTransferThrottler
+        .requestTransferPermission(runtimeEdgeId)
+        .thenCompose(obj -> byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray()));
 
-        // whenComplete() ensures that blockTransferThrottler.onTransferFinished() is always called,
-        // even on failures. Actual failure handling and Task retry will be done by DataFetcher.
-        contextFuture.whenComplete((connectionContext, connectionThrowable) -> {
-          if (connectionThrowable != null) {
-            // Something wrong with the connection. Notify blockTransferThrottler immediately.
+      // whenComplete() ensures that blockTransferThrottler.onTransferFinished() is always called,
+      // even on failures. Actual failure handling and Task retry will be done by DataFetcher.
+      contextFuture.whenComplete((connectionContext, connectionThrowable) -> {
+        if (connectionThrowable != null) {
+          // Something wrong with the connection. Notify blockTransferThrottler immediately.
+          blockTransferThrottler.onTransferFinished(runtimeEdgeId);
+        } else {
+          // Connection is okay. Notify blockTransferThrottler when the actual transfer is done, or fails.
+          connectionContext.getCompletedFuture().whenComplete((transferContext, transferThrowable) -> {
             blockTransferThrottler.onTransferFinished(runtimeEdgeId);
-          } else {
-            // Connection is okay. Notify blockTransferThrottler when the actual transfer is done, or fails.
-            connectionContext.getCompletedFuture().whenComplete((transferContext, transferThrowable) -> {
-              blockTransferThrottler.onTransferFinished(runtimeEdgeId);
-            });
-          }
-        });
+          });
+        }
+      });
 
-        return contextFuture
-            .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(),
-                serializerManager.getSerializer(runtimeEdgeId)));
-      }
-    });
+      return contextFuture
+        .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(),
+          serializerManager.getSerializer(runtimeEdgeId)));
+    }
   }
 
   /**

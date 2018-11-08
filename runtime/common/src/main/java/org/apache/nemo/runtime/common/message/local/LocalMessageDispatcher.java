@@ -15,6 +15,7 @@
  */
 package org.apache.nemo.runtime.common.message.local;
 
+import org.apache.nemo.runtime.common.ReplyFutureMap;
 import org.apache.nemo.runtime.common.message.MessageListener;
 import org.apache.nemo.runtime.common.message.MessageSender;
 import org.apache.reef.tang.Injector;
@@ -76,7 +77,7 @@ public final class LocalMessageDispatcher {
     listener.onMessage(message);
   }
 
-  <T, U> CompletableFuture<U> dispatchRequestMessage(
+  <T, U> ReplyFutureMap.ReplyFuture<U> dispatchRequestMessage(
       final String senderId, final String targetId, final String messageTypeId, final T message) {
 
     final MessageListener listener = nodeIdToMessageListenersMap.get(targetId).get(messageTypeId);
@@ -89,7 +90,9 @@ public final class LocalMessageDispatcher {
 
     final Optional<Object> replyMessage = context.getReplyMessage();
 
-    return CompletableFuture.completedFuture((U) replyMessage.orElse(null));
+    final ReplyFutureMap.ReplyFuture<U> future = new ReplyFutureMap.ReplyFuture<>();
+    future.resolve((U) replyMessage.orElse(null));
+    return future;
   }
 
   /**

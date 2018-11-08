@@ -88,7 +88,7 @@ public final class BroadcastManagerWorker {
               return result;
             } else {
               // Get from master
-              final CompletableFuture<ControlMessage.Message> responseFromMasterFuture = toMaster
+              final ControlMessage.Message responseFromMaster = (ControlMessage.Message) toMaster
                 .getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).request(
                   ControlMessage.Message.newBuilder()
                     .setId(RuntimeIdManager.generateMessageId())
@@ -99,9 +99,9 @@ public final class BroadcastManagerWorker {
                         .setExecutorId(executorId)
                         .setBroadcastId(ByteString.copyFrom(SerializationUtils.serialize(id)))
                         .build())
-                    .build());
+                    .build()).get();
               return SerializationUtils.deserialize(
-                responseFromMasterFuture.get().getBroadcastVariableMsg().getVariable().toByteArray());
+                responseFromMaster.getBroadcastVariableMsg().getVariable().toByteArray());
             }
           }
         });

@@ -15,6 +15,7 @@
  */
 package org.apache.nemo.runtime.common.message.grpc;
 
+import org.apache.nemo.runtime.common.ReplyFutureMap;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageSender;
 
@@ -50,8 +51,8 @@ final class GrpcMessageSender implements MessageSender<ControlMessage.Message> {
   }
 
   @Override
-  public CompletableFuture<ControlMessage.Message> request(final ControlMessage.Message message) {
-    return grpcClient.request(message);
+  public ReplyFutureMap.ReplyFuture<ControlMessage.Message> request(final ControlMessage.Message message) {
+    return null;
   }
 
   @Override

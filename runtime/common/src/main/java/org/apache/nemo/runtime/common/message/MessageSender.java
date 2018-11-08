@@ -15,7 +15,7 @@
  */
 package org.apache.nemo.runtime.common.message;
 
-import java.util.concurrent.CompletableFuture;
+import org.apache.nemo.runtime.common.ReplyFutureMap;
 
 /**
  * This class sends messages to {@link MessageListener} with some defined semantics.
@@ -39,7 +39,7 @@ public interface MessageSender<T> {
    * @param <U> reply message type.
    * @return a future
    */
-  <U> CompletableFuture<U> request(T message);
+  <U> ReplyFutureMap.ReplyFuture<U> request(T message);
 
   /**
    * Closes the connection.
