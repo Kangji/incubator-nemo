@@ -44,6 +44,8 @@ abstract class DataFetcher {
     return child;
   }
 
+  abstract boolean isStarted() throws IOException;
+
   public IRVertex getDataSource() {
     return dataSource;
   }

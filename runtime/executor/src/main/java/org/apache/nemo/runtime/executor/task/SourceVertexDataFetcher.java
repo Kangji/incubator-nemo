@@ -52,6 +52,10 @@ class SourceVertexDataFetcher extends DataFetcher {
     }
   }
 
+  boolean isStarted() throws IOException {
+    return true;
+  }
+
   private void fetchDataLazily() throws IOException {
     final long start = System.currentTimeMillis();
     iterator = this.readable.read().iterator();

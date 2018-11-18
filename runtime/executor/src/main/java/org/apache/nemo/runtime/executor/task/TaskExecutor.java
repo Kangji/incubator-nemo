@@ -410,9 +410,11 @@ public final class TaskExecutor {
       int finishedFetcherIndex = NONE_FINISHED;
       for (int i = 0; i < availableFetchers.size(); i++) {
         final DataFetcher dataFetcher = availableFetchers.get(i);
-        final Object element;
+        Object element = null;
         try {
-          element = dataFetcher.fetchDataElement();
+          if (dataFetcher.isStarted()) {
+            element = dataFetcher.fetchDataElement();
+          }
         } catch (NoSuchElementException e) {
           // We've consumed all the data from this data fetcher.
           if (dataFetcher instanceof SourceVertexDataFetcher) {
@@ -432,7 +434,9 @@ public final class TaskExecutor {
         }
 
         // Successfully fetched an element
-        processElementRecursively(dataFetcher.getChild(), element);
+        if (element != null) {
+          processElementRecursively(dataFetcher.getChild(), element);
+        }
       }
 
       // Remove the finished fetcher from the list
