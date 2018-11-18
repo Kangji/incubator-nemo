@@ -408,11 +408,13 @@ public final class TaskExecutor {
     while (!availableFetchers.isEmpty()) { // empty means we've consumed all task-external input data
       // For this looping of available fetchers.
       int finishedFetcherIndex = NONE_FINISHED;
+      boolean isStarted = false;
       for (int i = 0; i < availableFetchers.size(); i++) {
         final DataFetcher dataFetcher = availableFetchers.get(i);
         Object element = null;
         try {
           if (dataFetcher.isStarted()) {
+            isStarted = true;
             element = dataFetcher.fetchDataElement();
           }
         } catch (NoSuchElementException e) {
@@ -442,6 +444,13 @@ public final class TaskExecutor {
       // Remove the finished fetcher from the list
       if (finishedFetcherIndex != NONE_FINISHED) {
         availableFetchers.remove(finishedFetcherIndex);
+      }
+      if (!isStarted) {
+        try {
+          Thread.sleep(50);
+        } catch (final InterruptedException e) {
+          throw new RuntimeException(e);
+        }
       }
     }
     return true;

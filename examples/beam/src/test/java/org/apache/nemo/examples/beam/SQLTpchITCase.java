@@ -78,6 +78,20 @@ public final class SQLTpchITCase {
   }
 
   @Test (timeout = TIMEOUT)
+  public void testSS() throws Exception {
+    final int queryNum = 12;
+    JobLauncher.main(builder
+      .addUserMain(Tpch.class.getCanonicalName())
+      .addUserArgs("/Users/sanha/tpch_queries/tpc" + String.valueOf(queryNum) + ".sql",
+        "/Users/sanha/tpc_zipf_4.0_1gb/",
+        //"/Users/sanha/tpc_1gb/",
+        outputFilePath)
+      .addJobId(SQLTpchITCase.class.getSimpleName() + "_SS")
+      .addOptimizationPolicy(SamplingLargeShuffleSkewPolicy.class.getCanonicalName())
+      .build());
+  }
+
+  @Test (timeout = TIMEOUT)
   public void testThree() throws Exception {
     final int queryNum = 3;
     JobLauncher.main(builder

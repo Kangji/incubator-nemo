@@ -40,6 +40,7 @@ class ParentTaskDataFetcher extends DataFetcher {
 
   // Non-finals (lazy fetching)
   private boolean firstFetch;
+  private boolean lazyTriggeted;
   private int expectedNumOfIterators;
   private DataUtil.IteratorWithNumBytes currentIterator;
   private int currentIteratorIndex;
@@ -50,6 +51,7 @@ class ParentTaskDataFetcher extends DataFetcher {
     super(dataSource, child);
     this.readersForParentTask = readerForParentTask;
     this.firstFetch = true;
+    this.lazyTriggeted = false;
     this.currentIteratorIndex = 0;
     this.iteratorQueue = new LinkedBlockingQueue<>();
   }
@@ -58,7 +60,9 @@ class ParentTaskDataFetcher extends DataFetcher {
     if (!firstFetch) {
       return true;
     } else {
-      fetchDataLazily();
+      if (!lazyTriggeted) {
+        fetchDataLazily();
+      }
       return !iteratorQueue.isEmpty();
     }
   }
@@ -67,7 +71,9 @@ class ParentTaskDataFetcher extends DataFetcher {
   Object fetchDataElement() throws IOException {
     try {
       if (firstFetch) {
-        fetchDataLazily();
+        if (!lazyTriggeted) {
+          fetchDataLazily();
+        }
         advanceIterator();
         firstFetch = false;
       }
@@ -123,6 +129,7 @@ class ParentTaskDataFetcher extends DataFetcher {
   }
 
   private void fetchDataLazily() throws IOException {
+    lazyTriggeted = true;
     final List<CompletableFuture<DataUtil.IteratorWithNumBytes>> futures = readersForParentTask.read();
     this.expectedNumOfIterators = futures.size();
 
