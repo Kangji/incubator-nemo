@@ -592,7 +592,12 @@ public final class BlockStoreTest {
     final Iterable serToNonSerialized = DataUtil.convertToNonSerPartitions(
         SERIALIZER, optionalBlock.get().readSerializedPartitions(hashRange));
 
-    assertEquals(expectedResult, DataUtil.concatNonSerPartitions(nonSerializedResult));
-    assertEquals(expectedResult, DataUtil.concatNonSerPartitions(serToNonSerialized));
+    final ArrayList nonSerializedResultList = new ArrayList();
+    final ArrayList serToNonSerializedList = new ArrayList();
+    DataUtil.concatNonSerPartitions(nonSerializedResult).forEach(nonSerializedResultList::add);
+    DataUtil.concatNonSerPartitions(serToNonSerialized).forEach(serToNonSerializedList::add);
+
+    assertEquals(expectedResult, nonSerializedResultList);
+    assertEquals(expectedResult, serToNonSerializedList);
   }
 }

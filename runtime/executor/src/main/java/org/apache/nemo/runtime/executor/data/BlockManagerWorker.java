@@ -431,23 +431,19 @@ public final class BlockManagerWorker {
       handleDataPersistence(blockStore, blockId);
 
       // Block resides in this evaluator!
+      final Iterator innerIterator = DataUtil.concatNonSerPartitions(partitions).iterator();
+      long numSerializedBytes = 0;
+      long numEncodedBytes = 0;
       try {
-        final Iterator innerIterator = DataUtil.concatNonSerPartitions(partitions).iterator();
-        long numSerializedBytes = 0;
-        long numEncodedBytes = 0;
-        try {
-          for (final NonSerializedPartition partition : partitions) {
-            numSerializedBytes += partition.getNumSerializedBytes();
-            numEncodedBytes += partition.getNumEncodedBytes();
-          }
-
-          return CompletableFuture.completedFuture(DataUtil.IteratorWithNumBytes.of(innerIterator, numSerializedBytes,
-              numEncodedBytes));
-        } catch (final DataUtil.IteratorWithNumBytes.NumBytesNotSupportedException e) {
-          return CompletableFuture.completedFuture(DataUtil.IteratorWithNumBytes.of(innerIterator));
+        for (final NonSerializedPartition partition : partitions) {
+          numSerializedBytes += partition.getNumSerializedBytes();
+          numEncodedBytes += partition.getNumEncodedBytes();
         }
-      } catch (final IOException e) {
-        throw new BlockFetchException(e);
+
+        return CompletableFuture.completedFuture(DataUtil.IteratorWithNumBytes.of(innerIterator, numSerializedBytes,
+            numEncodedBytes));
+      } catch (final DataUtil.IteratorWithNumBytes.NumBytesNotSupportedException e) {
+        return CompletableFuture.completedFuture(DataUtil.IteratorWithNumBytes.of(innerIterator));
       }
     } else {
       // We don't have the block here...

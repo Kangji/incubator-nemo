@@ -29,9 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /**
  * Utility methods for data handling (e.g., (de)serialization).
@@ -181,17 +178,57 @@ public final class DataUtil {
    *
    * @param partitionsToConcat the partitions to concatenate.
    * @return the concatenated iterable of all elements.
-   * @throws IOException if fail to concatenate.
    */
-  public static Iterable concatNonSerPartitions(final Iterable<NonSerializedPartition> partitionsToConcat)
-      throws IOException {
-    final List concatStreamBase = new ArrayList<>();
-    Stream<Object> concatStream = concatStreamBase.stream();
-    for (final NonSerializedPartition nonSerializedPartition : partitionsToConcat) {
-      final Iterable elementsInPartition = nonSerializedPartition.getData();
-      concatStream = Stream.concat(concatStream, StreamSupport.stream(elementsInPartition.spliterator(), false));
-    }
-    return concatStream.collect(Collectors.toList());
+  public static Iterable concatNonSerPartitions(final Iterable<NonSerializedPartition> partitionsToConcat) {
+    return new Iterable() {
+      @Override
+      public Iterator iterator() {
+        return new Iterator() {
+          private final Iterator<NonSerializedPartition> topLevelIterator = partitionsToConcat.iterator();
+          private Iterator subIterator = null;
+          private Object nextItem = null;
+          private boolean foundNextItem = false;
+          private boolean endOfIterator = false;
+          @Override
+          public boolean hasNext() {
+            if (endOfIterator) {
+              return false;
+            }
+            if (foundNextItem) {
+              return true;
+            }
+
+            while (subIterator == null || !subIterator.hasNext()) {
+              if (!topLevelIterator.hasNext()) {
+                endOfIterator = true;
+                return false;
+              }
+              try {
+                subIterator = topLevelIterator.next().getData().iterator();
+              } catch (final IOException e) {
+                throw new RuntimeException(e);
+              }
+            }
+
+            nextItem = subIterator.next();
+            foundNextItem = true;
+            return true;
+          }
+
+          @Override
+          public Object next() {
+            hasNext();
+            if (endOfIterator) {
+              throw new NoSuchElementException();
+            }
+            final Object itemToReturn = nextItem;
+            foundNextItem = false;
+            nextItem = null;
+            return itemToReturn;
+          }
+        };
+      }
+    };
   }
 
   /**
