@@ -55,7 +55,7 @@ public final class ReplyFutureMap<T> {
    * @param successMessage the reply message
    */
   public void onSuccessMessage(final long id, final T successMessage) {
-    final CompletableFuture<T> f = requestIdToFuture.remove(id)
+    final CompletableFuture<T> f = requestIdToFuture.remove(id);
     LOG.error(String.format("success0: %d", f.hashCode()));
     f.complete(successMessage);
     LOG.error(String.format("success1: %d", f.hashCode()));

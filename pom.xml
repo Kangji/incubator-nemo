@@ -279,6 +279,8 @@ limitations under the License.
                         <exclude>.editorconfig</exclude>
                         <!-- formatter.xml -->
                         <exclude>formatter.xml</exclude>
+                      <!-- docs -->
+                      <exclude>**/docs/**</exclude>
                     </excludes>
                 </configuration>
             </plugin>
