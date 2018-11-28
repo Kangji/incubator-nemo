@@ -49,7 +49,7 @@ public final class JobConf extends ConfigurationModuleBuilder {
   /**
    * User Main Arguments.
    */
-  @NamedParameter(doc = "User Main Arguments", short_name = "user_args")
+  @NamedParameter(doc = "User Main Arguments", short_name = "user_args", default_value = "")
   public final class UserMainArguments implements Name<String> {
   }
 
@@ -165,7 +165,7 @@ public final class JobConf extends ConfigurationModuleBuilder {
    * Path to the JSON file that specifies resource layout.
    */
   @NamedParameter(doc = "Path to the JSON file that specifies resources for executors", short_name = "executor_json",
-      default_value = "examples/resources/test_executor_resources.json")
+      default_value = "")
   public final class ExecutorJSONPath implements Name<String> {
   }
 
