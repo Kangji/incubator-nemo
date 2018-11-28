@@ -14,17 +14,17 @@ limitations under the License.
 -->
 <template>
   <el-container>
-    <el-header>
-      <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal" @select="handleSelect">
-        <el-menu-item index="0" disabled><a href="/">LOGO</a></el-menu-item>
-        <el-menu-item index="1">Jobs</el-menu-item>
-        <el-menu-item index="2">Stages</el-menu-item>
-        <el-menu-item index="3">Storage</el-menu-item>
-        <el-menu-item index="4">Environment</el-menu-item>
-        <el-menu-item index="5">Executors</el-menu-item>
-        <el-menu-item index="6" disabled style="float: right;">Nemo Web UI</el-menu-item>
-      </el-menu>
-    </el-header>
+    <!--<el-header>-->
+      <!--<el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal" @select="handleSelect">-->
+        <!--<el-menu-item index="0" disabled><a href="/">LOGO</a></el-menu-item>-->
+        <!--<el-menu-item index="1">Jobs</el-menu-item>-->
+        <!--<el-menu-item index="2">Stages</el-menu-item>-->
+        <!--<el-menu-item index="3">Storage</el-menu-item>-->
+        <!--<el-menu-item index="4">Environment</el-menu-item>-->
+        <!--<el-menu-item index="5">Executors</el-menu-item>-->
+        <!--<el-menu-item index="6" disabled style="float: right;">Nemo Web UI</el-menu-item>-->
+      <!--</el-menu>-->
+    <!--</el-header>-->
 
     <el-main>
       <!--Jobs-->

@@ -19,9 +19,9 @@ limitations under the License.
 
     <!--Jobs information-->
     <p>
-      <b>User: </b><span>{ TODO }</span><br>
-      <b>Total Uptime: </b><span>{ TODO }</span><br>
-      <b>Scheduling Mode: </b><span>{ TODO }</span><br>
+      <!--<b>User: </b><span>{ TODO }</span><br>-->
+      <!--<b>Total Uptime: </b><span>{ TODO }</span><br>-->
+      <!--<b>Scheduling Mode: </b><span>{ TODO }</span><br>-->
       <b @click="jump($event, JOB_STATUS.RUNNING)"><a>
         Active Jobs: </a></b><el-badge type="primary" :value="activeJobsData.length"></el-badge><br>
       <b @click="jump($event, JOB_STATUS.COMPLETE)"><a>
@@ -31,11 +31,11 @@ limitations under the License.
     </p>
 
     <!--Stage Timeline-->
-    <el-collapse>
-      <el-collapse-item title="Event Timeline" name="1">
-        { TODO: JOBS TIMELINE }
-      </el-collapse-item>
-    </el-collapse>
+    <!--<el-collapse>-->
+      <!--<el-collapse-item title="Event Timeline" name="1">-->
+        <!--{ TODO: JOBS TIMELINE }-->
+      <!--</el-collapse-item>-->
+    <!--</el-collapse>-->
 
     <!--Jobs list-->
     <h2 ref="activeJobs">Active Jobs
@@ -91,16 +91,16 @@ limitations under the License.
     <div v-if="completedJobsData.length !== 0">
       <el-table class="completed-jobs-table" :data="completedJobsData"
                 @row-click="handleSelect" stripe>
-        <el-table-column label="Job id" width="100">
+        <el-table-column label="Job id">
           <template slot-scope="scope">
             {{ _getFrom(scope.row.jobId) }}
           </template>
         </el-table-column>
-        <el-table-column label="Description" width="180"></el-table-column>
-        <el-table-column label="Submitted" width="180"></el-table-column>
-        <el-table-column label="Duration" width="90"></el-table-column>
-        <el-table-column label="Stages: Succeeded/Total" width="200"></el-table-column>
-        <el-table-column label="Tasks (for all stages): Succeeded/Total"></el-table-column>
+        <!--<el-table-column label="Description" width="180"></el-table-column>-->
+        <!--<el-table-column label="Submitted" width="180"></el-table-column>-->
+        <!--<el-table-column label="Duration" width="90"></el-table-column>-->
+        <!--<el-table-column label="Stages: Succeeded/Total" width="200"></el-table-column>-->
+        <!--<el-table-column label="Tasks (for all stages): Succeeded/Total"></el-table-column>-->
       </el-table>
     </div>
 

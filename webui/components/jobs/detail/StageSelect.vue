@@ -157,6 +157,7 @@ export default {
     this.$eventBus.$on('set-timeline-items', metricDataSet => {
       this.metricDataSet = metricDataSet;
       this.filterAndSend(metricDataSet);
+      this.selectAll();
     });
 
     // this event is emitted by JobsView, which processes incoming metric.
@@ -168,6 +169,7 @@ export default {
       if (this.filterItem(item)) {
         this.newMetricDataSet.add(item);
       }
+      this.selectAll();
     });
 
     // this event is emitted by JobsView, which processes incoming metric.
@@ -179,6 +181,7 @@ export default {
       if (this.filterItem(item)) {
         this.newMetricDataSet.update(item);
       }
+      this.selectAll();
     });
 
     // should be emitted when metric was deselected or job was cleared.

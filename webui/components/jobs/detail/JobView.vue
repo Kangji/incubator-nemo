@@ -16,7 +16,7 @@ limitations under the License.
   <!--(toggle for debugging)-->
   <el-card v-if="selectedJobId" style="background-color: ghostwhite;">
   <!--<el-card>-->
-    <h1>Details for Job {{ jobFrom ? jobFrom : 'NULL' }}</h1>
+    <h1>Details for {{ jobFrom ? jobFrom : 'NULL' }}</h1>
 
     <p>
       <b>Status: </b>
@@ -81,117 +81,117 @@ limitations under the License.
       </el-collapse-item>
     </el-collapse>
 
-    <!--Stages List-->
-    <!--Pending Stages-->
-    <h2 ref="pendingStages">Pending Stages
-      <el-badge type="warning" :value="pendingStagesData.length"></el-badge></h2>
-    <div>
-      <!--<div v-if="pendingStagesData.length !== 0">-->
-      <el-table class="pending-stages-table" :data="pendingStagesData" stripe>
-        <el-table-column label="Stage id" width="80">
-          <template slot-scope="scope">
-            {{ scope.row }}
-          </template>
-        </el-table-column>
-        <el-table-column label="Description" width="180"></el-table-column>
-        <el-table-column label="Submitted" width="180"></el-table-column>
-        <el-table-column label="Duration" width="90"></el-table-column>
-        <el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>
-        <el-table-column label="Input" width="60"></el-table-column>
-        <el-table-column label="Output" width="70"></el-table-column>
-        <el-table-column label="Shuffle Read"></el-table-column>
-        <el-table-column label="Shuffle Write"></el-table-column>
-      </el-table>
-    </div>
+    <!--&lt;!&ndash;Stages List&ndash;&gt;-->
+    <!--&lt;!&ndash;Pending Stages&ndash;&gt;-->
+    <!--<h2 ref="pendingStages">Pending Stages-->
+      <!--<el-badge type="warning" :value="pendingStagesData.length"></el-badge></h2>-->
+    <!--<div>-->
+      <!--&lt;!&ndash;<div v-if="pendingStagesData.length !== 0">&ndash;&gt;-->
+      <!--<el-table class="pending-stages-table" :data="pendingStagesData" stripe>-->
+        <!--<el-table-column label="Stage id" width="80">-->
+          <!--<template slot-scope="scope">-->
+            <!--{{ scope.row }}-->
+          <!--</template>-->
+        <!--</el-table-column>-->
+        <!--<el-table-column label="Description" width="180"></el-table-column>-->
+        <!--<el-table-column label="Submitted" width="180"></el-table-column>-->
+        <!--<el-table-column label="Duration" width="90"></el-table-column>-->
+        <!--<el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>-->
+        <!--<el-table-column label="Input" width="60"></el-table-column>-->
+        <!--<el-table-column label="Output" width="70"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Read"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Write"></el-table-column>-->
+      <!--</el-table>-->
+    <!--</div>-->
 
-    <!--Active Stages-->
-    <h2 ref="activeStages">Active Stages
-      <el-badge type="primary" :value="activeStagesData.length"></el-badge></h2>
-    <div>
-    <!--<div v-if="activeStagesData.length !== 0">-->
-      <el-table class="active-stages-table" :data="activeStagesData" stripe>
-        <el-table-column label="Stage id" width="80">
-          <template slot-scope="scope">
-            {{ scope.row }}
-          </template>
-        </el-table-column>
-        <el-table-column label="Description" width="180"></el-table-column>
-        <el-table-column label="Submitted" width="180"></el-table-column>
-        <el-table-column label="Duration" width="90"></el-table-column>
-        <el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>
-        <el-table-column label="Input" width="60"></el-table-column>
-        <el-table-column label="Output" width="70"></el-table-column>
-        <el-table-column label="Shuffle Read"></el-table-column>
-        <el-table-column label="Shuffle Write"></el-table-column>
-      </el-table>
-    </div>
+    <!--&lt;!&ndash;Active Stages&ndash;&gt;-->
+    <!--<h2 ref="activeStages">Active Stages-->
+      <!--<el-badge type="primary" :value="activeStagesData.length"></el-badge></h2>-->
+    <!--<div>-->
+    <!--&lt;!&ndash;<div v-if="activeStagesData.length !== 0">&ndash;&gt;-->
+      <!--<el-table class="active-stages-table" :data="activeStagesData" stripe>-->
+        <!--<el-table-column label="Stage id" width="80">-->
+          <!--<template slot-scope="scope">-->
+            <!--{{ scope.row }}-->
+          <!--</template>-->
+        <!--</el-table-column>-->
+        <!--<el-table-column label="Description" width="180"></el-table-column>-->
+        <!--<el-table-column label="Submitted" width="180"></el-table-column>-->
+        <!--<el-table-column label="Duration" width="90"></el-table-column>-->
+        <!--<el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>-->
+        <!--<el-table-column label="Input" width="60"></el-table-column>-->
+        <!--<el-table-column label="Output" width="70"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Read"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Write"></el-table-column>-->
+      <!--</el-table>-->
+    <!--</div>-->
 
-    <!--Completed Stages-->
-    <h2 ref="completedStages">Completed Stages
-      <el-badge type="success" :value="completedStagesData.length"></el-badge></h2>
-    <div>
-      <!--<div v-if="completedStagesData.length !== 0">-->
-      <el-table class="completed-stages-table" :data="completedStagesData" stripe>
-        <el-table-column label="Stage id" width="80">
-          <template slot-scope="scope">
-            {{ scope.row }}
-          </template>
-        </el-table-column>
-        <el-table-column label="Description" width="180"></el-table-column>
-        <el-table-column label="Submitted" width="180"></el-table-column>
-        <el-table-column label="Duration" width="90"></el-table-column>
-        <el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>
-        <el-table-column label="Input" width="60"></el-table-column>
-        <el-table-column label="Output" width="70"></el-table-column>
-        <el-table-column label="Shuffle Read"></el-table-column>
-        <el-table-column label="Shuffle Write"></el-table-column>
-      </el-table>
-    </div>
+    <!--&lt;!&ndash;Completed Stages&ndash;&gt;-->
+    <!--<h2 ref="completedStages">Completed Stages-->
+      <!--<el-badge type="success" :value="completedStagesData.length"></el-badge></h2>-->
+    <!--<div>-->
+      <!--&lt;!&ndash;<div v-if="completedStagesData.length !== 0">&ndash;&gt;-->
+      <!--<el-table class="completed-stages-table" :data="completedStagesData" stripe>-->
+        <!--<el-table-column label="Stage id" width="80">-->
+          <!--<template slot-scope="scope">-->
+            <!--{{ scope.row }}-->
+          <!--</template>-->
+        <!--</el-table-column>-->
+        <!--<el-table-column label="Description" width="180"></el-table-column>-->
+        <!--<el-table-column label="Submitted" width="180"></el-table-column>-->
+        <!--<el-table-column label="Duration" width="90"></el-table-column>-->
+        <!--<el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>-->
+        <!--<el-table-column label="Input" width="60"></el-table-column>-->
+        <!--<el-table-column label="Output" width="70"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Read"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Write"></el-table-column>-->
+      <!--</el-table>-->
+    <!--</div>-->
 
-    <!--Skipped Stages-->
-    <h2 ref="skippedStages">Skipped Stages
-      <el-badge type="info" :value="skippedStagesData.length"></el-badge></h2>
-    <div>
-    <!--<div v-if="skippedStagesData.length !== 0">-->
-      <el-table class="skipped-stages-table" :data="skippedStagesData" stripe>
-        <el-table-column label="Stage id" width="80">
-          <template slot-scope="scope">
-            {{ scope.row }}
-          </template>
-        </el-table-column>
-        <el-table-column label="Description" width="180"></el-table-column>
-        <el-table-column label="Submitted" width="180"></el-table-column>
-        <el-table-column label="Duration" width="90"></el-table-column>
-        <el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>
-        <el-table-column label="Input" width="60"></el-table-column>
-        <el-table-column label="Output" width="70"></el-table-column>
-        <el-table-column label="Shuffle Read"></el-table-column>
-        <el-table-column label="Shuffle Write"></el-table-column>
-      </el-table>
-    </div>
+    <!--&lt;!&ndash;Skipped Stages&ndash;&gt;-->
+    <!--<h2 ref="skippedStages">Skipped Stages-->
+      <!--<el-badge type="info" :value="skippedStagesData.length"></el-badge></h2>-->
+    <!--<div>-->
+    <!--&lt;!&ndash;<div v-if="skippedStagesData.length !== 0">&ndash;&gt;-->
+      <!--<el-table class="skipped-stages-table" :data="skippedStagesData" stripe>-->
+        <!--<el-table-column label="Stage id" width="80">-->
+          <!--<template slot-scope="scope">-->
+            <!--{{ scope.row }}-->
+          <!--</template>-->
+        <!--</el-table-column>-->
+        <!--<el-table-column label="Description" width="180"></el-table-column>-->
+        <!--<el-table-column label="Submitted" width="180"></el-table-column>-->
+        <!--<el-table-column label="Duration" width="90"></el-table-column>-->
+        <!--<el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>-->
+        <!--<el-table-column label="Input" width="60"></el-table-column>-->
+        <!--<el-table-column label="Output" width="70"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Read"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Write"></el-table-column>-->
+      <!--</el-table>-->
+    <!--</div>-->
 
-    <!--Failed Stages-->
-    <h2 ref="failedStages">Failed Stages
-      <el-badge type="danger" :value="failedStagesData.length"></el-badge></h2>
-    <div>
-      <!--<div v-if="failedStagesData.length !== 0">-->
-      <el-table class="failed-stages-table" :data="failedStagesData" stripe>
-        <el-table-column label="Stage id" width="80">
-          <template slot-scope="scope">
-            {{ scope.row }}
-          </template>
-        </el-table-column>
-        <el-table-column label="Description" width="180"></el-table-column>
-        <el-table-column label="Submitted" width="180"></el-table-column>
-        <el-table-column label="Duration" width="90"></el-table-column>
-        <el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>
-        <el-table-column label="Input" width="60"></el-table-column>
-        <el-table-column label="Output" width="70"></el-table-column>
-        <el-table-column label="Shuffle Read"></el-table-column>
-        <el-table-column label="Shuffle Write"></el-table-column>
-        <el-table-column label="Failure Reason" width="200"></el-table-column>
-      </el-table>
-    </div>
+    <!--&lt;!&ndash;Failed Stages&ndash;&gt;-->
+    <!--<h2 ref="failedStages">Failed Stages-->
+      <!--<el-badge type="danger" :value="failedStagesData.length"></el-badge></h2>-->
+    <!--<div>-->
+      <!--&lt;!&ndash;<div v-if="failedStagesData.length !== 0">&ndash;&gt;-->
+      <!--<el-table class="failed-stages-table" :data="failedStagesData" stripe>-->
+        <!--<el-table-column label="Stage id" width="80">-->
+          <!--<template slot-scope="scope">-->
+            <!--{{ scope.row }}-->
+          <!--</template>-->
+        <!--</el-table-column>-->
+        <!--<el-table-column label="Description" width="180"></el-table-column>-->
+        <!--<el-table-column label="Submitted" width="180"></el-table-column>-->
+        <!--<el-table-column label="Duration" width="90"></el-table-column>-->
+        <!--<el-table-column label="Tasks: Succeeded/Total" width="200"></el-table-column>-->
+        <!--<el-table-column label="Input" width="60"></el-table-column>-->
+        <!--<el-table-column label="Output" width="70"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Read"></el-table-column>-->
+        <!--<el-table-column label="Shuffle Write"></el-table-column>-->
+        <!--<el-table-column label="Failure Reason" width="200"></el-table-column>-->
+      <!--</el-table>-->
+    <!--</div>-->
   </el-card>
 </template>
 
