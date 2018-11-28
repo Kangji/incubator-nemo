@@ -73,6 +73,19 @@ public final class NemoDriver {
 
   private final String resourceSpecificationString;
 
+  private static final String DEFAULT_RESOUCE_SPEC = "[\n" +
+    "  {\n" +
+    "    \"type\": \"Transient\",\n" +
+    "    \"memory_mb\": 512,\n" +
+    "    \"capacity\": 15\n" +
+    "  },\n" +
+    "  {\n" +
+    "    \"type\": \"Reserved\",\n" +
+    "    \"memory_mb\": 512,\n" +
+    "    \"capacity\": 15\n" +
+    "  }\n" +
+    "]";
+
   private final UserApplicationRunner userApplicationRunner;
   private final RuntimeMaster runtimeMaster;
   private final String jobId;
@@ -103,7 +116,8 @@ public final class NemoDriver {
     this.runtimeMaster = runtimeMaster;
     this.nameServer = nameServer;
     this.localAddressProvider = localAddressProvider;
-    this.resourceSpecificationString = resourceSpecificationString;
+    this.resourceSpecificationString = resourceSpecificationString.isEmpty() ? DEFAULT_RESOUCE_SPEC
+      : resourceSpecificationString;
     this.jobId = jobId;
     this.localDirectory = localDirectory;
     this.glusterDirectory = glusterDirectory;
