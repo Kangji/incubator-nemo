@@ -77,12 +77,12 @@ public final class NemoDriver {
     + "  {\n"
     + "    \"type\": \"Transient\",\n"
     + "    \"memory_mb\": 512,\n"
-    + "    \"capacity\": 15\n"
+    + "    \"capacity\": 10000\n"
     + "  },\n"
     + "  {\n"
     + "    \"type\": \"Reserved\",\n"
     + "    \"memory_mb\": 512,\n"
-    + "    \"capacity\": 15\n"
+    + "    \"capacity\": 10000\n"
     + "  }\n"
     + "]";
 
