@@ -77,7 +77,7 @@ limitations under the License.
       <el-collapse-item title="  Task Statistics" name="3">
         <task-statistics
           :selectedJobId="selectedJobId"
-          :metricLookupMap="metricLookupMap"/>
+          :taskStatistics="selectedTaskStatistics"/>
       </el-collapse-item>
     </el-collapse>
 
@@ -228,7 +228,7 @@ export default {
     'task-statistics': TaskStatistics,
   },
 
-  props: ['selectedJobStatus', 'selectedJobMetricDataSet'],
+  props: ['selectedJobStatus', 'selectedJobMetricDataSet', 'selectedTaskStatistics'],
 
   data() {
     return {
