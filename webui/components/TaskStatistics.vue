@@ -32,6 +32,7 @@ limitations under the License.
         :key="col"
         :prop="col"/>
     </el-table>
+    <el-pagination :page-size="pageSize" :total="total" :current-page.sync="currentPage"></el-pagination>
   </el-card>
 </template>
 
@@ -46,23 +47,30 @@ const COLUMNS = {
   'containerId': 'Container ID',
 }
 
+const TASKS_PER_PAGE = 20
+
 export default {
   props: ['taskStatistics'],
 
   data: function() {
     return { 
       columns: COLUMNS,
-      columnKeys: Object.keys(COLUMNS),
+      pageSize: TASKS_PER_PAGE,
+      currentPage: 1.
     };
   },
 
   //COMPUTED
   computed: {
+    total() {
+      return this.taskStatistics.tableView.length
+    },
+
     /**
      * Computed property which consists table data.
      */
     taskMetric() {
-      return this.taskStatistics.tableView
+      return this.taskStatistics.tableView.slice((this.currentPage - 1) * TASKS_PER_PAGE, this.currentPage * TASKS_PER_PAGE)
     },
   },
 

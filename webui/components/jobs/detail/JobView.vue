@@ -35,6 +35,7 @@ limitations under the License.
 
     <el-collapse accordion @change="handleCollapse">
       <!--Event Timeline-->
+      <!--
       <el-collapse-item title="  Event Timeline" name="1">
         <el-card header="Timeline" class="detail-card">
           <metric-timeline
@@ -58,6 +59,7 @@ limitations under the License.
           </el-col>
         </el-row>
       </el-collapse-item>
+      -->
       <!--DAG Visualization-->
       <el-collapse-item title="  DAG Visualization" name="2">
         <no-ssr>
