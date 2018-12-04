@@ -124,6 +124,8 @@ public class TaskMetric implements StateMetric<TaskState.State> {
 
   @Override
   public final boolean processMetricMessage(final String metricField, final byte[] metricValue) {
+    return false;
+    /*
     LOG.debug("metric {} is just arrived!", metricField);
     switch (metricField) {
       case "serializedReadBytes":
@@ -157,5 +159,6 @@ public class TaskMetric implements StateMetric<TaskState.State> {
         return false;
     }
     return true;
+    */
   }
 }
