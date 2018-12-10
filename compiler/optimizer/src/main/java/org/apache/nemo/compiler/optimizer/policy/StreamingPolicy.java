@@ -17,6 +17,7 @@
  * under the License.
  */
 package org.apache.nemo.compiler.optimizer.policy;
+
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.eventhandler.PubSubEventHandlerWrapper;
 import org.apache.nemo.common.ir.edge.IREdge;
@@ -24,11 +25,13 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.PipeTransferForAllEdgesPass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.DefaultCompositePass;
 import org.apache.reef.tang.Injector;
+
 /**
  * Streaming policy.
  */
 public final class StreamingPolicy implements Policy {
   private final Policy policy;
+
   /**
    * Default constructor.
    */
@@ -38,10 +41,12 @@ public final class StreamingPolicy implements Policy {
     builder.registerCompileTimePass(new PipeTransferForAllEdgesPass());
     this.policy = builder.build();
   }
+
   @Override
   public DAG<IRVertex, IREdge> runCompileTimeOptimization(final DAG<IRVertex, IREdge> dag, final String dagDirectory) {
     return this.policy.runCompileTimeOptimization(dag, dagDirectory);
   }
+
   @Override
   public void registerRunTimeOptimizations(final Injector injector, final PubSubEventHandlerWrapper pubSubWrapper) {
     this.policy.registerRunTimeOptimizations(injector, pubSubWrapper);
