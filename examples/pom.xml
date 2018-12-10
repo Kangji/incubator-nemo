@@ -30,6 +30,7 @@ under the License.
   <name>Nemo Examples</name>
 
   <modules>
+    <module>nexmark</module>
     <module>beam</module>
     <module>spark</module>
   </modules>
