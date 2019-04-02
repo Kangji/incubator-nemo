@@ -205,7 +205,7 @@ public final class PlanStateManager {
         // (Step 2) Check max attempt
         if (attemptStatesForThisTaskIndex.size() > maxScheduleAttempt) {
           throw new RuntimeException(
-            attemptStatesForThisTaskIndex.size() + " exceeds max attempt " + maxScheduleAttempt);
+            "[" + stageId + "]" + attemptStatesForThisTaskIndex.size() + " exceeds max attempt " + maxScheduleAttempt);
         }
 
         // (Step 3) Return all READY attempts
