@@ -18,7 +18,7 @@
  */
 package org.apache.nemo.runtime.master.servlet;
 
-import org.apache.nemo.runtime.common.metric.JobMetric;
+import org.apache.nemo.runtime.metric.JobMetric;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 
 import javax.servlet.http.HttpServlet;

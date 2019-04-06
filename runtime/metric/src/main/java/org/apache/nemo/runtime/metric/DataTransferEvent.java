@@ -16,25 +16,44 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.metric;
+package org.apache.nemo.runtime.metric;
 
 /**
- * Interface for all metrics.
+ * Event for data transfer, such as data read or write.
  */
-public interface Metric {
-  /**
-   * Get its unique id.
-   *
-   * @return an unique id
-   */
-  String getId();
+public class DataTransferEvent extends Event {
+  private TransferType transferType;
+
+  public DataTransferEvent(final long timestamp, final TransferType transferType) {
+    super(timestamp);
+    this.transferType = transferType;
+  }
 
   /**
-   * Process metric message from evaluators.
+   * Get transfer type.
    *
-   * @param metricField field name of the metric.
-   * @param metricValue byte array of serialized data value.
-   * @return true if the metric was changed or false if not.
+   * @return TransferType.
    */
-  boolean processMetricMessage(String metricField, byte[] metricValue);
+  public final TransferType getTransferType() {
+    return transferType;
+  }
+
+  /**
+   * Set transfer type.
+   *
+   * @param transferType TransferType to set.
+   */
+  public final void setTransferType(final TransferType transferType) {
+    this.transferType = transferType;
+  }
+
+  /**
+   * Enum of transfer types.
+   */
+  public enum TransferType {
+    READ_START,
+    READ_END,
+    WRITE_START,
+    WRITE_END
+  }
 }

@@ -16,40 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.metric;
+package org.apache.nemo.runtime.metric;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
- * Event of state transition. It contains timestamp and the state transition.
+ * Interface for metric which contians its state.
  *
- * @param <T> class of state for the metric.
+ * @param <T> class of state of the metric.
  */
-public final class StateTransitionEvent<T extends Serializable> extends Event {
-  private T prevState;
-  private T newState;
-
-  public StateTransitionEvent(final long timestamp, final T prevState, final T newState) {
-    super(timestamp);
-    this.prevState = prevState;
-    this.newState = newState;
-  }
+public interface StateMetric<T extends Serializable> extends Metric {
+  /**
+   * Get its list of {@link StateTransitionEvent}.
+   *
+   * @return list of events.
+   */
+  List<StateTransitionEvent<T>> getStateTransitionEvents();
 
   /**
-   * Get previous state.
+   * Add a {@link StateTransitionEvent} to the metric.
    *
-   * @return previous state.
+   * @param prevState previous state.
+   * @param newState  new state.
    */
-  public T getPrevState() {
-    return prevState;
-  }
-
-  /**
-   * Get new state.
-   *
-   * @return new state.
-   */
-  public T getNewState() {
-    return newState;
-  }
+  void addEvent(T prevState, T newState);
 }

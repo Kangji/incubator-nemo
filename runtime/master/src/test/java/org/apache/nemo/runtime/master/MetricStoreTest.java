@@ -20,7 +20,7 @@ package org.apache.nemo.runtime.master;
 
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.nemo.runtime.common.metric.JobMetric;
+import org.apache.nemo.runtime.metric.JobMetric;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.junit.Test;
 

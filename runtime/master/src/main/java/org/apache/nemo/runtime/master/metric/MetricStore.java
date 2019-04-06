@@ -25,8 +25,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.exception.UnsupportedMetricException;
-import org.apache.nemo.runtime.common.metric.*;
 import org.apache.nemo.runtime.common.state.PlanState;
+import org.apache.nemo.runtime.metric.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

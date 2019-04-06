@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.nemo.runtime.common.metric;
+package org.apache.nemo.runtime.metric;
 
 import org.apache.nemo.common.coder.DecoderFactory;
 import org.apache.nemo.common.coder.EncoderFactory;

@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.metric;
+package org.apache.nemo.runtime.metric;
 
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.runtime.common.state.TaskState;

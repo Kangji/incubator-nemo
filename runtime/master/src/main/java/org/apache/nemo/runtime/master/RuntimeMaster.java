@@ -33,7 +33,7 @@ import org.apache.nemo.runtime.common.message.ClientRPC;
 import org.apache.nemo.runtime.common.message.MessageContext;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.MessageListener;
-import org.apache.nemo.runtime.common.metric.JobMetric;
+import org.apache.nemo.runtime.metric.JobMetric;
 import org.apache.nemo.runtime.common.plan.PhysicalPlan;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.metric.MetricManagerMaster;

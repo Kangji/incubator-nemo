@@ -16,40 +16,40 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.metric;
+package org.apache.nemo.runtime.metric;
 
 import java.io.Serializable;
 
 /**
- * Class for all generic event that contains timestamp at the moment.
+ * Event of state transition. It contains timestamp and the state transition.
+ *
+ * @param <T> class of state for the metric.
  */
-public class Event implements Serializable {
-  private long timestamp;
+public final class StateTransitionEvent<T extends Serializable> extends Event {
+  private T prevState;
+  private T newState;
 
-  /**
-   * Constructor.
-   *
-   * @param timestamp timestamp in millisecond.
-   */
-  public Event(final long timestamp) {
-    this.timestamp = timestamp;
+  public StateTransitionEvent(final long timestamp, final T prevState, final T newState) {
+    super(timestamp);
+    this.prevState = prevState;
+    this.newState = newState;
   }
 
   /**
-   * Get timestamp.
+   * Get previous state.
    *
-   * @return timestamp.
+   * @return previous state.
    */
-  public final long getTimestamp() {
-    return timestamp;
+  public T getPrevState() {
+    return prevState;
   }
 
   /**
-   * Set timestamp.
+   * Get new state.
    *
-   * @param timestamp timestamp in millisecond.
+   * @return new state.
    */
-  public final void setTimestamp(final long timestamp) {
-    this.timestamp = timestamp;
+  public T getNewState() {
+    return newState;
   }
 }

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.nemo.runtime.common.metric;
+package org.apache.nemo.runtime.metric;
 
 import com.google.common.collect.HashBiMap;
 import org.apache.commons.lang3.SerializationUtils;
