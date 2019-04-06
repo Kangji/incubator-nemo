@@ -20,6 +20,7 @@ package org.apache.nemo.runtime.metric;
 
 import org.apache.nemo.runtime.common.plan.Stage;
 import org.apache.nemo.runtime.common.state.StageState;
+import org.apache.nemo.runtime.common.event.StateTransitionEvent;
 
 import java.util.ArrayList;
 import java.util.List;

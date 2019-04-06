@@ -19,6 +19,7 @@
 package org.apache.nemo.runtime.metric;
 
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.nemo.runtime.common.event.StateTransitionEvent;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

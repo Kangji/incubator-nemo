@@ -30,7 +30,7 @@ import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.compiler.optimizer.OptimizerUtils;
-import org.apache.nemo.runtime.common.metric.MetricUtils;
+import org.apache.nemo.runtime.metric.MetricUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

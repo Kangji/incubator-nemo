@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.metric;
+package org.apache.nemo.runtime.common.event;
 
 /**
  * Event for data transfer, such as data read or write.

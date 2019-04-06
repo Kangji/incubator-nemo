@@ -30,6 +30,7 @@ import org.apache.nemo.runtime.common.plan.PhysicalPlan;
 import org.apache.nemo.runtime.common.plan.Stage;
 import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.common.state.PlanState;
+import org.apache.nemo.runtime.common.event.StateTransitionEvent;
 
 import java.io.IOException;
 import java.util.ArrayList;

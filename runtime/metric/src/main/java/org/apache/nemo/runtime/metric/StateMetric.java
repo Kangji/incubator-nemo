@@ -18,6 +18,8 @@
  */
 package org.apache.nemo.runtime.metric;
 
+import org.apache.nemo.runtime.common.event.StateTransitionEvent;
+
 import java.io.Serializable;
 import java.util.List;
 
