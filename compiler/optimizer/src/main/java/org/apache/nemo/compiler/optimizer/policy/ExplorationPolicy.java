@@ -40,8 +40,6 @@ public final class ExplorationPolicy implements Policy {
    * Default constructor.
    */
   public ExplorationPolicy() {
-    CANDIDATES.add(new BasicPullPolicy());
-    CANDIDATES.add(new BasicPushPolicy());
     CANDIDATES.add(new ConditionalLargeShufflePolicy());
     CANDIDATES.add(new DataSkewPolicy());
     CANDIDATES.add(new DefaultPolicy());
