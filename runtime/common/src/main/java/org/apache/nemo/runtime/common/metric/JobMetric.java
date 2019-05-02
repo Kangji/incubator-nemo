@@ -25,7 +25,6 @@ import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.runtime.common.plan.PhysicalPlan;
 import org.apache.nemo.runtime.common.plan.Stage;
 import org.apache.nemo.runtime.common.plan.StageEdge;
@@ -95,16 +94,7 @@ public final class JobMetric implements StateMetric<PlanState.State> {
    */
   public void setIRDAG(final IRDAG irDag) {
     this.irDagSummary = irDag.irDAGSummary();
-    this.inputSize = irDag.getRootVertices().stream()
-      .filter(irVertex -> irVertex instanceof SourceVertex)
-      .mapToLong(srcVertex -> {
-        try {
-          return ((SourceVertex) srcVertex).getEstimatedSizeBytes();
-        } catch (Exception e) {
-          throw new MetricException(e);
-        }
-      })
-      .sum();
+    this.inputSize = irDag.getInputSize();
     final Pair<String, String> stringifiedProperties = MetricUtils.stringifyIRDAGProperties(irDag);
     this.vertexProperties = stringifiedProperties.left();
     this.edgeProperties = stringifiedProperties.right();

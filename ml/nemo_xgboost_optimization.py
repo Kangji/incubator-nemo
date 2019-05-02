@@ -20,7 +20,6 @@
 
 import getopt
 import json
-import random
 import sys
 from pathlib import Path
 
@@ -322,7 +321,6 @@ id_to_col = dict(zip(ids, col))
 
 ## PREPROCESSING DATA FOR TAINING
 encoded_rows = encode_processed_rows(processed_rows, col_to_id)
-random.shuffle(encoded_rows)
 write_to_file('nemo_optimization.out', encoded_rows)
 # write_to_file('decode_test', decode_rows(encoded_rows, id_to_col))
 ddata = xgb.DMatrix('nemo_optimization.out')
