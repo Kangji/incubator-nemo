@@ -48,7 +48,7 @@ public final class BestInitialDAGConfFromDBPass extends AnnotatingPass {
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    try (Connection c = DriverManager.getConnection(MetricUtils.POSTGRESQL_METADATA_DB_NAME,
+    try (Connection c = DriverManager.getConnection(MetricUtils.POSTGRESQL_DB_NAME,
       "postgres", "fake_password")) {
       try (Statement statement = c.createStatement()) {
         statement.setQueryTimeout(30);  // set timeout to 30sec.
@@ -92,7 +92,7 @@ public final class BestInitialDAGConfFromDBPass extends AnnotatingPass {
                   bestVertex.copyExecutionPropertiesTo(irVertex);
                 } else {
                   LOG.warn("DAG topology doesn't match while comparing {}({}) from the ideal DAG with {}({})",
-                    bestVertex.getId(), bestVertex.toString(), irVertex.getId(), irVertex.toString());
+                    bestVertex.getId(), bestVertex, irVertex.getId(), irVertex);
                 }
               }
             }

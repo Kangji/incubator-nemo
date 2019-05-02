@@ -273,13 +273,8 @@ public final class MetricStore {
                                           final String dbId, final String dbPasswd) {
     final String[] syntax = {"SERIAL PRIMARY KEY"};
 
-    if (!MetricUtils.metaDataLoaded()) {
-      saveOptimizationMetricsToLocal(jobId);
-      return;
-    }
-
     try (Connection c = DriverManager.getConnection(address, dbId, dbPasswd)) {
-      LOG.info("Opened database successfully at {}", MetricUtils.POSTGRESQL_METADATA_DB_NAME);
+      LOG.info("Opened database successfully at {}", MetricUtils.POSTGRESQL_DB_NAME);
       saveOptimizationMetrics(jobId, c, syntax);
     } catch (SQLException e) {
       LOG.error("Error while saving optimization metrics to PostgreSQL: {}", e);
@@ -313,8 +308,7 @@ public final class MetricStore {
           .findFirst().orElseThrow(() -> new MetricException("job has never completed"))
           .getTimestamp();
         final long duration = endTime - startTime;  // ms
-        final String vertexProperties = jobMetric.getVertexProperties();
-        final String edgeProperties = jobMetric.getEdgeProperties();
+        final String properties = jobMetric.getProperties();
         final Long inputSize = jobMetric.getInputSize();
         final long jvmMemSize = Runtime.getRuntime().maxMemory();
         final long memSize = ((com.sun.management.OperatingSystemMXBean) ManagementFactory
@@ -324,18 +318,18 @@ public final class MetricStore {
           statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + tableName
             + " (id " + syntax[0] + ", duration BIGINT NOT NULL, inputsize BIGINT NOT NULL, "
             + "jvmmemsize BIGINT NOT NULL, memsize BIGINT NOT NULL, "
-            + "vertex_properties TEXT NOT NULL, edge_properties TEXT NOT NULL, dag BYTEA, metrics JSON,"
+            + "properties JSON NOT NULL, dag BYTEA, metrics JSON,"
             + "note TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);");
           LOG.info("CREATED TABLE For {} IF NOT PRESENT", tableName);
 
           try (PreparedStatement pstmt = c.prepareStatement("INSERT INTO " + tableName
-            + " (duration, inputsize, jvmmemsize, memsize, vertex_properties, edge_properties, dag, metrics, note) "
+            + " (duration, inputsize, jvmmemsize, memsize, properties, dag, metrics, note) "
             + "VALUES (" + duration + ", " + inputSize + ", "
-            + jvmMemSize + ", " + memSize + ", '"
-            + vertexProperties + "', '" + edgeProperties + "', ?, '"
-            + dumpAllMetricToJson() + "', '" + jobId + "');")) {
-            pstmt.setBinaryStream(1,
+            + jvmMemSize + ", " + memSize + ", (?::json), ?, (?::json), '" + jobId + "');")) {
+            pstmt.setString(1, properties);
+            pstmt.setBinaryStream(2,
               new ByteArrayInputStream(SerializationUtils.serialize(jobMetric.getIrdag())));
+            pstmt.setString(3, dumpAllMetricToJson());
             pstmt.executeUpdate();
           }
           LOG.info("Recorded metrics on the table for {}", tableName);

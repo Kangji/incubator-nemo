@@ -21,7 +21,6 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.*;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
@@ -78,22 +77,16 @@ public final class XGBoostPass extends AnnotatingPass {
           mapper.readValue(message, new TypeReference<List<Map<String, String>>>() {
           });
         listOfMap.forEach(m -> {
-          final Pair<List<Object>, Integer> objAndEPKey;
-          if (m.get("feature").length() == 10) {  // get by pattern.
-            // Formatted into 10 digits: 0:pattern(1) 1-3:pattern ID 4-5:vtx/edge index 6-9:EP Index.
-            objAndEPKey = OptimizerUtils.patternStringToObjsAndEPKeyIndex(m.get("feature"), dag);
-          } else if (m.get("feature").length() == 9) {  // get by id.
-            // Formatted into 9 digits: 0:vertex(2)/edge(3) 1-4:vtx/edge ID 5-8:EP Index.
-            objAndEPKey = OptimizerUtils.stringToObjsAndEPKeyIndex(m.get("feature"), dag);
-          } else {  // doesn't support yet.
-            return;
-          }
-          LOG.info("Tuning: {} of {} should be {} than {}",
-            objAndEPKey.right(), objAndEPKey.left(), m.get("val"), m.get("split"));
-          final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(objAndEPKey.right(),
-            Double.valueOf(m.get("split")), Double.valueOf(m.get("val")));
+          final List<Object> objectList = OptimizerUtils.getObjects(m.get("type"), m.get("ID"), dag);
+          final String epKeyClass = m.get("EPKeyClass");
+          final String epValueClass = m.get("EPValueClass");
+          final String epValue = m.get("EPValue");
+          LOG.info("Tuning: tuning with {} of {} for {} with {} with {}", m.get("type"), m.get("ID"),
+            m.get("EPKeyClass"), m.get("EPValueClass"), m.get("EPValue"));
+          final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(
+            epKeyClass, epValueClass, epValue);
           try {
-            for (final Object obj: objAndEPKey.left()) {
+            for (final Object obj: objectList) {
               if (obj instanceof IRVertex) {
                 final IRVertex v = (IRVertex) obj;
                 final VertexExecutionProperty<?> originalEP = v.getExecutionProperties().stream()

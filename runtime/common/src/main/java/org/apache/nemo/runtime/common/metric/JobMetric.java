@@ -21,7 +21,6 @@ package org.apache.nemo.runtime.common.metric;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.IRDAG;
@@ -43,8 +42,7 @@ public final class JobMetric implements StateMetric<PlanState.State> {
   private String irDagSummary;
   private IRDAG irdag;
   private Long inputSize;
-  private String vertexProperties;
-  private String edgeProperties;
+  private String properties;
   private JsonNode irDagJson;
   private JsonNode stageDagJson;
 
@@ -84,12 +82,8 @@ public final class JobMetric implements StateMetric<PlanState.State> {
     return this.inputSize;
   }
 
-  public String getVertexProperties() {
-    return this.vertexProperties;
-  }
-
-  public String getEdgeProperties() {
-    return this.edgeProperties;
+  public String getProperties() {
+    return this.properties;
   }
 
   /**
@@ -101,9 +95,7 @@ public final class JobMetric implements StateMetric<PlanState.State> {
     this.irdag = irDag;
     this.irDagSummary = irDag.irDAGSummary();
     this.inputSize = irDag.getInputSize();
-    final Pair<String, String> stringifiedProperties = MetricUtils.stringifyIRDAGProperties(irDag);
-    this.vertexProperties = stringifiedProperties.left();
-    this.edgeProperties = stringifiedProperties.right();
+    this.properties = MetricUtils.stringifyIRDAGProperties(irDag);
     final ObjectMapper objectMapper = new ObjectMapper();
     try {
       this.irDagJson = objectMapper.readTree(irDag.toString());
