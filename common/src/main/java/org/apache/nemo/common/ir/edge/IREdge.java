@@ -63,6 +63,17 @@ public final class IREdge extends Edge<IRVertex> {
   }
 
   /**
+   * Set an executionProperty of the IREdge, if it hasn't been already finalized.
+   *
+   * @param executionProperty new execution property.
+   * @return the IRVertex with the execution property set.
+   */
+  public IREdge setPropertyIfPossible(final EdgeExecutionProperty<?> executionProperty) {
+    executionProperties.putIfPossible(executionProperty);
+    return this;
+  }
+
+  /**
    * Set an executionProperty of the IREdge, permanently.
    *
    * @param executionProperty the execution property.

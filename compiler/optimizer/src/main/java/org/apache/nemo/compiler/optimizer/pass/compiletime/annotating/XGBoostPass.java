@@ -98,17 +98,17 @@ public final class XGBoostPass extends AnnotatingPass {
                 final IRVertex v = (IRVertex) obj;
                 final VertexExecutionProperty<?> originalEP = v.getExecutionProperties().stream()
                   .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
-                v.setProperty((VertexExecutionProperty) newEP);
+                v.setPropertyIfPossible((VertexExecutionProperty) newEP);
                 if (!dag.checkIntegrity().isPassed()) {
-                  v.setProperty(originalEP);
+                  v.setPropertyIfPossible(originalEP);
                 }
               } else if (obj instanceof IREdge) {
                 final IREdge e = (IREdge) obj;
                 final EdgeExecutionProperty<?> originalEP = e.getExecutionProperties().stream()
                   .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
-                e.setProperty((EdgeExecutionProperty) newEP);
+                e.setPropertyIfPossible((EdgeExecutionProperty) newEP);
                 if (!dag.checkIntegrity().isPassed()) {
-                  e.setProperty(originalEP);
+                  e.setPropertyIfPossible(originalEP);
                 }
               }
             }

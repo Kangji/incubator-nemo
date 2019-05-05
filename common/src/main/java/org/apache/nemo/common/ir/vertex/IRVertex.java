@@ -76,6 +76,17 @@ public abstract class IRVertex extends Vertex implements Cloneable<IRVertex> {
   }
 
   /**
+   * Set an executionProperty of the IRVertex, if it hasn't been already finalized.
+   *
+   * @param executionProperty new execution property.
+   * @return the IRVertex with the execution property set.
+   */
+  public final IRVertex setPropertyIfPossible(final VertexExecutionProperty<?> executionProperty) {
+    executionProperties.putIfPossible(executionProperty);
+    return this;
+  }
+
+  /**
    * Set an executionProperty of the IRVertex, permanently.
    *
    * @param executionProperty new execution property.

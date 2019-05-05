@@ -152,6 +152,22 @@ public final class ExecutionPropertyMap<T extends ExecutionProperty> implements 
   }
 
   /**
+   * Put the given execution property in the ExecutionPropertyMap if it hasn't been already finalized.
+   *
+   * @param executionProperty execution property to insert.
+   * @return the previous execution property, or null if there was no execution property with the specified key.
+   */
+  public T putIfPossible(final T executionProperty) {
+    if (finalizedProperties.contains(executionProperty.getClass())
+      && properties.get(executionProperty.getClass()) != null
+      && !properties.get(executionProperty.getClass()).equals(executionProperty)) {
+      return properties.get(executionProperty.getClass());
+    } else {
+      return put(executionProperty);
+    }
+  }
+
+  /**
    * Get the value of the given execution property type.
    *
    * @param <U>                  Type of the return value.
