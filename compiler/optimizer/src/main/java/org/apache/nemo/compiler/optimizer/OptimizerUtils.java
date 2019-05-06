@@ -25,7 +25,9 @@ import org.apache.nemo.common.exception.InvalidParameterException;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.exception.UnsupportedMethodException;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.utility.StreamVertex;
 import org.apache.nemo.runtime.common.metric.MetricUtils;
 
 import java.util.ArrayList;
@@ -92,6 +94,14 @@ public final class OptimizerUtils {
     final IRVertex targetVertex = subDAG.getTopologicalSort().get(subDAG.getVertices().size() - 1);
     if (subDAG.getEdges().stream().anyMatch(e -> e.getSrc().equals(targetVertex))) {
       throw new MetricException(targetVertex.getId() + " is not the target vertex");
+    }
+
+    if (targetVertex instanceof StreamVertex) {
+      dag.getEdges().stream()
+        .filter(e -> subDAG.getIncomingEdgesOf(targetVertex).stream()
+          .map(IREdge::getSrc)
+          .anyMatch(src -> src.equals(e.getSrc())))
+        .forEach(e -> dag.insert(new StreamVertex(), e));
     }
 
     final Stream<IRVertex> targetVertexFromDAG = dag.getVertices().stream()
