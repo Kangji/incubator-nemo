@@ -19,6 +19,7 @@
 
 package org.apache.nemo.runtime.common.metric;
 
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.coder.DecoderFactory;
 import org.apache.nemo.common.coder.EncoderFactory;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
@@ -33,6 +34,16 @@ import org.junit.Test;
 import java.io.Serializable;
 
 public class MetricUtilsTest {
+
+  @Test
+  public void testFetchBestConfForDAG() {
+    final String mapReduceTableName = "rv2_v26_e26_139b";
+    final Pair<String, String> bestConf = MetricUtils.fetchBestConfForDAG(mapReduceTableName);
+
+    Assert.assertFalse("Result for vertex properties: " + bestConf.left(), bestConf.left().isEmpty());
+
+    Assert.assertFalse("Result for edge properties: " + bestConf.right(), bestConf.right().isEmpty());
+  }
 
   @Test
   public void testEnumIndexAndValue() {

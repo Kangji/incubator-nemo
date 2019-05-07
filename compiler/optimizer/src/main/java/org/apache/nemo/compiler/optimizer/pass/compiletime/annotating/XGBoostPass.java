@@ -24,11 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.*;
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.edge.IREdge;
-import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
-import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
-import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.compiler.optimizer.OptimizerUtils;
 import org.apache.nemo.runtime.common.metric.MetricUtils;
 import org.slf4j.Logger;
@@ -93,25 +89,7 @@ public final class XGBoostPass extends AnnotatingPass {
           final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(objAndEPKey.right(),
             Double.valueOf(m.get("split")), Double.valueOf(m.get("val")));
           try {
-            for (final Object obj: objAndEPKey.left()) {
-              if (obj instanceof IRVertex) {
-                final IRVertex v = (IRVertex) obj;
-                final VertexExecutionProperty<?> originalEP = v.getExecutionProperties().stream()
-                  .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
-                v.setPropertyIfPossible((VertexExecutionProperty) newEP);
-                if (!dag.checkIntegrity().isPassed()) {
-                  v.setPropertyIfPossible(originalEP);
-                }
-              } else if (obj instanceof IREdge) {
-                final IREdge e = (IREdge) obj;
-                final EdgeExecutionProperty<?> originalEP = e.getExecutionProperties().stream()
-                  .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
-                e.setPropertyIfPossible((EdgeExecutionProperty) newEP);
-                if (!dag.checkIntegrity().isPassed()) {
-                  e.setPropertyIfPossible(originalEP);
-                }
-              }
-            }
+            OptimizerUtils.applyNewEpToVertexOrEdge(objAndEPKey.left(), newEP, dag);
           } catch (IllegalVertexOperationException | IllegalEdgeOperationException e) {
           }
         });

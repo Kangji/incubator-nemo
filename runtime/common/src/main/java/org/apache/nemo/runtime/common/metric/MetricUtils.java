@@ -246,6 +246,29 @@ public final class MetricUtils {
     }
   }
 
+  public static Pair<String, String> fetchBestConfForDAG(final String tableName) {
+    try (Connection c = DriverManager.getConnection(POSTGRESQL_METADATA_DB_NAME,
+      "postgres", "fake_password")) {
+      try (Statement statement = c.createStatement()) {
+        statement.setQueryTimeout(30);  // set timeout to 30 sec.
+
+        try (ResultSet rs = statement.executeQuery("SELECT vertex_properties, edge_properties FROM " + tableName
+          + " WHERE duration = (SELECT MIN (duration) FROM " + tableName + ")")) {
+          LOG.info("Configuration loaded from DB");
+          if (rs.next()) {
+            final String vertexProperties = rs.getString("vertex_properties");
+            final String edgeProperties = rs.getString("edge_properties");
+            return Pair.of(vertexProperties, edgeProperties);
+          } else {
+            return Pair.of("", "");
+          }
+        }
+      }
+    } catch (SQLException e) {
+      throw new MetricException(e);
+    }
+  }
+
   /**
    * Stringify execution properties of an IR DAG.
    *
@@ -496,7 +519,7 @@ public final class MetricUtils {
    * and returns the actual value which the execution property uses.
    *
    * @param split      the split value, from which to start from.
-   * @param tweak      the tweak value, to which we should tweak the split value.
+   * @param tweak      the tweak value, to which we should tweak the split value. Give 0 if you don't want any changes.
    * @param epKeyIndex the EP Key index to retrieve information from.
    * @return the project root path.
    */
@@ -511,6 +534,8 @@ public final class MetricUtils {
       final int ordinal;
       if (split < 0) {
         ordinal = 0;
+      } else if (tweak == 0) {
+        ordinal = split.intValue();
       } else {
         final int maxOrdinal = targetObjectClass.getFields().length - 1;
         final int left = splitIntVal.left() <= 0 ? 0 : splitIntVal.left();
@@ -520,7 +545,7 @@ public final class MetricUtils {
       LOG.info("Translated: {} into ENUM with ordinal {}", split, ordinal);
       return targetObjectClass.getEnumConstants()[ordinal];
     } else if (targetObjectClass.isAssignableFrom(Integer.class)) {
-      final Double val = split + tweak + 0.5;
+      final Double val = split + (tweak + 0.5);
       final Integer res = val.intValue();
       LOG.info("Translated: {} into INTEGER of {}", split, res);
       return res;
@@ -530,6 +555,8 @@ public final class MetricUtils {
         res = false;
       } else if (split > 1) {
         res = true;
+      } else if (tweak == 0) {
+        res = split > 0.5;  // 0.5 is the threshold.
       } else {
         final Boolean left = splitIntVal.left() >= 1;  // false by default, true if >= 1
         final Boolean right = splitIntVal.right() > 0;  // true by default, false if <= 0
@@ -549,11 +576,30 @@ public final class MetricUtils {
         .filter(n -> n > split)
         .sorted()  // minimum among larger values
         .findFirst().orElse(valueCandidates.get().max().getAsInt());
-      final Integer targetValue = tweak < 0 ? left : right;
+      final Integer targetValue;
+      if (tweak == 0 && valueCandidates.get().anyMatch(c -> c == split.intValue())) {
+        targetValue = split.intValue();
+      } else if (tweak == 0) {
+        targetValue = split - left > right - split ? right : left;
+      } else {
+        targetValue = tweak < 0 ? left : right;
+      }
       final Serializable res = EP_METADATA.get(Pair.of(epKeyIndex, targetValue)).getValue();
       LOG.info("Translated: {} into VALUE of {}", split, res);
       return res;
     }
+  }
+
+  /**
+   * Receives the pair of execution property and value classes, and returns the optimized value of the EP.
+   *
+   * @param epKeyIndex the EP Key index to retrieve the new EP from.
+   * @param value      the EP Value index.
+   * @return The execution property constructed from the key index and the split value.
+   */
+  public static ExecutionProperty<? extends Serializable> keyAndValueToEP(final Integer epKeyIndex,
+                                                                          final Double value) {
+    return keyAndValueToEP(epKeyIndex, value, 0.0);
   }
 
   /**

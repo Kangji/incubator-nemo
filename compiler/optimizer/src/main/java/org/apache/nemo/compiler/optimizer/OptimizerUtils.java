@@ -21,18 +21,19 @@ package org.apache.nemo.compiler.optimizer;
 
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
-import org.apache.nemo.common.exception.InvalidParameterException;
-import org.apache.nemo.common.exception.MetricException;
-import org.apache.nemo.common.exception.UnsupportedMethodException;
+import org.apache.nemo.common.exception.*;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
+import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.utility.StreamVertex;
 import org.apache.nemo.runtime.common.metric.MetricUtils;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.io.Serializable;
+import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,6 +47,9 @@ public final class OptimizerUtils {
    */
   private OptimizerUtils() {
   }
+
+  private static final Map<IRDAG, Map<String, Supplier<Stream<IRVertex>>>> PATTERN_TO_TARGET_VERTEX_CACHE =
+    new HashMap<>();
 
   /**
    * Restore the formatted string into a pair of vertex/edge list and the execution property.
@@ -104,24 +108,86 @@ public final class OptimizerUtils {
         .forEach(e -> dag.insert(new StreamVertex(), e));
     }
 
-    final Stream<IRVertex> targetVertexFromDAG = dag.getVertices().stream()
-      .filter(v -> v.toString().equals(targetVertex.toString()))
-      .filter(v -> subDAG.getVertices().size() == dag.getIncomingEdgesOf(v).size() + 1)
-      .filter(v -> dag.getIncomingEdgesOf(v).stream()
-        .map(e -> e.getSrc().toString())
-        .allMatch(str1 -> subDAG.getIncomingEdgesOf(targetVertex).stream()
+    final Supplier<Stream<IRVertex>> targetVertexFromDAG;
+    if (PATTERN_TO_TARGET_VERTEX_CACHE.containsKey(dag)
+      && PATTERN_TO_TARGET_VERTEX_CACHE.get(dag).containsKey(string)) {
+      targetVertexFromDAG = PATTERN_TO_TARGET_VERTEX_CACHE.get(dag).get(string);
+    } else {
+      targetVertexFromDAG = () -> dag.getVertices().stream()
+        .filter(v -> v.toString().equals(targetVertex.toString()))
+        .filter(v -> subDAG.getVertices().size() == dag.getIncomingEdgesOf(v).size() + 1)
+        .filter(v -> dag.getIncomingEdgesOf(v).stream()
           .map(e -> e.getSrc().toString())
-          .anyMatch(str2 -> str2.equals(str1))));
+          .allMatch(str1 -> subDAG.getIncomingEdgesOf(targetVertex).stream()
+            .map(e -> e.getSrc().toString())
+            .anyMatch(str2 -> str2.equals(str1))));
+
+      PATTERN_TO_TARGET_VERTEX_CACHE.putIfAbsent(dag, new HashMap<>());
+      PATTERN_TO_TARGET_VERTEX_CACHE.get(dag).putIfAbsent(string, targetVertexFromDAG);
+    }
+
     final Integer index = Integer.parseInt(string.substring(4, 6));
     final List<Object> objectList = new ArrayList<>();
     if (index % 2 == 0) {  // vertex
-      targetVertexFromDAG.forEach(objectList::add);
+      targetVertexFromDAG.get().forEach(objectList::add);
     } else {  // edge
-      targetVertexFromDAG.forEach(v -> objectList.add(dag.getIncomingEdgesOf(v).stream()
+      targetVertexFromDAG.get().forEach(v -> objectList.add(dag.getIncomingEdgesOf(v).stream()
         .sorted(Comparator.comparing(e -> e.getSrc().toString()))
         .collect(Collectors.toList()).get(index / 2)));
     }
     return Pair.of(objectList, Integer.parseInt(string.substring(6, 10)));
+  }
+
+  /**
+   * Method to fetch and apply the best DAG configurations from the DB.
+   * @param dag
+   */
+  public static void fetchAndApplyBestConfFromDB(final IRDAG dag) {
+    final Pair<String, String> vertexAndEdgeProperties = MetricUtils.fetchBestConfForDAG(dag.irDAGSummary());
+
+    final String[] properties = vertexAndEdgeProperties.left().concat(vertexAndEdgeProperties.right()).split(" ");
+
+    for (String property : properties) {
+      final String[] keyAndValue = property.split(":");
+      final Pair<List<Object>, Integer> objAndEpKey = patternStringToObjsAndEPKeyIndex(keyAndValue[0], dag);
+      final ExecutionProperty<? extends Serializable> newEP =
+        MetricUtils.keyAndValueToEP(objAndEpKey.right(), Double.valueOf(keyAndValue[1]));
+      try {
+        applyNewEpToVertexOrEdge(objAndEpKey.left(), newEP, dag);
+      } catch (IllegalVertexOperationException | IllegalEdgeOperationException e) {
+      }
+    }
+  }
+
+  /**
+   * Apply the given execution property to the vertex/edges given.
+   *
+   * @param objects a list of IRVertex or IREdge objects.
+   * @param newEP the new EP to apply to the object.
+   * @param dag the DAG containing the objects.
+   */
+  public static void applyNewEpToVertexOrEdge(final List<Object> objects,
+                                              final ExecutionProperty<? extends Serializable> newEP,
+                                              final IRDAG dag) {
+    for (final Object obj: objects) {
+      if (obj instanceof IRVertex) {
+        final IRVertex v = (IRVertex) obj;
+        final VertexExecutionProperty<?> originalEP = v.getExecutionProperties().stream()
+          .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
+        v.setPropertyIfPossible((VertexExecutionProperty) newEP);
+        if (!dag.checkIntegrity().isPassed()) {
+          v.setPropertyIfPossible(originalEP);
+        }
+      } else if (obj instanceof IREdge) {
+        final IREdge e = (IREdge) obj;
+        final EdgeExecutionProperty<?> originalEP = e.getExecutionProperties().stream()
+          .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
+        e.setPropertyIfPossible((EdgeExecutionProperty) newEP);
+        if (!dag.checkIntegrity().isPassed()) {
+          e.setPropertyIfPossible(originalEP);
+        }
+      }
+    }
   }
 
   /**
