@@ -140,7 +140,7 @@ public final class OptimizerUtils {
 
   /**
    * Method to fetch and apply the best DAG configurations from the DB.
-   * @param dag
+   * @param dag the DAG to load the configurations for.
    */
   public static void fetchAndApplyBestConfFromDB(final IRDAG dag) {
     final Pair<String, String> vertexAndEdgeProperties = MetricUtils.fetchBestConfForDAG(dag.irDAGSummary());
@@ -150,10 +150,8 @@ public final class OptimizerUtils {
     for (String property : properties) {
       final String[] keyAndValue = property.split(":");
       final Pair<List<Object>, Integer> objAndEpKey = patternStringToObjsAndEPKeyIndex(keyAndValue[0], dag);
-      final ExecutionProperty<? extends Serializable> newEP =
-        MetricUtils.keyAndValueToEP(objAndEpKey.right(), Double.valueOf(keyAndValue[1]));
       try {
-        applyNewEpToVertexOrEdge(objAndEpKey.left(), newEP, dag);
+        applyNewEpToVertexOrEdge(objAndEpKey, Double.valueOf(keyAndValue[1]), 0.0, dag);
       } catch (IllegalVertexOperationException | IllegalEdgeOperationException e) {
       }
     }
@@ -162,18 +160,31 @@ public final class OptimizerUtils {
   /**
    * Apply the given execution property to the vertex/edges given.
    *
-   * @param objects a list of IRVertex or IREdge objects.
-   * @param newEP the new EP to apply to the object.
+   * @param objAndEPKey a list of IRVertex or IREdge objects, with the EP Key that it tries to apply.
+   * @param split the split value for the new EP.
+   * @param tweak the tweak value for the new EP.
    * @param dag the DAG containing the objects.
    */
-  public static void applyNewEpToVertexOrEdge(final List<Object> objects,
-                                              final ExecutionProperty<? extends Serializable> newEP,
+  public static void applyNewEpToVertexOrEdge(final Pair<List<Object>, Integer> objAndEPKey,
+                                              final Double split,
+                                              final Double tweak,
                                               final IRDAG dag) {
-    for (final Object obj: objects) {
+    // final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(objAndEPKey.right(),
+    final Class<? extends ExecutionProperty> epClass = MetricUtils.getEpPairFromKeyIndex(objAndEPKey.right()).left();
+
+    for (final Object obj: objAndEPKey.left()) {
       if (obj instanceof IRVertex) {
         final IRVertex v = (IRVertex) obj;
         final VertexExecutionProperty<?> originalEP = v.getExecutionProperties().stream()
-          .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
+          .filter(ep -> ep.getClass().isAssignableFrom(epClass)).findFirst().orElse(null);
+        if (originalEP == null) {
+          return;
+        }
+
+        final Integer originalEPValueIndex = MetricUtils.valueToIndex(objAndEPKey.right(), originalEP);
+        final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(objAndEPKey.right(),
+          originalEPValueIndex.doubleValue(), split, tweak);
+
         v.setPropertyIfPossible((VertexExecutionProperty) newEP);
         if (!dag.checkIntegrity().isPassed()) {
           v.setPropertyIfPossible(originalEP);
@@ -181,7 +192,15 @@ public final class OptimizerUtils {
       } else if (obj instanceof IREdge) {
         final IREdge e = (IREdge) obj;
         final EdgeExecutionProperty<?> originalEP = e.getExecutionProperties().stream()
-          .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
+          .filter(ep -> ep.getClass().isAssignableFrom(epClass)).findFirst().orElse(null);
+        if (originalEP == null) {
+          return;
+        }
+
+        final Integer originalEPValueIndex = MetricUtils.valueToIndex(objAndEPKey.right(), originalEP);
+        final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(objAndEPKey.right(),
+          originalEPValueIndex.doubleValue(), split, tweak);
+
         e.setPropertyIfPossible((EdgeExecutionProperty) newEP);
         if (!dag.checkIntegrity().isPassed()) {
           e.setPropertyIfPossible(originalEP);
@@ -196,7 +215,7 @@ public final class OptimizerUtils {
    * @param environmentType the input string.
    * @return the formatted string corresponding to each type.
    */
-  public static String filterEnvironmentTypeString(final String environmentType) {
+  static String filterEnvironmentTypeString(final String environmentType) {
     if (environmentType.toLowerCase().contains("transient")) {
       return "transient";
     } else if (environmentType.toLowerCase().contains("large") && environmentType.toLowerCase().contains("shuffle")) {

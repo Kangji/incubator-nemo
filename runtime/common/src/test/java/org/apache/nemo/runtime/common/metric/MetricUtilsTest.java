@@ -56,19 +56,19 @@ public class MetricUtilsTest {
     // Pull is of ordinal index 0
     Assert.assertEquals(Integer.valueOf(0), idx);
 
-    final Object pull1 = MetricUtils.indexToValue(0.5, -0.1, epKeyIndex);
+    final Object pull1 = MetricUtils.indexToValue(0.0, 0.5, -0.1, epKeyIndex);
     Assert.assertEquals(pull, pull1);
-    final Object push1 = MetricUtils.indexToValue(0.5, 0.1, epKeyIndex);
+    final Object push1 = MetricUtils.indexToValue(0.0, 0.5, 0.1, epKeyIndex);
     Assert.assertEquals(push, push1);
-    final Object pull2 = MetricUtils.indexToValue(-0.5, -0.1, epKeyIndex);
+    final Object pull2 = MetricUtils.indexToValue(0.0, -0.5, -0.1, epKeyIndex);
     Assert.assertEquals(pull, pull2);
-    final Object pull3 = MetricUtils.indexToValue(-0.5, 0.1, epKeyIndex);
+    final Object pull3 = MetricUtils.indexToValue(0.0, -0.5, 0.1, epKeyIndex);
     Assert.assertEquals(pull, pull3);
-    final Object push2 = MetricUtils.indexToValue(2.0, 1.0, epKeyIndex);
+    final Object push2 = MetricUtils.indexToValue(0.0, 2.0, 1.0, epKeyIndex);
     Assert.assertEquals(push, push2);
-    final Object push3 = MetricUtils.indexToValue(1.1, -0.1, epKeyIndex);
+    final Object push3 = MetricUtils.indexToValue(0.0, 1.1, -0.1, epKeyIndex);
     Assert.assertEquals(push, push3);
-    final Object push4 = MetricUtils.indexToValue(1.1, 0.1, epKeyIndex);
+    final Object push4 = MetricUtils.indexToValue(0.0, 1.1, 0.1, epKeyIndex);
     Assert.assertEquals(push, push4);
   }
 
@@ -92,30 +92,30 @@ public class MetricUtilsTest {
     Assert.assertEquals(Integer.valueOf(1), MetricUtils.valueToIndex(rsEpTKeyIndex, rsEpT));
     Assert.assertEquals(Integer.valueOf(0), MetricUtils.valueToIndex(rsEpFKeyIndex, rsEpF));
 
-    final Object one1 = MetricUtils.indexToValue(1.5, -0.1, pEp1KeyIndex);
-    final Object one2 = MetricUtils.indexToValue(0.5, 0.1, pEp1KeyIndex);
-    final Object one3 = MetricUtils.indexToValue(2.0, -0.6, pEp1KeyIndex);
-    final Object one4 = MetricUtils.indexToValue(0.0, 0.5, pEp1KeyIndex);
+    final Object one1 = MetricUtils.indexToValue(0.0, 1.5, -0.1, pEp1KeyIndex);
+    final Object one2 = MetricUtils.indexToValue(0.0, 0.5, 0.1, pEp1KeyIndex);
+    final Object one3 = MetricUtils.indexToValue(0.0, 2.0, -0.6, pEp1KeyIndex);
+    final Object one4 = MetricUtils.indexToValue(0.0, 0.0, 0.5, pEp1KeyIndex);
     Assert.assertEquals(one, one1);
     Assert.assertEquals(one, one2);
     Assert.assertEquals(one, one3);
     Assert.assertEquals(one, one4);
 
-    final Object hundred1 = MetricUtils.indexToValue(100.5, -0.1, pEp100KeyIndex);
-    final Object hundred2 = MetricUtils.indexToValue(99.5, 0.1, pEp100KeyIndex);
+    final Object hundred1 = MetricUtils.indexToValue(0.0, 100.5, -0.1, pEp100KeyIndex);
+    final Object hundred2 = MetricUtils.indexToValue(0.0, 99.5, 0.1, pEp100KeyIndex);
     Assert.assertEquals(hundred, hundred1);
     Assert.assertEquals(hundred, hundred2);
 
-    final Object t1 = MetricUtils.indexToValue(1.5, -0.1, rsEpTKeyIndex);
-    final Object t2 = MetricUtils.indexToValue(0.1, 0.5, rsEpTKeyIndex);
-    final Object t3 = MetricUtils.indexToValue(1.5, 0.1, rsEpTKeyIndex);
+    final Object t1 = MetricUtils.indexToValue(0.0, 1.5, -0.1, rsEpTKeyIndex);
+    final Object t2 = MetricUtils.indexToValue(0.0, 0.1, 0.5, rsEpTKeyIndex);
+    final Object t3 = MetricUtils.indexToValue(0.0, 1.5, 0.1, rsEpTKeyIndex);
     Assert.assertEquals(true, t1);
     Assert.assertEquals(true, t2);
     Assert.assertEquals(true, t3);
 
-    final Object f1 = MetricUtils.indexToValue(0.5, -0.1, rsEpFKeyIndex);
-    final Object f2 = MetricUtils.indexToValue(-0.5, 0.1, rsEpFKeyIndex);
-    final Object f3 = MetricUtils.indexToValue(-0.5, -0.1, rsEpFKeyIndex);
+    final Object f1 = MetricUtils.indexToValue(0.0, 0.5, -0.1, rsEpFKeyIndex);
+    final Object f2 = MetricUtils.indexToValue(0.0, -0.5, 0.1, rsEpFKeyIndex);
+    final Object f3 = MetricUtils.indexToValue(0.0, -0.5, -0.1, rsEpFKeyIndex);
     Assert.assertEquals(false, f1);
     Assert.assertEquals(false, f2);
     Assert.assertEquals(false, f3);
@@ -133,13 +133,13 @@ public class MetricUtilsTest {
     final Integer efidx = MetricUtils.valueToIndex(eEpKeyIndex, eEp);
     final Integer dfidx = MetricUtils.valueToIndex(dEpKeyIndex, dEp);
 
-    final Object ef1 = MetricUtils.indexToValue(0.1 + efidx, -0.1, eEpKeyIndex);
-    final Object ef2 = MetricUtils.indexToValue(-0.1 + efidx, 0.1, eEpKeyIndex);
+    final Object ef1 = MetricUtils.indexToValue(0.0, 0.1 + efidx, -0.1, eEpKeyIndex);
+    final Object ef2 = MetricUtils.indexToValue(0.0, -0.1 + efidx, 0.1, eEpKeyIndex);
     Assert.assertEquals("EP_INDEX: (" + eEpKeyIndex + ", " + efidx + ")", ef.toString(), ef1.toString());
     Assert.assertEquals("EP_INDEX: (" + eEpKeyIndex + ", " + efidx + ")", ef.toString(), ef2.toString());
 
-    final Object df1 = MetricUtils.indexToValue(0.1 + dfidx, -0.1, dEpKeyIndex);
-    final Object df2 = MetricUtils.indexToValue(-0.1 + dfidx, 0.1, dEpKeyIndex);
+    final Object df1 = MetricUtils.indexToValue(0.0, 0.1 + dfidx, -0.1, dEpKeyIndex);
+    final Object df2 = MetricUtils.indexToValue(0.0, -0.1 + dfidx, 0.1, dEpKeyIndex);
     Assert.assertEquals("EP_INDEX: (" + dEpKeyIndex + ", " + dfidx + ")", df.toString(), df1.toString());
     Assert.assertEquals("EP_INDEX: (" + dEpKeyIndex + ", " + dfidx + ")", df.toString(), df2.toString());
   }

@@ -90,8 +90,6 @@ public final class MetricUtils {
 
   /**
    * Load the BiMaps (lightweight) Metadata from the DB.
-   *
-   * @return the loaded BiMaps, or initialized ones.
    */
   private static void loadMetaData() {
     try (Connection c = DriverManager.getConnection(MetricUtils.POSTGRESQL_METADATA_DB_NAME,
@@ -157,6 +155,9 @@ public final class MetricUtils {
     }
   }
 
+  /**
+   * @return Whether the metadata has been loaded or not.
+   */
   public static Boolean metaDataLoaded() {
     return METADATA_LOADED.getCount() == 0;
   }
@@ -246,6 +247,10 @@ public final class MetricUtils {
     }
   }
 
+  /**
+   * @param tableName The table to search for.
+   * @return the pair of vertex and edge properties with the lowest duration.
+   */
   public static Pair<String, String> fetchBestConfForDAG(final String tableName) {
     try (Connection c = DriverManager.getConnection(POSTGRESQL_METADATA_DB_NAME,
       "postgres", "fake_password")) {
@@ -275,7 +280,7 @@ public final class MetricUtils {
    * @param irdag the IR DAG to observe.
    * @return stringified execution properties, grouped as patterns. Left is for vertices, right is for edges.
    */
-  public static Pair<String, String> stringifyIRDAGProperties(final IRDAG irdag) {
+  static Pair<String, String> stringifyIRDAGProperties(final IRDAG irdag) {
     return stringifyIRDAGProperties(irdag, 0);  // pattern recording is default
   }
 
@@ -286,7 +291,7 @@ public final class MetricUtils {
    * @param mode 0: record metrics by patterns, 1: record metrics with vertex or edge IDs.
    * @return the pair of stringified execution properties. Left is for vertices, right is for edges.
    */
-  public static Pair<String, String> stringifyIRDAGProperties(final IRDAG irdag, final Integer mode) {
+  static Pair<String, String> stringifyIRDAGProperties(final IRDAG irdag, final Integer mode) {
     final StringBuilder vStringBuilder = new StringBuilder();
     final StringBuilder eStringBuilder = new StringBuilder();
 
@@ -438,7 +443,7 @@ public final class MetricUtils {
    * @param valueTypes the value types of the method.
    * @return optional of the method. It returns Optional.empty() if the method could not be found.
    */
-  public static Optional<Method> getMethodFor(final Class<? extends ExecutionProperty> clazz,
+  static Optional<Method> getMethodFor(final Class<? extends ExecutionProperty> clazz,
                                               final String name, final Class<?>... valueTypes) {
     try {
       final Method mthd = clazz.getMethod(name, valueTypes);
@@ -454,7 +459,7 @@ public final class MetricUtils {
    * @param index the index of the EP Key.
    * @return the class of the execution property (EP), as well as the type of the value of the EP.
    */
-  private static Pair<Class<? extends ExecutionProperty>, Class<? extends Serializable>> getEpPairFromKeyIndex(
+  public static Pair<Class<? extends ExecutionProperty>, Class<? extends Serializable>> getEpPairFromKeyIndex(
     final Integer index) {
     return EP_KEY_METADATA.get(index);
   }
@@ -477,7 +482,7 @@ public final class MetricUtils {
    * @param ep         the execution property containing the value.
    * @return the converted value index.
    */
-  static Integer valueToIndex(final Integer epKeyIndex, final ExecutionProperty<?> ep) {
+  public static Integer valueToIndex(final Integer epKeyIndex, final ExecutionProperty<?> ep) {
     final Object o = ep.getValue();
 
     if (o instanceof Enum) {
@@ -518,21 +523,35 @@ public final class MetricUtils {
    * It receives the split, and the direction of the tweak value (which show the target index value),
    * and returns the actual value which the execution property uses.
    *
+   * @param previousValue the previous value of the EP.
    * @param split      the split value, from which to start from.
    * @param tweak      the tweak value, to which we should tweak the split value. Give 0 if you don't want any changes.
    * @param epKeyIndex the EP Key index to retrieve information from.
    * @return the project root path.
    */
-  static Serializable indexToValue(final Double split, final Double tweak, final Integer epKeyIndex) {
+  static Serializable indexToValue(final Double previousValue,
+                                   final Double split, final Double tweak,
+                                   final Integer epKeyIndex) {
     final Class<? extends Serializable> targetObjectClass = getEpPairFromKeyIndex(epKeyIndex).right();
     final boolean splitIsInteger = split.compareTo((double) split.intValue()) == 0;
-    final Pair<Integer, Integer> splitIntVal = splitIsInteger
-      ? Pair.of(split.intValue() - 1, split.intValue() + 1)
-      : Pair.of(split.intValue(), split.intValue() + 1);
+    final Boolean previousValueIsInteger = previousValue.compareTo((double) previousValue.intValue()) == 0;
+    final Boolean considerPreviousValue = previousValue != 0.0;
+    final Pair<Integer, Integer> splitIntVal;
+    if (considerPreviousValue) {
+      splitIntVal = previousValue < split
+        ? Pair.of(previousValueIsInteger ? previousValue.intValue() - 1 : previousValue.intValue(),
+        split.intValue() + 1)
+        : Pair.of(splitIsInteger ? split.intValue() - 1 : split.intValue(),  // split <= previousValue
+        previousValue.intValue() + 1);
+    } else {
+      splitIntVal = splitIsInteger
+        ? Pair.of(split.intValue() - 1, split.intValue() + 1)
+        : Pair.of(split.intValue(), split.intValue() + 1);
+    }
 
-    if (targetObjectClass.isEnum()) {
+    if (targetObjectClass.isEnum()) {  // ENUM CASE.
       final int ordinal;
-      if (split < 0) {
+      if (split < 0 && (!considerPreviousValue || previousValue < 0)) {
         ordinal = 0;
       } else if (tweak == 0) {
         ordinal = split.intValue();
@@ -544,19 +563,32 @@ public final class MetricUtils {
       }
       LOG.info("Translated: {} into ENUM with ordinal {}", split, ordinal);
       return targetObjectClass.getEnumConstants()[ordinal];
-    } else if (targetObjectClass.isAssignableFrom(Integer.class)) {
-      final Double val = split + (tweak + 0.5);
-      final Integer res = val.intValue();
+
+    } else if (targetObjectClass.isAssignableFrom(Integer.class)) {  // INTEGER CASE.
+      final Integer res;
+      if (tweak > 0 && considerPreviousValue) {
+        final Double val = (split < previousValue ? previousValue : split) + (tweak + 0.5);
+        res = val.intValue();
+      } else if (tweak < 0 && considerPreviousValue) {
+        final Double val = (split < previousValue ? split : previousValue) + (tweak + 0.5);
+        res = val.intValue();
+      } else if (tweak == 0) {
+        res = split.intValue();
+      } else {  // tweak has a value, and previousValue is 0.
+        final Double val = split + (tweak + 0.5);
+        res = val.intValue();
+      }
       LOG.info("Translated: {} into INTEGER of {}", split, res);
       return res;
-    } else if (targetObjectClass.isAssignableFrom(Boolean.class)) {
+
+    } else if (targetObjectClass.isAssignableFrom(Boolean.class)) {  // BOOLEAN CASE.
       final Boolean res;
-      if (split < 0) {
+      if (split < 0 && (!considerPreviousValue || previousValue < 0)) {
         res = false;
-      } else if (split > 1) {
+      } else if (split > 1 && (!considerPreviousValue || previousValue > 1)) {
         res = true;
       } else if (tweak == 0) {
-        res = split > 0.5;  // 0.5 is the threshold.
+        res = split >= 0.5;  // 0.5 is the threshold.
       } else {
         final Boolean left = splitIntVal.left() >= 1;  // false by default, true if >= 1
         final Boolean right = splitIntVal.right() > 0;  // true by default, false if <= 0
@@ -564,16 +596,19 @@ public final class MetricUtils {
       }
       LOG.info("Translated: {} into BOOLEAN of {}", split, res);
       return res;
-    } else {
+
+    } else {  // EVERYTHING ELSE (SAVED IN METADATA).
       final Supplier<IntStream> valueCandidates = () -> EP_METADATA.keySet().stream()
         .filter(p -> p.left().equals(epKeyIndex))
         .mapToInt(Pair::right);
+      final Double smaller = considerPreviousValue ? (split < previousValue ? split : previousValue) : split;
+      final Double larger = considerPreviousValue ? (split < previousValue ? previousValue : split) : split;
       final Integer left = valueCandidates.get()
-        .filter(n -> n < split)
+        .filter(n -> n < smaller)
         .map(n -> -n).sorted().map(n -> -n)  // maximum among smaller values
         .findFirst().orElse(valueCandidates.get().min().getAsInt());
       final Integer right = valueCandidates.get()
-        .filter(n -> n > split)
+        .filter(n -> n > larger)
         .sorted()  // minimum among larger values
         .findFirst().orElse(valueCandidates.get().max().getAsInt());
       final Integer targetValue;
@@ -599,7 +634,7 @@ public final class MetricUtils {
    */
   public static ExecutionProperty<? extends Serializable> keyAndValueToEP(final Integer epKeyIndex,
                                                                           final Double value) {
-    return keyAndValueToEP(epKeyIndex, value, 0.0);
+    return keyAndValueToEP(epKeyIndex, 0.0, value, 0.0);
   }
 
   /**
@@ -610,12 +645,28 @@ public final class MetricUtils {
    * @param tweak      the direction in which to tweak the execution property value.
    * @return The execution property constructed from the key index and the split value.
    */
+  static ExecutionProperty<? extends Serializable> keyAndValueToEP(final Integer epKeyIndex,
+                                                                   final Double split,
+                                                                   final Double tweak) {
+    return keyAndValueToEP(epKeyIndex, 0.0, split, tweak);
+  }
+
+  /**
+   * Receives the pair of execution property and value classes, and returns the optimized value of the EP.
+   *
+   * @param epKeyIndex the EP Key index to retrieve the new EP from.
+   * @param previousValue the previous value of the EP.
+   * @param split      the split point.
+   * @param tweak      the direction in which to tweak the execution property value.
+   * @return The execution property constructed from the key index and the split value.
+   */
   public static ExecutionProperty<? extends Serializable> keyAndValueToEP(
     final Integer epKeyIndex,
+    final Double previousValue,
     final Double split,
     final Double tweak) {
 
-    final Serializable value = indexToValue(split, tweak, epKeyIndex);
+    final Serializable value = indexToValue(previousValue, split, tweak, epKeyIndex);
     final Class<? extends ExecutionProperty> epClass = getEpPairFromKeyIndex(epKeyIndex).left();
 
     final ExecutionProperty<? extends Serializable> ep;

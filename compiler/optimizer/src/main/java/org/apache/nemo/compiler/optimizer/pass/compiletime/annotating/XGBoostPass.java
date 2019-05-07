@@ -24,13 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.*;
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
 import org.apache.nemo.compiler.optimizer.OptimizerUtils;
-import org.apache.nemo.runtime.common.metric.MetricUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -86,10 +83,10 @@ public final class XGBoostPass extends AnnotatingPass {
           }
           LOG.info("Tuning: {} of {} should be {} than {}",
             objAndEPKey.right(), objAndEPKey.left(), m.get("val"), m.get("split"));
-          final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(objAndEPKey.right(),
-            Double.valueOf(m.get("split")), Double.valueOf(m.get("val")));
+
           try {
-            OptimizerUtils.applyNewEpToVertexOrEdge(objAndEPKey.left(), newEP, dag);
+            OptimizerUtils.applyNewEpToVertexOrEdge(objAndEPKey,
+              Double.valueOf(m.get("split")), Double.valueOf(m.get("val")), dag);
           } catch (IllegalVertexOperationException | IllegalEdgeOperationException e) {
           }
         });
