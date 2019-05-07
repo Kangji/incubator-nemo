@@ -329,7 +329,7 @@ public final class MetricStore {
           statement.executeUpdate("CREATE TABLE IF NOT EXISTS ir_dag (id " + syntax[0]
             + ", table_name TEXT NOT NULL, ir_dag_json JSON NOT NULL);");
           statement.executeUpdate("INSERT INTO ir_dag (table_name, ir_dag_json) "
-            + "VALUES ('" + tableName + "', '" + dumpMetricToJson(JobMetric.class) + "')");
+            + "VALUES ('" + tableName + "', '" + dumpAllMetricToJson() + "')");
 
           statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + tableName
             + " (id " + syntax[0] + ", duration BIGINT NOT NULL, inputsize BIGINT NOT NULL, "
