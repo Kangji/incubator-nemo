@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.exception.UnsupportedMetricException;
 import org.apache.nemo.runtime.common.metric.*;
@@ -30,15 +31,9 @@ import org.apache.nemo.runtime.common.state.PlanState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.lang.management.ManagementFactory;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -326,23 +321,23 @@ public final class MetricStore {
           .getOperatingSystemMXBean()).getTotalPhysicalMemorySize();
 
         try {
-          statement.executeUpdate("CREATE TABLE IF NOT EXISTS ir_dag (id " + syntax[0]
-            + ", table_name TEXT NOT NULL, ir_dag_json JSON NOT NULL);");
-          statement.executeUpdate("INSERT INTO ir_dag (table_name, ir_dag_json) "
-            + "VALUES ('" + tableName + "', '" + dumpAllMetricToJson() + "')");
-
           statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + tableName
             + " (id " + syntax[0] + ", duration BIGINT NOT NULL, inputsize BIGINT NOT NULL, "
             + "jvmmemsize BIGINT NOT NULL, memsize BIGINT NOT NULL, "
-            + "vertex_properties TEXT NOT NULL, edge_properties TEXT NOT NULL, "
+            + "vertex_properties TEXT NOT NULL, edge_properties TEXT NOT NULL, dag BYTEA, metrics JSON,"
             + "note TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);");
           LOG.info("CREATED TABLE For {} IF NOT PRESENT", tableName);
 
-          statement.executeUpdate("INSERT INTO " + tableName
-            + " (duration, inputsize, jvmmemsize, memsize, vertex_properties, edge_properties, note) "
+          try (PreparedStatement pstmt = c.prepareStatement("INSERT INTO " + tableName
+            + " (duration, inputsize, jvmmemsize, memsize, vertex_properties, edge_properties, dag, metrics, note) "
             + "VALUES (" + duration + ", " + inputSize + ", "
             + jvmMemSize + ", " + memSize + ", '"
-            + vertexProperties + "', '" + edgeProperties + "', '" + jobId + "');");
+            + vertexProperties + "', '" + edgeProperties + "', ?, '"
+            + dumpAllMetricToJson() + "', '" + jobId + "');")) {
+            pstmt.setBinaryStream(1,
+              new ByteArrayInputStream(SerializationUtils.serialize(jobMetric.getIrdag())));
+            pstmt.executeUpdate();
+          }
           LOG.info("Recorded metrics on the table for {}", tableName);
         } catch (SQLException | IOException e) {
           LOG.error("Error while saving optimization metrics: {}", e);

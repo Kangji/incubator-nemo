@@ -41,6 +41,7 @@ public final class JobMetric implements StateMetric<PlanState.State> {
   private final String id;
   private final List<StateTransitionEvent<PlanState.State>> stateTransitionEvents;
   private String irDagSummary;
+  private IRDAG irdag;
   private Long inputSize;
   private String vertexProperties;
   private String edgeProperties;
@@ -71,6 +72,10 @@ public final class JobMetric implements StateMetric<PlanState.State> {
     return irDagJson;
   }
 
+  public IRDAG getIrdag() {
+    return this.irdag;
+  }
+
   public String getIrDagSummary() {
     return this.irDagSummary;
   }
@@ -93,6 +98,7 @@ public final class JobMetric implements StateMetric<PlanState.State> {
    * @param irDag the IR DAG.
    */
   public void setIRDAG(final IRDAG irDag) {
+    this.irdag = irDag;
     this.irDagSummary = irDag.irDAGSummary();
     this.inputSize = irDag.getInputSize();
     final Pair<String, String> stringifiedProperties = MetricUtils.stringifyIRDAGProperties(irDag);
