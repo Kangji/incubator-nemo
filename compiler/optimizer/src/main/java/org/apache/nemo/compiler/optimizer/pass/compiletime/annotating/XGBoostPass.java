@@ -77,35 +77,37 @@ public final class XGBoostPass extends AnnotatingPass {
           mapper.readValue(message, new TypeReference<List<Map<String, String>>>() {
           });
         listOfMap.forEach(m -> {
-          final List<Object> objectList = OptimizerUtils.getObjects(m.get("type"), m.get("ID"), dag);
           final String epKeyClass = m.get("EPKeyClass");
           final String epValueClass = m.get("EPValueClass");
           final String epValue = m.get("EPValue");
-          LOG.info("Tuning: tuning with {} of {} for {} with {} with {}", m.get("type"), m.get("ID"),
-            m.get("EPKeyClass"), m.get("EPValueClass"), m.get("EPValue"));
-          final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(
-            epKeyClass, epValueClass, epValue);
-          try {
-            for (final Object obj: objectList) {
-              if (obj instanceof IRVertex) {
-                final IRVertex v = (IRVertex) obj;
-                final VertexExecutionProperty<?> originalEP = v.getExecutionProperties().stream()
-                  .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
-                v.setPropertyIfPossible((VertexExecutionProperty) newEP);
-                if (!dag.checkIntegrity().isPassed()) {
-                  v.setPropertyIfPossible(originalEP);
-                }
-              } else if (obj instanceof IREdge) {
-                final IREdge e = (IREdge) obj;
-                final EdgeExecutionProperty<?> originalEP = e.getExecutionProperties().stream()
-                  .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
-                e.setPropertyIfPossible((EdgeExecutionProperty) newEP);
-                if (!dag.checkIntegrity().isPassed()) {
-                  e.setPropertyIfPossible(originalEP);
+          if (!epValueClass.contains("ScheduleGroupProperty")) {
+            final List<Object> objectList = OptimizerUtils.getObjects(m.get("type"), m.get("ID"), dag);
+            LOG.info("Tuning: tuning with {} of {} for {} with {} with {}", m.get("type"), m.get("ID"),
+              m.get("EPKeyClass"), m.get("EPValueClass"), m.get("EPValue"));
+            final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(
+              epKeyClass, epValueClass, epValue);
+            try {
+              for (final Object obj: objectList) {
+                if (obj instanceof IRVertex) {
+                  final IRVertex v = (IRVertex) obj;
+                  final VertexExecutionProperty<?> originalEP = v.getExecutionProperties().stream()
+                    .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
+                  v.setPropertyIfPossible((VertexExecutionProperty) newEP);
+                  if (!dag.checkIntegrity().isPassed()) {
+                    v.setPropertyIfPossible(originalEP);
+                  }
+                } else if (obj instanceof IREdge) {
+                  final IREdge e = (IREdge) obj;
+                  final EdgeExecutionProperty<?> originalEP = e.getExecutionProperties().stream()
+                    .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
+                  e.setPropertyIfPossible((EdgeExecutionProperty) newEP);
+                  if (!dag.checkIntegrity().isPassed()) {
+                    e.setPropertyIfPossible(originalEP);
+                  }
                 }
               }
+            } catch (IllegalVertexOperationException | IllegalEdgeOperationException e) {
             }
-          } catch (IllegalVertexOperationException | IllegalEdgeOperationException e) {
           }
         });
       }
