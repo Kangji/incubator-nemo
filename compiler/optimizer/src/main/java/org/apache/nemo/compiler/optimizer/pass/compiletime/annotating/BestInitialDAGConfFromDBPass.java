@@ -25,7 +25,8 @@ import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.vertex.IRVertex;
-import org.apache.nemo.common.ir.vertex.utility.StreamVertex;
+import org.apache.nemo.common.ir.vertex.OperatorVertex;
+import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
 import org.apache.nemo.runtime.common.metric.MetricUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,9 @@ public final class BestInitialDAGConfFromDBPass extends AnnotatingPass {
           if (rs.next()) {
             final IRDAG bestDAG = SerializationUtils.deserialize(rs.getBytes("dag"));  // best dag.
 
+//            LOG.info("best dag:" + bestDAG.getTopologicalSort());
+//            LOG.info("curr dag:" + dag.getTopologicalSort());
+
             final Iterator<IRVertex> bestDAGVertices = bestDAG.getTopologicalSort().iterator();
             final Iterator<IRVertex> dagVertices = dag.getTopologicalSort().iterator();
 
@@ -66,7 +70,7 @@ public final class BestInitialDAGConfFromDBPass extends AnnotatingPass {
               final IRVertex bestVertex = bestDAGVertices.next();
 
               if (bestVertex.isUtilityVertex()) {
-                if (bestVertex instanceof StreamVertex) {
+                if (bestVertex instanceof RelayVertex) {
                   final List<IRVertex> srcVertices = bestDAG.getIncomingEdgesOf(bestVertex).stream()
                     .map(IREdge::getSrc).collect(Collectors.toList());
                   final List<IRVertex> dstVertices = bestDAG.getOutgoingEdgesOf(bestVertex).stream()
@@ -78,7 +82,7 @@ public final class BestInitialDAGConfFromDBPass extends AnnotatingPass {
                         final IREdge edge = dag.getEdgeBetween(srcVertex.getId(), dstVertex.getId());
 
                         if (edge != null) {
-                          dag.insert(new StreamVertex(), edge);
+                          dag.insert(new RelayVertex(), edge);
                         }
                       } catch (IllegalEdgeOperationException e) {
                         // ignore
@@ -88,7 +92,9 @@ public final class BestInitialDAGConfFromDBPass extends AnnotatingPass {
               } else {
                 final IRVertex irVertex = dagVertices.next();
 
-                if (bestVertex.toString().equals(irVertex.toString())) {
+                if (bestVertex.getClass().equals(irVertex.getClass())
+                  && (!bestVertex.getClass().equals(OperatorVertex.class)
+                  || bestVertex.toString().equals(irVertex.toString()))) {
                   bestVertex.copyExecutionPropertiesTo(irVertex);
                 } else {
                   LOG.warn("DAG topology doesn't match while comparing {}({}) from the ideal DAG with {}({})",

@@ -18,7 +18,7 @@
  */
 package org.apache.nemo.common.ir;
 
-import org.apache.nemo.common.ir.vertex.utility.StreamVertex;
+import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +33,8 @@ public class IRVertexTest{
 
   @Test
   public void testIsUtilityVertex() {
-    final StreamVertex streamVertex = new StreamVertex();
+    final RelayVertex relayVertex = new RelayVertex();
 
-    assertTrue(streamVertex.isUtilityVertex());
+    assertTrue(relayVertex.isUtilityVertex());
   }
 }
