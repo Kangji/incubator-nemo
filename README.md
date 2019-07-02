@@ -82,7 +82,7 @@ Below describes how Beam applications can be run directly on Nemo.
 ## MapReduce example
 ./bin/run_beam.sh \
 	-job_id mr_default \
-	-executor_json `pwd`/examples/resources/executors/beam_test_executor_resources.json \
+	-executor_info `pwd`/examples/resources/executors/beam_test_executor_resources.xml \
 	-optimization_policy org.apache.nemo.compiler.optimizer.policy.DefaultPolicy \
 	-user_main org.apache.nemo.examples.beam.WordCount \
         -user_args "`pwd`/examples/resources/inputs/test_input_wordcount `pwd`/outputs/wordcount"
@@ -91,7 +91,7 @@ Below describes how Beam applications can be run directly on Nemo.
 ./bin/run_beam.sh \
 	-deploy_mode yarn \
  	-job_id mr_transient \
-	-executor_json `pwd`/examples/resources/executors/beam_test_executor_resources.json \
+	-executor_info `pwd`/examples/resources/executors/beam_test_executor_resources.xml \
  	-user_main org.apache.nemo.examples.beam.WordCount \
  	-optimization_policy org.apache.nemo.compiler.optimizer.policy.TransientResourcePolicy \
 	-user_args "hdfs://v-m:9000/test_input_wordcount hdfs://v-m:9000/test_output_wordcount"
@@ -99,7 +99,7 @@ Below describes how Beam applications can be run directly on Nemo.
 ## NEXMark streaming Q0 (query0) example 
 ./bin/run_nexmark.sh \
  	-job_id nexmark-Q0 \
-	-executor_json `pwd`/examples/resources/executors/beam_test_executor_resources.json \
+	-executor_info `pwd`/examples/resources/executors/beam_test_executor_resources.xml \
  	-user_main org.apache.beam.sdk.nexmark.Main \
  	-optimization_policy org.apache.nemo.compiler.optimizer.policy.StreamingPolicy \
   -scheduler_impl_class_name org.apache.nemo.runtime.master.scheduler.StreamingScheduler \	
@@ -107,7 +107,7 @@ Below describes how Beam applications can be run directly on Nemo.
 
 ```
 ## Resource Configuration
-`-executor_json` command line option can be used to provide a path to the JSON file that describes resource configuration for executors. Its default value is `config/default.json`, which initializes one of each `Transient`, `Reserved`, and `Compute` executor, each of which has one core and 1024MB memory.
+`-executor_info` command line option can be used to provide a path to the JSON/XML file that describes resource configuration for executors.
 
 ### Configurable options
 * `num` (optional): Number of containers. Default value is 1
@@ -119,25 +119,28 @@ Below describes how Beam applications can be run directly on Nemo.
 * `capacity`: Number of `Task`s that can be run in an executor. Set this value to be the same as the number of CPU cores of the container.
 
 ### Examples
-```json
-[
-  {
-    "num": 12,
-    "type": "Transient",
-    "memory_mb": 1024,
-    "capacity": 4
-  },
-  {
-    "type": "Reserved",
-    "memory_mb": 1024,
-    "capacity": 2
-  }
-]
+```xml
+<resources>
+  <cluster>
+    <node>
+      <num>12</num>
+      <type>Transient</type>
+      <memory_mb>512</memory_mb>
+      <capacity>8</capacity>
+    </node>
+
+    <node>
+      <type>Reserved</type>
+      <memory_mb>512</memory_mb>
+      <capacity>4</capacity>
+    </node>
+  </cluster>
+</resources>
 ```
 
 This example configuration specifies
-* 12 transient containers with 4 cores and 1024MB memory each
-* 1 reserved container with 2 cores and 1024MB memory
+* 12 transient containers with 8 cores and 512MB memory each
+* 1 reserved container with 4 cores and 512MB memory
 
 ## Monitoring your job using web UI
 Nemo Compiler and Engine can store JSON representation of intermediate DAGs.
@@ -148,7 +151,7 @@ Nemo Compiler and Engine can store JSON representation of intermediate DAGs.
 ```bash
 ./bin/run_beam.sh \
 	-job_id als \
-	-executor_json `pwd`/examples/resources/executors/beam_test_executor_resources.json \
+	-executor_info `pwd`/examples/resources/executors/beam_test_executor_resources.xml \
   	-user_main org.apache.nemo.examples.beam.AlternatingLeastSquare \
   	-optimization_policy org.apache.nemo.compiler.optimizer.policy.TransientResourcePolicy \
   	-dag_dir "./dag/als" \

@@ -55,9 +55,17 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 import javax.inject.Inject;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.Serializable;
+import java.io.StringReader;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
@@ -307,18 +315,51 @@ public final class RuntimeMaster {
   public void requestContainer(final String resourceSpecificationString) {
     final Future<?> containerRequestEventResult = runtimeMasterThread.submit(() -> {
       try {
-        final TreeNode jsonRootNode = objectMapper.readTree(resourceSpecificationString);
+        if (resourceSpecificationString.trim().startsWith("[")) {
+          final TreeNode jsonRootNode = objectMapper.readTree(resourceSpecificationString);
 
-        for (int i = 0; i < jsonRootNode.size(); i++) {
-          final TreeNode resourceNode = jsonRootNode.get(i);
-          final String type = resourceNode.get("type").traverse().nextTextValue();
-          final int memory = resourceNode.get("memory_mb").traverse().getIntValue();
-          final int capacity = resourceNode.get("capacity").traverse().getIntValue();
-          final int executorNum = resourceNode.path("num").traverse().nextIntValue(1);
-          final int poisonSec = resourceNode.path("poison_sec").traverse().nextIntValue(-1);
-          resourceRequestCount.getAndAdd(executorNum);
-          containerManager.requestContainer(executorNum, new ResourceSpecification(type, capacity, memory, poisonSec));
+          for (int i = 0; i < jsonRootNode.size(); i++) {
+            final TreeNode resourceNode = jsonRootNode.get(i);
+            final String type = resourceNode.get("type").traverse().nextTextValue();
+            final int memory = resourceNode.get("memory_mb").traverse().getIntValue();
+            final int capacity = resourceNode.get("capacity").traverse().getIntValue();
+            final int executorNum = resourceNode.path("num").traverse().nextIntValue(1);
+            final int poisonSec = resourceNode.path("poison_sec").traverse().nextIntValue(-1);
+            resourceRequestCount.getAndAdd(executorNum);
+            containerManager.requestContainer(executorNum,
+              new ResourceSpecification(type, capacity, memory, poisonSec));
+          }
+        } else if (resourceSpecificationString.trim().startsWith("<")) {
+          final InputSource is = new InputSource(new StringReader(resourceSpecificationString));
+          final DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+          final Document document = docBuilder.parse(is);
+          final Element root = document.getDocumentElement();
+
+          final NodeList clusters = root.getElementsByTagName("cluster");
+          for (int i = 0; i < clusters.getLength(); i++) {
+            final Node cluster = clusters.item(i);
+            final NodeList nodes = cluster.getChildNodes();
+            for (int j = 0; j < nodes.getLength(); j++) {
+              final Node node = nodes.item(j);
+              if (node.getNodeType() == Node.ELEMENT_NODE) {
+                final Element n = ((Element) node);
+                final String type = n.getElementsByTagName("type").item(0).getTextContent();
+                final int memory = Integer.parseInt(n.getElementsByTagName("memory_mb").item(0).getTextContent());
+                final int capacity = Integer.parseInt(n.getElementsByTagName("capacity").item(0).getTextContent());
+                final int executorNum = n.getElementsByTagName("num").item(0) == null ? 1  // default
+                  : Integer.parseInt(n.getElementsByTagName("num").item(0).getTextContent());
+                final int poisonSec = n.getElementsByTagName("poison_sec").item(0) == null ? -1  // default
+                  : Integer.parseInt(n.getElementsByTagName("poison_sec").item(0).getTextContent());
+                resourceRequestCount.getAndAdd(executorNum);
+                containerManager.requestContainer(executorNum,
+                  new ResourceSpecification(type, capacity, memory, poisonSec));
+              }
+            }
+          }
+        } else {
+          throw new UnsupportedOperationException("Executor Info file should be a JSON or an XML file.");
         }
+
         metricCountDownLatch = new CountDownLatch(resourceRequestCount.get());
       } catch (final Exception e) {
         throw new ContainerException(e);

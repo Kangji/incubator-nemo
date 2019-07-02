@@ -40,7 +40,7 @@ public final class BeamSimpleSumSQLITCase {
 
   private static final String outputFileName = "test_output_simplesql";
   private static final String expectedOutputFileName = "outputs/expected_output_simplesql";
-  private static final String executorResourceFileName = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.json";
+  private static final String executorResourceFileName = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.xml";
   private static final String outputFilePath = ExampleTestArgs.getFileBasePath() + outputFileName;
 
   @Before

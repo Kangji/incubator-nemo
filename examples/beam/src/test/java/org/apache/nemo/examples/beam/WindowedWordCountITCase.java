@@ -46,7 +46,7 @@ public final class WindowedWordCountITCase {
   private static final String outputFileName = "test_output_windowed_wordcount";
   private static final String expectedOutputFileName = "outputs/expected_output_windowed_wordcount";
   private static final String expectedSlidingWindowOutputFileName = "outputs/expected_output_sliding_windowed_wordcount";
-  private static final String executorResourceFileName = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.json";
+  private static final String executorResourceFileName = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.xml";
   private static final String inputFilePath = ExampleTestArgs.getFileBasePath() + inputFileName;
   private static final String outputFilePath = ExampleTestArgs.getFileBasePath() + outputFileName;
 

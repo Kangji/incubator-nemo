@@ -41,7 +41,7 @@ public final class WindowedBroadcastITCase {
   private static final String outputFileName = "test_output_windowed_broadcast";
   private static final String expectedOutputFileName = "expected_output_windowed_broadcast";
   private static final String expectedSlidingWindowOutputFileName = "expected_output_sliding_windowed_broadcast";
-  private static final String executorResourceFileName = fileBasePath + "beam_test_executor_resources.json";
+  private static final String executorResourceFileName = fileBasePath + "beam_test_executor_resources.xml";
   private static final String outputFilePath = fileBasePath + outputFileName;
 
   // TODO #271: We currently disable this test because we cannot force close Nemo

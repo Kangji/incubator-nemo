@@ -199,11 +199,11 @@ public final class JobConf extends ConfigurationModuleBuilder {
   }
 
   /**
-   * Path to the JSON file that specifies resource layout.
+   * Path to the JSON/XML file that specifies resource layout.
    */
-  @NamedParameter(doc = "Path to the JSON file that specifies resources for executors", short_name = "executor_json",
-    default_value = "")
-  public final class ExecutorJSONPath implements Name<String> {
+  @NamedParameter(doc = "Path to the JSON/XML file that specifies resources for executors",
+    short_name = "executor_info", default_value = "")
+  public final class ExecutorInfoPath implements Name<String> {
   }
 
   /**
@@ -215,10 +215,10 @@ public final class JobConf extends ConfigurationModuleBuilder {
 
 
   /**
-   * Contents of the JSON file that specifies resource layout.
+   * Contents of the JSON/XML file that specifies resource layout.
    */
-  @NamedParameter(doc = "Contents of JSON file that specifies resources for executors")
-  public final class ExecutorJSONContents implements Name<String> {
+  @NamedParameter(doc = "Contents of JSON/XML file that specifies resources for executors")
+  public final class ExecutorInfoContents implements Name<String> {
   }
 
   //////////////////////////////// Runtime Data Plane Configurations

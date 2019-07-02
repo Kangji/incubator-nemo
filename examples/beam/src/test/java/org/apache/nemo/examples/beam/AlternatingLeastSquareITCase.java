@@ -41,8 +41,8 @@ public final class AlternatingLeastSquareITCase {
   private static final String outputFileName = "test_output_als";
   private static final String output = ExampleTestArgs.getFileBasePath() + outputFileName;
   private static final String expectedOutputFileName = "outputs/expected_output_als";
-  private static final String noPoisonResources = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.json";
-  private static final String poisonedResource = ExampleTestArgs.getFileBasePath() + "executors/beam_test_poisoned_executor_resources.json";
+  private static final String noPoisonResources = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.xml";
+  private static final String poisonedResource = ExampleTestArgs.getFileBasePath() + "executors/beam_test_poisoned_executor_resources.xml";
   private static final String numFeatures = "10";
   private static final String numIteration = "3";
   private static final String lambda = "0.05";
