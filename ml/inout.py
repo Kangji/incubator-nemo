@@ -18,9 +18,11 @@
 # under the License.
 #
 
+import json
 import psycopg2 as pg
 import sqlite3 as sq
 from sklearn import preprocessing
+import xml.etree.ElementTree as ET
 
 
 def preprocess_properties(properties, keypairs, values):
@@ -216,6 +218,24 @@ class Data:
 
 
 # ########################################################
+def read_resource_info(resource_info_path):
+  data = []
+  if resource_info_path.endswith("json"):
+    with open(resource_info_path) as data_file:
+      data.append(json.load(data_file))
+  elif resource_info_path.endswith("xml"):
+    root = ET.parse(resource_info_path).getroot()
+    for cluster in root:
+      nodes = []
+      for node in cluster:
+        attr = {}
+        for a in node:
+          attr[a.tag] = int(a.text) if a.text.isdigit() else a.text
+        nodes.append(attr)
+      data.append(nodes)
+  return data
+
+
 def write_rows_to_file(filename, rows):
   f = open(filename, 'w')
   for row in rows:

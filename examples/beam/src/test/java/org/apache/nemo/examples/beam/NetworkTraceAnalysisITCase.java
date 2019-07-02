@@ -42,7 +42,7 @@ public final class NetworkTraceAnalysisITCase {
   private static final String inputFileName1 = "inputs/test_input_network1";
   private static final String outputFileName = "test_output_network";
   private static final String expectedOutputFileName = "outputs/expected_output_network";
-  private static final String executorResourceFileName = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.json";
+  private static final String executorResourceFileName = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.xml";
   private static final String inputFilePath0 = ExampleTestArgs.getFileBasePath() + inputFileName0;
   private static final String inputFilePath1 = ExampleTestArgs.getFileBasePath() + inputFileName1;
   private static final String outputFilePath = ExampleTestArgs.getFileBasePath() + outputFileName;

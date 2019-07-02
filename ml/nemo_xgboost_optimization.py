@@ -21,6 +21,7 @@
 import getopt
 import sys
 from pathlib import Path
+import pprint
 
 import numpy as np
 import xgboost as xgb
@@ -34,7 +35,7 @@ import matplotlib.pyplot as plt
 # MAIN FUNCTION
 # ########################################################
 try:
-  opts, args = getopt.getopt(sys.argv[1:], "ht:m:i:", ["tablename=", "memsize=", "inputsize="])
+  opts, args = getopt.getopt(sys.argv[1:], "ht:r:i:", ["tablename=", "resourceinfo=", "inputsize="])
 except getopt.GetoptError:
   print('nemo_xgboost_optimization.py -t <tablename>')
   sys.exit(2)
@@ -44,8 +45,8 @@ for opt, arg in opts:
     sys.exit()
   elif opt in ("-t", "--tablename"):
     tablename = arg
-  elif opt in ("-m", "--memsize"):
-    memsize = arg
+  elif opt in ("-r", "--resourceinfo"):
+    resourceinfo = arg
   elif opt in ("-i", "--inputsize"):
     inputsize = arg
 
@@ -66,9 +67,9 @@ row_size = len(encoded_rows)
 print("total_rows: ", row_size)
 
 ## TRAIN THE MODEL (REGRESSION)
-dtrain = ddata.slice([i for i in range(0, row_size) if i % 6 != 5])  # mod is not 5
+dtrain = ddata.slice([i for i in range(0, row_size) if i % 7 != 6])  # mod is not 6
 print("train_rows: ", dtrain.num_row())
-dtest = ddata.slice([i for i in range(0, row_size) if i % 6 == 5])  # mod is 5
+dtest = ddata.slice([i for i in range(0, row_size) if i % 7 == 6])  # mod is 6
 print("test_rows: ", dtest.num_row())
 labels = dtest.get_label()
 
@@ -80,7 +81,7 @@ error_opt = (sum(1 for i in range(len(preds_opt)) if abs(preds_opt[i] - labels[i
 print('opt_error=%f' % error_opt)
 min_error = error_opt
 
-learning_rates = [0.1, 0.3, 0.4, 0.5, 0.6, 0.7, 0.9]
+learning_rates = [0.01, 0.05, 0.1, 0.25, 0.5, 0.8]
 for lr in learning_rates:
   param = {'max_depth': 6, 'eta': lr, 'verbosity': 0, 'objective': 'reg:linear'}
 
@@ -126,6 +127,7 @@ for index, row in df.iterrows():
   trees[row['Tree']].addNode(row['ID'], row['Feature'], row['Split'], row['Yes'], row['No'], row['Missing'],
                              row['Gain'])
 
+
 results = {}
 print("\nGenerated Trees:")
 for t in trees.values():
@@ -142,13 +144,22 @@ for k, v in results.items():
     # k = feature, kk = split, vv = val
     i, key, tpe = data.transform_id_to_keypair(int(k[1:]))
     how = 'greater' if vv > 0 else 'smaller'
-    restring = f'{key} should be {vv} {how} than {kk}'
-    print(restring)
+    # result_string = f'{key} should be {vv} ({how}) than {kk}'
+    # print(result_string)
     classes = key.split('/')
     key_class = classes[0]
     value_class = classes[1]
     value = data.transform_id_to_value(key, data.derive_value_from(key, kk, vv))
     resultsJson.append({'type': tpe, 'ID': i, 'EPKeyClass': key_class, 'EPValueClass': value_class, 'EPValue': value})
+
+resultsJson = [item for item in resultsJson if not item['EPKeyClass'].endswith('ScheduleGroupProperty')]  # We don't want to fix schedule group property
+
+# Question: Manually use this resource information in the optimization?
+# cluster_information = read_resource_info(resourceinfo)
+# print("CLUSTER:\n", cluster_information)
+
+print("RESULT:")
+pprint.pprint(resultsJson)
 
 with open("results.out", "w") as file:
   file.write(json.dumps(resultsJson, indent=2))

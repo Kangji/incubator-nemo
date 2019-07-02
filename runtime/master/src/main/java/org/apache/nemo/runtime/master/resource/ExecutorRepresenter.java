@@ -178,6 +178,13 @@ public final class ExecutorRepresenter {
   }
 
   /**
+   * @return the memory allocated to the executor.
+   */
+  public int getExecutorMemory() {
+    return resourceSpecification.getMemory();
+  }
+
+  /**
    * @return the current snapshot of set of Tasks that are running in this executor.
    */
   public Set<Task> getRunningTasks() {

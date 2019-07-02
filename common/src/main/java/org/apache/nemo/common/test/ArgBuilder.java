@@ -93,11 +93,11 @@ public final class ArgBuilder {
   }
 
   /**
-   * @param executorJsonFileName the name of the executor resource file to use.
+   * @param executorInfoFileName the name of the executor resource file to use.
    * @return builder with the executor resource file.
    */
-  public ArgBuilder addResourceJson(final String executorJsonFileName) {
-    args.add(Arrays.asList("-executor_json", executorJsonFileName));
+  public ArgBuilder addResourceJson(final String executorInfoFileName) {
+    args.add(Arrays.asList("-executor_info", executorInfoFileName));
     return this;
   }
 

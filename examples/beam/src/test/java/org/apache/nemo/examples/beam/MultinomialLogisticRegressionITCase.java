@@ -35,7 +35,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 @PrepareForTest(JobLauncher.class)
 public final class MultinomialLogisticRegressionITCase {
   private static ArgBuilder builder = new ArgBuilder();
-  private static final String executorResourceFileName = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.json";
+  private static final String executorResourceFileName = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.xml";
 
   @Before
   public void setUp() throws Exception {

@@ -18,14 +18,13 @@
  */
 package org.apache.nemo.runtime.master;
 
-import com.fasterxml.jackson.core.TreeNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.*;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.compiler.optimizer.OptimizerUtils;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
@@ -59,10 +58,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.io.Serializable;
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -100,8 +96,6 @@ public final class RuntimeMaster {
   private final ClientRPC clientRPC;
   private final MetricManagerMaster metricManagerMaster;
   private final PlanStateManager planStateManager;
-  // For converting json data. This is a thread safe.
-  private final ObjectMapper objectMapper;
   private final String jobId;
   private final String dagDirectory;
   private final Boolean dbEnabled;
@@ -178,7 +172,6 @@ public final class RuntimeMaster {
     this.dbPassword = dbPassword;
     this.irVertices = new HashSet<>();
     this.resourceRequestCount = new AtomicInteger(0);
-    this.objectMapper = new ObjectMapper();
     this.metricServer = startRestMetricServer();
     this.metricStore = MetricStore.getStore();
     this.planStateManager = planStateManager;
@@ -307,18 +300,21 @@ public final class RuntimeMaster {
   public void requestContainer(final String resourceSpecificationString) {
     final Future<?> containerRequestEventResult = runtimeMasterThread.submit(() -> {
       try {
-        final TreeNode jsonRootNode = objectMapper.readTree(resourceSpecificationString);
+        final List<Pair<String, List<Integer>>> resourceSpecificationList =
+          OptimizerUtils.parseResourceSpecificationString(resourceSpecificationString);
 
-        for (int i = 0; i < jsonRootNode.size(); i++) {
-          final TreeNode resourceNode = jsonRootNode.get(i);
-          final String type = resourceNode.get("type").traverse().nextTextValue();
-          final int memory = resourceNode.get("memory_mb").traverse().getIntValue();
-          final int capacity = resourceNode.get("capacity").traverse().getIntValue();
-          final int executorNum = resourceNode.path("num").traverse().nextIntValue(1);
-          final int poisonSec = resourceNode.path("poison_sec").traverse().nextIntValue(-1);
+        for (final Pair<String, List<Integer>> resourceSpecification: resourceSpecificationList) {
+          final String type = resourceSpecification.left();
+          final int memory = resourceSpecification.right().get(0);
+          final int capacity = resourceSpecification.right().get(1);
+          final int executorNum = resourceSpecification.right().get(2);
+          final int poisonSec = resourceSpecification.right().get(3);
+
           resourceRequestCount.getAndAdd(executorNum);
-          containerManager.requestContainer(executorNum, new ResourceSpecification(type, capacity, memory, poisonSec));
+          containerManager.requestContainer(executorNum,
+            new ResourceSpecification(type, capacity, memory, poisonSec));
         }
+
         metricCountDownLatch = new CountDownLatch(resourceRequestCount.get());
       } catch (final Exception e) {
         throw new ContainerException(e);
@@ -331,6 +327,7 @@ public final class RuntimeMaster {
       throw new ContainerException(e);
     }
   }
+
 
   /**
    * Called when a container is allocated for this runtime.

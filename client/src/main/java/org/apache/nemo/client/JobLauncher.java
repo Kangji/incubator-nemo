@@ -143,11 +143,9 @@ public final class JobLauncher {
     final Configuration driverConf = getDriverConf(builtJobConf);
     final Configuration driverNcsConf = getDriverNcsConf();
     final Configuration driverMessageConfig = getDriverMessageConf();
-    final String defaultExecutorResourceConfig = "[{\"type\":\"Transient\",\"memory_mb\":512,\"capacity\":5},"
-      + "{\"type\":\"Reserved\",\"memory_mb\":512,\"capacity\":5}]";
-    final Configuration executorResourceConfig = getJSONConf(builtJobConf, JobConf.ExecutorJSONPath.class,
-      JobConf.ExecutorJSONContents.class, defaultExecutorResourceConfig);
-    final Configuration bandwidthConfig = getJSONConf(builtJobConf, JobConf.BandwidthJSONPath.class,
+    final Configuration executorResourceConfig = getInfoConf(builtJobConf, JobConf.ExecutorInfoPath.class,
+      JobConf.ExecutorInfoContents.class, "");
+    final Configuration bandwidthConfig = getInfoConf(builtJobConf, JobConf.BandwidthJSONPath.class,
       JobConf.BandwidthJSONContents.class, "");
     final Configuration clientConf = getClientConf();
     final Configuration schedulerConf = getSchedulerConf(builtJobConf);
@@ -403,7 +401,7 @@ public final class JobLauncher {
     cl.registerShortNameOfClass(JobConf.EnvironmentType.class);
     cl.registerShortNameOfClass(JobConf.DeployMode.class);
     cl.registerShortNameOfClass(JobConf.DriverMemMb.class);
-    cl.registerShortNameOfClass(JobConf.ExecutorJSONPath.class);
+    cl.registerShortNameOfClass(JobConf.ExecutorInfoPath.class);
     cl.registerShortNameOfClass(JobConf.BandwidthJSONPath.class);
     cl.registerShortNameOfClass(JobConf.JVMHeapSlack.class);
     cl.registerShortNameOfClass(JobConf.IORequestHandleThreadsTotal.class);
@@ -450,16 +448,16 @@ public final class JobLauncher {
   }
 
   /**
-   * Read json file and return its contents as configuration parameter.
+   * Read file and return its contents as configuration parameter.
    *
-   * @param jobConf           job configuration to get json path.
-   * @param pathParameter     named parameter represents path to the json file, or an empty string
+   * @param jobConf           job configuration to get the info file path.
+   * @param pathParameter     named parameter represents path to the info file, or an empty string
    * @param contentsParameter named parameter represents contents of the file
    * @param defaultContent    the default configuration
    * @return configuration with contents of the file, or an empty string as value for {@code contentsParameter}
    * @throws InjectionException exception while injection.
    */
-  private static Configuration getJSONConf(final Configuration jobConf,
+  private static Configuration getInfoConf(final Configuration jobConf,
                                            final Class<? extends Name<String>> pathParameter,
                                            final Class<? extends Name<String>> contentsParameter,
                                            final String defaultContent)
