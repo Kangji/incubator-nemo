@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.runtime.master.scheduler;
 
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceImportanceProperty;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
@@ -26,6 +27,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import java.util.Collection;
 import java.util.OptionalInt;
+import java.util.stream.Collectors;
 
 /**
  * This policy chooses a set of Executors, on which have minimum running Tasks.
@@ -40,17 +42,28 @@ public final class MinOccupancyFirstSchedulingPolicy implements SchedulingPolicy
 
   @Override
   public ExecutorRepresenter selectExecutor(final Collection<ExecutorRepresenter> executors, final Task task) {
-    final OptionalInt minOccupancy =
-      executors.stream()
-        .map(executor -> executor.getNumOfRunningTasks())
-        .mapToInt(i -> i).min();
+    final Collection<ExecutorRepresenter> candidates;
+    final String resourceImportance = task.getPropertyValue(ResourceImportanceProperty.class)
+      .orElse(ResourceImportanceProperty.NONE);
 
-    if (!minOccupancy.isPresent()) {
-      throw new RuntimeException("Cannot find min occupancy");
+    if (resourceImportance.equals(ResourceImportanceProperty.MEMORY)) {
+      final OptionalInt maxMemoryCapacity = executors.stream()
+        .mapToInt(ExecutorRepresenter::getExecutorMemory)
+        .max();
+
+      candidates = executors.stream()
+        .filter(executor -> executor.getExecutorMemory() >= maxMemoryCapacity.orElse(0))
+        .collect(Collectors.toList());
+    } else {
+      candidates = executors;
     }
 
-    return executors.stream()
-      .filter(executor -> executor.getNumOfRunningTasks() == minOccupancy.getAsInt())
+    final Integer minOccupancy = candidates.stream()
+      .mapToInt(ExecutorRepresenter::getNumOfRunningTasks)
+      .min().orElseThrow(() -> new RuntimeException("Cannot find min occupancy"));
+
+    return candidates.stream()
+      .filter(executor -> executor.getNumOfRunningTasks() == minOccupancy)
       .findFirst()
       .orElseThrow(() -> new RuntimeException("No such executor"));
   }

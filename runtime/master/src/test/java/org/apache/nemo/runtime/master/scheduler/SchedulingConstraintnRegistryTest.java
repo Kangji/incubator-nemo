@@ -49,8 +49,7 @@ public final class SchedulingConstraintnRegistryTest {
     assertEquals(FreeSlotSchedulingConstraint.class, getConstraintOf(ResourceSlotProperty.class, registry));
     assertEquals(ContainerTypeAwareSchedulingConstraint.class,
       getConstraintOf(ResourcePriorityProperty.class, registry));
-    assertEquals(LocalitySchedulingConstraint.class,
-      getConstraintOf(ResourceLocalityProperty.class, registry));
+    assertEquals(LocalitySchedulingConstraint.class, getConstraintOf(ResourceLocalityProperty.class, registry));
   }
 
   private static Class<? extends SchedulingConstraint> getConstraintOf(

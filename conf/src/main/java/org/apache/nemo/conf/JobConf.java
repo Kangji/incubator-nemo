@@ -202,7 +202,8 @@ public final class JobConf extends ConfigurationModuleBuilder {
    * Path to the JSON/XML file that specifies resource layout.
    */
   @NamedParameter(doc = "Path to the JSON/XML file that specifies resources for executors",
-    short_name = "executor_info", default_value = "")
+    short_name = "executor_info",
+    default_value = "`pwd`/examples/resources/executors/beam_test_executor_resources.xml")
   public final class ExecutorInfoPath implements Name<String> {
   }
 

@@ -29,8 +29,10 @@ import org.apache.nemo.common.ir.vertex.CachedSourceVertex;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.ResourceExplorationPass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
+import org.apache.nemo.compiler.optimizer.policy.XGBoostExplorationPolicy;
 import org.apache.nemo.compiler.optimizer.policy.XGBoostPolicy;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
@@ -38,6 +40,9 @@ import org.apache.nemo.runtime.common.message.ClientRPC;
 import org.apache.reef.tang.annotations.Parameter;
 
 import javax.inject.Inject;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -50,6 +55,7 @@ public final class NemoOptimizer implements Optimizer {
   private final String dagDirectory;
   private final Policy optimizationPolicy;
   private final String environmentTypeStr;
+  private final String executorInfoPath;
   private final ClientRPC clientRPC;
 
   private final Map<UUID, Integer> cacheIdToParallelism = new HashMap<>();
@@ -60,15 +66,18 @@ public final class NemoOptimizer implements Optimizer {
    * @param dagDirectory       to store JSON representation of intermediate DAGs.
    * @param policyName         the name of the optimization policy.
    * @param environmentTypeStr the environment type of the workload to optimize the DAG for.
+   * @param executorInfoPath   the string containing the information about the executors provided.
    * @param clientRPC          the RPC channel to communicate with the client.
    */
   @Inject
   private NemoOptimizer(@Parameter(JobConf.DAGDirectory.class) final String dagDirectory,
                         @Parameter(JobConf.OptimizationPolicy.class) final String policyName,
                         @Parameter(JobConf.EnvironmentType.class) final String environmentTypeStr,
+                        @Parameter(JobConf.ExecutorInfoPath.class) final String executorInfoPath,
                         final ClientRPC clientRPC) {
     this.dagDirectory = dagDirectory;
     this.environmentTypeStr = OptimizerUtils.filterEnvironmentTypeString(environmentTypeStr);
+    this.executorInfoPath = executorInfoPath;
     this.clientRPC = clientRPC;
 
     try {
@@ -138,9 +147,18 @@ public final class NemoOptimizer implements Optimizer {
         .setType(ControlMessage.DriverToClientMessageType.LaunchOptimization)
         .setOptimizationType(ControlMessage.OptimizationType.XGBoost)
         .setDataCollected(ControlMessage.DataCollectMessage.newBuilder()
-          .setData(dag.irDAGSummary() + this.environmentTypeStr)
+          .setData(dag.irDAGSummary() + this.environmentTypeStr + " -r " + this.executorInfoPath)
           .build())
         .build());
+    }
+    if (policy instanceof XGBoostExplorationPolicy) {
+      try {
+        final String contents = this.executorInfoPath.isEmpty() ? ""
+          : new String(Files.readAllBytes(Paths.get(this.executorInfoPath)), StandardCharsets.UTF_8);
+        ResourceExplorationPass.updateResourceSpecificationString(contents);
+      } catch (Exception e) {
+        throw new CompileTimeOptimizationException(e);
+      }
     }
   }
 

@@ -143,10 +143,8 @@ public final class JobLauncher {
     final Configuration driverConf = getDriverConf(builtJobConf);
     final Configuration driverNcsConf = getDriverNcsConf();
     final Configuration driverMessageConfig = getDriverMessageConf();
-    final String defaultExecutorResourceConfig = "[{\"type\":\"Transient\",\"memory_mb\":512,\"capacity\":5},"
-      + "{\"type\":\"Reserved\",\"memory_mb\":512,\"capacity\":5}]";
     final Configuration executorResourceConfig = getInfoConf(builtJobConf, JobConf.ExecutorInfoPath.class,
-      JobConf.ExecutorInfoContents.class, defaultExecutorResourceConfig);
+      JobConf.ExecutorInfoContents.class, "");
     final Configuration bandwidthConfig = getInfoConf(builtJobConf, JobConf.BandwidthJSONPath.class,
       JobConf.BandwidthJSONContents.class, "");
     final Configuration clientConf = getClientConf();
