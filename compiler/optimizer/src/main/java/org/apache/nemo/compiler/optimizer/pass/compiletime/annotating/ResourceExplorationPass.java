@@ -19,12 +19,16 @@
 
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.CompileTimeOptimizationException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceImportanceProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
 import org.apache.nemo.compiler.optimizer.OptimizerUtils;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.LargeShuffleCompositePass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.TransientResourceCompositePass;
 import org.apache.nemo.runtime.common.plan.StagePartitioner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +36,10 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * A pass for annotating vertices requiring more memory resources with the memory ResourceImportanceProperty, then
+ * conditionally running TransientResourcePass and LargeShufflePass, according to a specific condition in the DAG.
+ */
 @Annotates()
 public final class ResourceExplorationPass extends AnnotatingPass {
   private static final Logger LOG = LoggerFactory.getLogger(ResourceExplorationPass.class.getName());
@@ -47,10 +55,13 @@ public final class ResourceExplorationPass extends AnnotatingPass {
 
   @Override
   public IRDAG apply(final IRDAG dag) {
+    IRDAG resultingDAG;
     final Map<IRVertex, Integer> vertexStageIdMap = new StagePartitioner().apply(dag);
     final Map<Integer, Long> stageIdToMemoryEdgeNumMap = new HashMap<>();
     final List<DataStoreProperty.Value> memoryValues =
       Arrays.asList(DataStoreProperty.Value.MemoryStore, DataStoreProperty.Value.SerializedMemoryStore);
+    final List<Pair<String, List<Integer>>> resourceSpecs =
+      OptimizerUtils.parseResourceSpecificationString(resourceSpecificationString);
 
     vertexStageIdMap.forEach((v, stageId) -> {
       if (v.getPropertyValue(ResourceImportanceProperty.class).isPresent()) {
@@ -63,9 +74,8 @@ public final class ResourceExplorationPass extends AnnotatingPass {
       stageIdToMemoryEdgeNumMap.compute(stageId, (k, val) -> val == null ? memoryEdgeNum : val + memoryEdgeNum);
     });
 
-    final List<Integer> memorySpecs =
-      OptimizerUtils.parseResourceSpecificationString(resourceSpecificationString).stream()
-        .map(spec -> spec.right().get(0)).collect(Collectors.toList());
+    final List<Integer> memorySpecs = resourceSpecs.stream()
+      .map(spec -> spec.right().get(0)).collect(Collectors.toList());
 
     final Integer maxMemory = memorySpecs.stream().mapToInt(i -> i).max().orElseThrow(() ->
       new CompileTimeOptimizationException("no executor supplied"));
@@ -86,10 +96,24 @@ public final class ResourceExplorationPass extends AnnotatingPass {
       }
     });
 
-    // TODO: Transient 같은 애들 있으면 TransientPass를 random하게 돌리기?
-    // TODO: Large input 이면 Large Shuffle pass를 먼저 돌릴까? 나중에 돌릴까?
+    // Run LargeShufflePass when the input dataset exceeds 512GB
+    if (dag.getInputSize() > 512 * 1024 * 1024 * 1024L) {
+      resultingDAG = new LargeShuffleCompositePass().apply(dag);
+    } else {
+      resultingDAG = dag;
+    }
 
-    return dag;
+    // Try randomly running TransientResourcePass when there are transient resources specified in the json.
+    final List<String> typeSpecs = resourceSpecs.stream()
+      .map(Pair::left)
+      .collect(Collectors.toList());
+
+    if (typeSpecs.stream().anyMatch(s -> s.equalsIgnoreCase(ResourcePriorityProperty.TRANSIENT))
+      && new Random().nextBoolean()) {
+      resultingDAG = new TransientResourceCompositePass().apply(resultingDAG);
+    }
+
+    return resultingDAG;
   }
 
   /**

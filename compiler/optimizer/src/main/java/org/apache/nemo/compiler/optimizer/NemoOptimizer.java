@@ -32,7 +32,6 @@ import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.ResourceExplorationPass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
-import org.apache.nemo.compiler.optimizer.policy.XGBoostExplorationPolicy;
 import org.apache.nemo.compiler.optimizer.policy.XGBoostPolicy;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
@@ -150,8 +149,7 @@ public final class NemoOptimizer implements Optimizer {
           .setData(dag.irDAGSummary() + this.environmentTypeStr + " -r " + this.executorInfoPath)
           .build())
         .build());
-    }
-    if (policy instanceof XGBoostExplorationPolicy) {
+
       try {
         final String contents = this.executorInfoPath.isEmpty() ? ""
           : new String(Files.readAllBytes(Paths.get(this.executorInfoPath)), StandardCharsets.UTF_8);
