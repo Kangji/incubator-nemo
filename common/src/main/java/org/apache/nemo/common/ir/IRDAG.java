@@ -29,10 +29,12 @@ import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.dag.DAGInterface;
 import org.apache.nemo.common.exception.CompileTimeOptimizationException;
 import org.apache.nemo.common.exception.IllegalEdgeOperationException;
+import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.LoopVertex;
+import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.utility.MessageAggregatorVertex;
@@ -114,6 +116,12 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
    * @return a IR DAG summary string, consisting of only the vertices generated from the frontend.
    */
   public String irDAGSummary() {
+    final Long inputBytes = this.getInputSize();
+    final String inputSizeString = inputBytes < 1024 ? inputBytes + "B"
+      : (inputBytes / 1024 < 1024 ? inputBytes / 1024 + "KB"
+      : (inputBytes / 1048576 < 1024 ? inputBytes / 1048576 + "MB"
+      : (inputBytes / 1073741824L < 1024 ? inputBytes / 1073741824L + "GB"
+      : inputBytes / 1099511627776L + "TB")));
     return "rv" + getRootVertices().size()
       + "_v" + getVertices().stream()
       .filter(v -> !v.isUtilityVertex())  // Exclude utility vertices
@@ -121,6 +129,22 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
       + "_e" + getVertices().stream()
       .filter(v -> !v.isUtilityVertex())  // Exclude utility vertices
       .mapToInt(v -> getIncomingEdgesOf(v).size())
+      .sum() + "_" + inputSizeString;
+  }
+
+  /**
+   * @return the total sum of the input size for the IR DAG.
+   */
+  public Long getInputSize() {
+    return this.getRootVertices().stream()
+      .filter(irVertex -> irVertex instanceof SourceVertex)
+      .mapToLong(srcVertex -> {
+        try {
+          return ((SourceVertex) srcVertex).getEstimatedSizeBytes();
+        } catch (Exception e) {
+          throw new MetricException(e);
+        }
+      })
       .sum();
   }
 

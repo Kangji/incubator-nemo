@@ -21,11 +21,9 @@ package org.apache.nemo.runtime.common.metric;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.runtime.common.plan.PhysicalPlan;
 import org.apache.nemo.runtime.common.plan.Stage;
 import org.apache.nemo.runtime.common.plan.StageEdge;
@@ -42,9 +40,9 @@ public final class JobMetric implements StateMetric<PlanState.State> {
   private final String id;
   private final List<StateTransitionEvent<PlanState.State>> stateTransitionEvents;
   private String irDagSummary;
+  private IRDAG irdag;
   private Long inputSize;
-  private String vertexProperties;
-  private String edgeProperties;
+  private String properties;
   private JsonNode irDagJson;
   private JsonNode stageDagJson;
 
@@ -72,6 +70,10 @@ public final class JobMetric implements StateMetric<PlanState.State> {
     return irDagJson;
   }
 
+  public IRDAG getIrdag() {
+    return this.irdag;
+  }
+
   public String getIrDagSummary() {
     return this.irDagSummary;
   }
@@ -80,12 +82,8 @@ public final class JobMetric implements StateMetric<PlanState.State> {
     return this.inputSize;
   }
 
-  public String getVertexProperties() {
-    return this.vertexProperties;
-  }
-
-  public String getEdgeProperties() {
-    return this.edgeProperties;
+  public String getProperties() {
+    return this.properties;
   }
 
   /**
@@ -94,20 +92,10 @@ public final class JobMetric implements StateMetric<PlanState.State> {
    * @param irDag the IR DAG.
    */
   public void setIRDAG(final IRDAG irDag) {
+    this.irdag = irDag;
     this.irDagSummary = irDag.irDAGSummary();
-    this.inputSize = irDag.getRootVertices().stream()
-      .filter(irVertex -> irVertex instanceof SourceVertex)
-      .mapToLong(srcVertex -> {
-        try {
-          return ((SourceVertex) srcVertex).getEstimatedSizeBytes();
-        } catch (Exception e) {
-          throw new MetricException(e);
-        }
-      })
-      .sum();
-    final Pair<String, String> stringifiedProperties = MetricUtils.stringifyIRDAGProperties(irDag);
-    this.vertexProperties = stringifiedProperties.left();
-    this.edgeProperties = stringifiedProperties.right();
+    this.inputSize = irDag.getInputSize();
+    this.properties = MetricUtils.stringifyIRDAGProperties(irDag);
     final ObjectMapper objectMapper = new ObjectMapper();
     try {
       this.irDagJson = objectMapper.readTree(irDag.toString());

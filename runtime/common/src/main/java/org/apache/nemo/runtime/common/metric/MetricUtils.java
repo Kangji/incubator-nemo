@@ -19,45 +19,33 @@
 
 package org.apache.nemo.runtime.common.metric;
 
-import com.google.common.collect.HashBiMap;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.lang3.SerializationUtils;
-import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
-import org.apache.nemo.common.coder.DecoderFactory;
-import org.apache.nemo.common.coder.EncoderFactory;
+import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.Serializable;
 import java.lang.reflect.Method;
-import java.sql.*;
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
-import java.util.function.Supplier;
-import java.util.stream.IntStream;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 /**
  * Utility class for metrics.
- * TODO #372: This class should later be refactored into a separate metric package.
  */
 public final class MetricUtils {
   private static final Logger LOG = LoggerFactory.getLogger(MetricUtils.class.getName());
-
-  private static final CountDownLatch METADATA_LOADED = new CountDownLatch(1);
-  private static final CountDownLatch MUST_UPDATE_EP_KEY_METADATA = new CountDownLatch(1);
-  private static final CountDownLatch MUST_UPDATE_EP_METADATA = new CountDownLatch(1);
-
-  // BiMap of (1) INDEX and (2) the Execution Property class and the value type class.
-  static final HashBiMap<Integer, Pair<Class<? extends ExecutionProperty>, Class<? extends Serializable>>>
-    EP_KEY_METADATA = HashBiMap.create();
-  // BiMap of (1) the Execution Property class INDEX and the value INDEX pair and (2) the Execution Property value.
-  private static final HashBiMap<Pair<Integer, Integer>, ExecutionProperty<? extends Serializable>>
-    EP_METADATA = HashBiMap.create();
 
   static {
     try {
@@ -65,14 +53,12 @@ public final class MetricUtils {
     } catch (ClassNotFoundException e) {
       throw new MetricException("PostgreSQL Driver not found: " + e);
     }
-    loadMetaData();
   }
 
   public static final String SQLITE_DB_NAME =
     "jdbc:sqlite:" + Util.fetchProjectRootPath() + "/optimization_db.sqlite3";
-  public static final String POSTGRESQL_METADATA_DB_NAME =
+  public static final String POSTGRESQL_DB_NAME =
     "jdbc:postgresql://nemo-optimization.cabbufr3evny.us-west-2.rds.amazonaws.com:5432/nemo_optimization";
-  private static final String METADATA_TABLE_NAME = "nemo_optimization_meta";
 
   /**
    * Private constructor.
@@ -81,179 +67,215 @@ public final class MetricUtils {
   }
 
   /**
-   * Load the BiMaps (lightweight) Metadata from the DB.
+   * Stringify execution properties of an IR DAG.
    *
-   * @return the loaded BiMaps, or initialized ones.
+   * @param irdag the IR DAG to observe.
+   * @return stringified execution properties, grouped as patterns. Left is for vertices, right is for edges.
    */
-  private static void loadMetaData() {
-    try (Connection c = DriverManager.getConnection(MetricUtils.POSTGRESQL_METADATA_DB_NAME,
-      "postgres", "fake_password")) {
-      try (Statement statement = c.createStatement()) {
-        statement.setQueryTimeout(30);  // set timeout to 30 sec.
-
-        statement.executeUpdate(
-          "CREATE TABLE IF NOT EXISTS " + METADATA_TABLE_NAME
-            + " (type TEXT NOT NULL, key INT NOT NULL UNIQUE, value BYTEA NOT NULL, "
-            + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);");
-
-        final ResultSet rsl = statement.executeQuery(
-          "SELECT * FROM " + METADATA_TABLE_NAME + " WHERE type='EP_KEY_METADATA';");
-        LOG.info("Metadata can be successfully loaded.");
-        while (rsl.next()) {
-          EP_KEY_METADATA.put(rsl.getInt("key"),
-            SerializationUtils.deserialize(rsl.getBytes("value")));
-        }
-        rsl.close();
-
-        final ResultSet rsr = statement.executeQuery(
-          "SELECT * FROM " + METADATA_TABLE_NAME + " WHERE type='EP_METADATA';");
-        while (rsr.next()) {
-          final Integer l = rsr.getInt("key");
-          EP_METADATA.put(Pair.of(l / 10000, 1 % 10000),
-            SerializationUtils.deserialize(rsr.getBytes("value")));
-        }
-        rsr.close();
-        METADATA_LOADED.countDown();
-        LOG.info("Metadata successfully loaded from DB.");
-      } catch (Exception e) {
-        LOG.warn("Loading metadata from DB failed: ", e);
-      }
-    } catch (Exception e) {
-      LOG.warn("Loading metadata from DB failed : ", e);
-    }
-  }
-
-  public static Boolean metaDataLoaded() {
-    return METADATA_LOADED.getCount() == 0;
-  }
-
-  /**
-   * Save the BiMaps to DB if changes are necessary (rarely executed).
-   */
-  private static void updateMetaData() {
-    if (!metaDataLoaded()
-      || (MUST_UPDATE_EP_METADATA.getCount() + MUST_UPDATE_EP_KEY_METADATA.getCount() == 2)) {
-      // no need to update
-      LOG.info("Not saving Metadata: metadata loaded: {}, Index-EP data: {}, Index-EP Key data: {}",
-        metaDataLoaded(), MUST_UPDATE_EP_METADATA.getCount() == 0, MUST_UPDATE_EP_KEY_METADATA.getCount() == 0);
-      return;
-    }
-    LOG.info("Saving Metadata..");
-
-    try (Connection c = DriverManager.getConnection(MetricUtils.POSTGRESQL_METADATA_DB_NAME,
-      "postgres", "fake_password")) {
-      try (Statement statement = c.createStatement()) {
-        statement.setQueryTimeout(30);  // set timeout to 30 sec.
-
-        if (MUST_UPDATE_EP_KEY_METADATA.getCount() == 0) {
-          EP_KEY_METADATA.forEach((l, r) -> {
-            try {
-              insertOrUpdateMetadata(c, "EP_KEY_METADATA", l, r);
-            } catch (SQLException e) {
-              LOG.warn("Saving of Metadata to DB failed: ", e);
-            }
-          });
-          LOG.info("EP Key Metadata saved to DB.");
-        }
-
-        if (MUST_UPDATE_EP_METADATA.getCount() == 0) {
-          EP_METADATA.forEach((l, r) -> {
-            try {
-              insertOrUpdateMetadata(c, "EP_METADATA", l.left() * 10000 + l.right(), r);
-            } catch (SQLException e) {
-              LOG.warn("Saving of Metadata to DB failed: ", e);
-            }
-          });
-          LOG.info("EP Metadata saved to DB.");
-        }
-      }
-    } catch (SQLException e) {
-      LOG.warn("Saving of Metadata to DB failed: ", e);
-    }
-  }
-
-  /**
-   * Utility method to save key, value to the metadata table.
-   *
-   * @param c     the connection to the DB.
-   * @param type  the key to write to the DB metadata table.
-   * @param key   the key to write to the DB metadata table (integer).
-   * @param value the value to write to the DB metadata table (object).
-   * @throws SQLException SQLException on the way.
-   */
-  private static void insertOrUpdateMetadata(final Connection c, final String type,
-                                             final Integer key, final Serializable value) throws SQLException {
-    try (PreparedStatement pstmt = c.prepareStatement(
-      "INSERT INTO " + METADATA_TABLE_NAME + " (type, key, value) "
-        + "VALUES ('" + type + "', " + key + ", ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value;")) {
-      pstmt.setBinaryStream(1, new ByteArrayInputStream(SerializationUtils.serialize(value)));
-      pstmt.executeUpdate();
-    }
+  static String stringifyIRDAGProperties(final IRDAG irdag) {
+    return stringifyIRDAGProperties(irdag, 0);  // pattern recording is default
   }
 
   /**
    * Stringify execution properties of an IR DAG.
    *
    * @param irdag IR DAG to observe.
+   * @param mode 0: record metrics by patterns, 1: record metrics with vertex or edge IDs.
    * @return the pair of stringified execution properties. Left is for vertices, right is for edges.
    */
-  public static Pair<String, String> stringifyIRDAGProperties(final IRDAG irdag) {
-    final StringBuilder vStringBuilder = new StringBuilder();
-    final StringBuilder eStringBuilder = new StringBuilder();
+  static String stringifyIRDAGProperties(final IRDAG irdag, final Integer mode) {
+    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectNode node = mapper.createObjectNode();
+    final ArrayNode verticesNode = mapper.createArrayNode();
+    final ArrayNode edgesNode = mapper.createArrayNode();
 
-    irdag.getVertices().forEach(v ->
-      v.getExecutionProperties().forEachProperties(ep ->
-        epFormatter(vStringBuilder, 1, v.getNumericId(), ep)));
+    if (mode == 0) {  // Patterns
+      node.put("type", "pattern");
+      LOG.info("Vertices list: {}", irdag.getTopologicalSort());
+      for (final IRVertex v: irdag.getTopologicalSort()) {
+        final List<IREdge> incomingEdges = irdag.getIncomingEdgesOf(v);
 
-    irdag.getVertices().forEach(v ->
-      irdag.getIncomingEdgesOf(v).forEach(e ->
-        e.getExecutionProperties().forEachProperties(ep ->
-          epFormatter(eStringBuilder, 2, e.getNumericId(), ep))));
+        final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
+        builder.addVertex(v);
+        incomingEdges.forEach(e ->
+          builder.addVertex(e.getSrc()).connectVertices(e));
+        final String subDAGString = subDAGToString(new IRDAG(builder.buildWithoutSourceSinkCheck()));
 
+        // Let's now add the execution properties of the given pattern.
+        final AtomicInteger idx = new AtomicInteger(0);
+
+        // The vertex itself
+        final ObjectNode vertexNode = mapper.createObjectNode();
+        v.getExecutionProperties().forEachProperties(ep ->
+          epFormatter(vertexNode, subDAGString + "-" + idx.get(), ep));
+        verticesNode.add(vertexNode);
+        // Main incoming edges & vertex
+        idx.getAndIncrement();
+        incomingEdges.stream()
+          .sorted(Comparator.comparing(e -> stringifyVertex(e.getSrc())))
+          .forEachOrdered(e -> {
+            e.getExecutionProperties().forEachProperties(ep -> {
+              final ObjectNode eNode = mapper.createObjectNode();
+              epFormatter(eNode, subDAGString + "-" + idx.get(), ep);
+              edgesNode.add(eNode);
+            });
+            idx.getAndIncrement();
+            e.getSrc().getExecutionProperties().forEachProperties(ep -> {
+              final ObjectNode vNode = mapper.createObjectNode();
+              epFormatter(vNode, subDAGString + "-" + idx.get(), ep);
+              verticesNode.add(vNode);
+            });
+            idx.getAndIncrement();
+          });
+      }
+    } else {  // By Vertex / Edge IDs.
+      node.put("type", "id");
+      irdag.getVertices().forEach(v ->
+        v.getExecutionProperties().forEachProperties(ep -> {
+          final ObjectNode vertexNode = mapper.createObjectNode();
+          epFormatter(vertexNode, v.getId(), ep);
+          verticesNode.add(vertexNode);
+        }));
+
+      irdag.getVertices().forEach(v ->
+        irdag.getIncomingEdgesOf(v).forEach(e ->
+          e.getExecutionProperties().forEachProperties(ep -> {
+            final ObjectNode edgeNode = mapper.createObjectNode();
+            epFormatter(edgeNode, e.getId(), ep);
+            edgesNode.add(edgeNode);
+          })));
+    }
+
+    node.set("vertex", verticesNode);
+    node.set("edge", edgesNode);
     // Update the metric metadata if new execution property key / values have been discovered and updates are required.
-    updateMetaData();
-    return Pair.of(vStringBuilder.toString().trim(), eStringBuilder.toString().trim());
+    return node.toString();
   }
 
   /**
    * Formatter for execution properties. It updates the metadata for the metrics if new EP key / values are discovered.
    *
-   * @param builder   string builder to append the metrics to.
-   * @param idx       index specifying whether it's a vertex or an edge. This should be one digit.
-   * @param numericId numeric ID of the vertex or the edge.
-   * @param ep        the execution property.
+   * @param node node append the metrics to.
+   * @param id   the string of the ID or the pattern of the vertex or the edge.
+   * @param ep   the execution property.
    */
-  private static void epFormatter(final StringBuilder builder, final int idx,
-                                  final Integer numericId, final ExecutionProperty<?> ep) {
-    // Formatted into 9 digits: 0:vertex/edge 1-5:ID 5-9:EP Index.
-    builder.append(idx);
-    builder.append(String.format("%04d", numericId));
-    final Integer epKeyIndex = getEpKeyIndex(ep);
-    builder.append(String.format("%04d", epKeyIndex));
-
-    // Format value to an index.
-    builder.append(":");
-    final Integer epIndex = valueToIndex(epKeyIndex, ep);
-    builder.append(epIndex);
-    builder.append(" ");
+  private static void epFormatter(final ObjectNode node, final String id, final ExecutionProperty<?> ep) {
+    node.put("ID", id);
+    node.put("EPKeyClass", ep.getClass().getName());
+    node.put("EPValueClass", ep.getValue().getClass().getName());
+    final String epValueStr = epValueToString(ep);
+    node.put("EPValue", epValueStr);
   }
 
   /**
-   * Get the EP Key index from the metadata.
+   * Helper method to convert Execution Property value objects to an integer index.
+   * It updates the metadata for the metrics if new EP values are discovered.
    *
-   * @param ep the EP to retrieve the Key index of.
-   * @return the Key index.
+   * @param ep         the execution property containing the value.
+   * @return the converted value index.
    */
-  static Integer getEpKeyIndex(final ExecutionProperty<?> ep) {
-    return EP_KEY_METADATA.inverse()
-      .computeIfAbsent(Pair.of(ep.getClass(), getParameterType(ep.getClass(), ep.getValue().getClass())),
-        epClassPair -> {
-          final Integer idx = EP_KEY_METADATA.keySet().stream().mapToInt(i -> i).max().orElse(0) + 1;
-          LOG.info("New EP Key Index: {} for {}", idx, epClassPair.left().getSimpleName());
-          // Update the metadata if new EP key has been discovered.
-          MUST_UPDATE_EP_KEY_METADATA.countDown();
-          return idx;
-        });
+  static String epValueToString(final ExecutionProperty<?> ep) {
+    final Serializable o = ep.getValue();
+
+    if (o instanceof Enum) {
+      return String.valueOf(((Enum) o).ordinal());
+    } else if (o instanceof Integer) {
+      return o.toString();
+    } else if (o instanceof Boolean) {
+      return o.toString();
+    } else {
+      return new String(SerializationUtils.serialize(o), ISO_8859_1);
+    }
+  }
+
+  /**
+   * Stringify a vertex with the name of its class and the transform, for pattern matching.
+   *
+   * @param vertex the vertex to stringify.
+   * @return the string containing the information of the IRVertex class and the transform (if applicable).
+   */
+  private static String stringifyVertex(final IRVertex vertex) {
+    if (vertex instanceof OperatorVertex) {
+      return vertex.getClass().getSimpleName()
+        + "{" + ((OperatorVertex) vertex).getTransform().getClass().getSimpleName() + "}";
+    } else {
+      return vertex.getClass().getSimpleName();
+    }
+  }
+
+  /**
+   * @param subDAG the sub-DAG of a pattern to stringify.
+   *
+   * @return the stringified sub-DAG.
+   */
+  private static String subDAGToString(final IRDAG subDAG) {
+    final StringBuilder res = new StringBuilder();
+    final List<IRVertex> topologicalVertices = subDAG.getTopologicalSort();
+    final IRVertex targetVertex = topologicalVertices.get(topologicalVertices.size() - 1);
+
+    res.append(stringifyVertex(targetVertex));
+
+    subDAG.getIncomingEdgesOf(targetVertex).stream()
+      .sorted(Comparator.comparing(e -> stringifyVertex(e.getSrc())))
+      .forEachOrdered(e -> {
+        res.append('|').append(e.getClass().getSimpleName());
+        res.append('|').append(stringifyVertex(e.getSrc()));
+      });
+
+    return res.toString();
+  }
+
+  /**
+   * Searches the DAG for the objects that matches the given ID.
+   * @param id the ID of the object to find.
+   * @param dag the DAG to get the object from.
+   *
+   * @return the list of objects that matches the given ID on the DAG.
+   */
+  public static List<Object> getObjectFromPatternString(final String id, final IRDAG dag) {
+    final String[] str = id.split("-");
+    final Integer index = Integer.parseInt(str[1]);
+    final String[] stringifiedElems = str[0].split("\\|");
+    final List<Object> objectList = new ArrayList<>();
+
+    dag.getVertices().stream()
+      .filter(v -> stringifyVertex(v).equals(stringifiedElems[0]))
+      .filter(v -> {
+        final Iterator<IREdge> edges = dag.getIncomingEdgesOf(v).stream()
+          .sorted(Comparator.comparing(e -> stringifyVertex(e.getSrc())))
+          .iterator();
+        final AtomicInteger i = new AtomicInteger(1);
+        while (edges.hasNext()) {
+          final IREdge e = edges.next();
+          if (!e.getClass().getSimpleName().equals(stringifiedElems[i.getAndIncrement()])
+            || !stringifyVertex(e.getSrc()).equals(stringifiedElems[i.getAndIncrement()])) {
+            return false;
+          }
+        }
+        return true;
+      }).forEach(v -> {
+        if (index == 0) {
+          objectList.add(v);
+        } else {
+          final Iterator<IREdge> edges = dag.getIncomingEdgesOf(v).stream()
+            .sorted(Comparator.comparing(e -> stringifyVertex(e.getSrc())))
+            .iterator();
+          final AtomicInteger i = new AtomicInteger(1);
+          while (edges.hasNext()) {
+            final IREdge e = edges.next();
+            if (index == i.getAndIncrement()) {
+              objectList.add(e);
+              break;
+            } else if (index == i.get()) {
+              objectList.add(e.getSrc());
+              break;
+            } else {
+              i.getAndIncrement();
+            }
+          }
+        }
+      });
+    return objectList;
   }
 
   /**
@@ -296,122 +318,35 @@ public final class MetricUtils {
   }
 
   /**
-   * Inverse method of the #getEpKeyIndex method.
-   *
-   * @param index the index of the EP Key.
-   * @return the class of the execution property (EP), as well as the type of the value of the EP.
-   */
-  private static Pair<Class<? extends ExecutionProperty>, Class<? extends Serializable>> getEpPairFromKeyIndex(
-    final Integer index) {
-    return EP_KEY_METADATA.get(index);
-  }
-
-  /**
-   * Helper method to convert Execution Property value objects to an integer index.
-   * It updates the metadata for the metrics if new EP values are discovered.
-   *
-   * @param epKeyIndex the index of the execution property key.
-   * @param ep         the execution property containing the value.
-   * @return the converted value index.
-   */
-  static Integer valueToIndex(final Integer epKeyIndex, final ExecutionProperty<?> ep) {
-    final Object o = ep.getValue();
-
-    if (o instanceof Enum) {
-      return ((Enum) o).ordinal();
-    } else if (o instanceof Integer) {
-      return (int) o;
-    } else if (o instanceof Boolean) {
-      return ((Boolean) o) ? 1 : 0;
-    } else {
-      final ExecutionProperty<? extends Serializable> ep1;
-      if (o instanceof EncoderFactory || o instanceof DecoderFactory) {
-        ep1 = EP_METADATA.values().stream()
-          .filter(ep2 -> ep2.getValue().toString().equals(o.toString()) || ep2.getValue().equals(o))
-          .findFirst().orElse(null);
-      } else {
-        ep1 = EP_METADATA.values().stream()
-          .filter(ep2 -> ep2.getValue().equals(o))
-          .findFirst().orElse(null);
-      }
-
-      if (ep1 != null) {
-        return EP_METADATA.inverse().get(ep1).right();
-      } else {
-        final Integer valueIndex = EP_METADATA.keySet().stream()
-          .filter(pair -> pair.left().equals(epKeyIndex))
-          .mapToInt(Pair::right).max().orElse(0) + 1;
-        // Update the metadata if new EP value has been discovered.
-        EP_METADATA.put(Pair.of(epKeyIndex, valueIndex), ep);
-        LOG.info("New EP Index: ({}, {}) for {}", epKeyIndex, valueIndex, ep);
-        MUST_UPDATE_EP_METADATA.countDown();
-        return valueIndex;
-      }
-    }
-  }
-
-  /**
-   * Helper method to do the opposite of the #valueToIndex method.
+   * Helper method to do the opposite of the #epValueToString method.
    * It receives the split, and the direction of the tweak value (which show the target index value),
    * and returns the actual value which the execution property uses.
    *
-   * @param split      the split value, from which to start from.
-   * @param tweak      the tweak value, to which we should tweak the split value.
-   * @param epKeyIndex the EP Key index to retrieve information from.
+   * @param epValue      the EP value, in the form of a string.
+   * @param epValueClass the EP value class to retrieve information from.
    * @return the project root path.
+   * @throws ClassNotFoundException exception when no class has been found for the epValueClass.
    */
-  static Serializable indexToValue(final Double split, final Double tweak, final Integer epKeyIndex) {
-    final Class<? extends Serializable> targetObjectClass = getEpPairFromKeyIndex(epKeyIndex).right();
-    final boolean splitIsInteger = split.compareTo((double) split.intValue()) == 0;
-    final Pair<Integer, Integer> splitIntVal = splitIsInteger
-      ? Pair.of(split.intValue() - 1, split.intValue() + 1)
-      : Pair.of(split.intValue(), split.intValue() + 1);
-
+  static Serializable stringToValue(final String epValue, final String epValueClass) throws ClassNotFoundException {
+    final Class<? extends Serializable> targetObjectClass = (Class<? extends Serializable>) Class.forName(epValueClass);
     if (targetObjectClass.isEnum()) {
-      final int ordinal;
-      if (split < 0) {
-        ordinal = 0;
-      } else {
-        final int maxOrdinal = targetObjectClass.getFields().length - 1;
-        final int left = splitIntVal.left() <= 0 ? 0 : splitIntVal.left();
-        final int right = splitIntVal.right() >= maxOrdinal ? maxOrdinal : splitIntVal.right();
-        ordinal = tweak < 0 ? left : right;
-      }
-      LOG.info("Translated: {} into ENUM with ordinal {}", split, ordinal);
+      final int value = Integer.parseInt(epValue);
+      final int maxOrdinal = targetObjectClass.getFields().length - 1;
+      final int ordinal = value < 0 ? 0 : (value > maxOrdinal ? maxOrdinal : value);
+      LOG.info("Translated: {} into ENUM with ordinal {}", epValue, ordinal);
       return targetObjectClass.getEnumConstants()[ordinal];
     } else if (targetObjectClass.isAssignableFrom(Integer.class)) {
-      final Double val = split + tweak + 0.5;
-      final Integer res = val.intValue();
-      LOG.info("Translated: {} into INTEGER of {}", split, res);
+      final Integer value = Integer.parseInt(epValue);
+      final Integer res = value < 0 ? 0 : value;
+      LOG.info("Translated: {} into INTEGER of {}", epValue, res);
       return res;
     } else if (targetObjectClass.isAssignableFrom(Boolean.class)) {
-      final Boolean res;
-      if (split < 0) {
-        res = false;
-      } else if (split > 1) {
-        res = true;
-      } else {
-        final Boolean left = splitIntVal.left() >= 1;  // false by default, true if >= 1
-        final Boolean right = splitIntVal.right() > 0;  // true by default, false if <= 0
-        res = tweak < 0 ? left : right;
-      }
-      LOG.info("Translated: {} into BOOLEAN of {}", split, res);
+      final Boolean res = Boolean.parseBoolean(epValue);
+      LOG.info("Translated: {} into BOOLEAN of {}", epValue, res);
       return res;
     } else {
-      final Supplier<IntStream> valueCandidates = () -> EP_METADATA.keySet().stream()
-        .filter(p -> p.left().equals(epKeyIndex))
-        .mapToInt(Pair::right);
-      final Integer left = valueCandidates.get()
-        .filter(n -> n < split)
-        .map(n -> -n).sorted().map(n -> -n)  // maximum among smaller values
-        .findFirst().orElse(valueCandidates.get().min().getAsInt());
-      final Integer right = valueCandidates.get()
-        .filter(n -> n > split)
-        .sorted()  // minimum among larger values
-        .findFirst().orElse(valueCandidates.get().max().getAsInt());
-      final Integer targetValue = tweak < 0 ? left : right;
-      final Serializable res = EP_METADATA.get(Pair.of(epKeyIndex, targetValue)).getValue();
-      LOG.info("Translated: {} into VALUE of {}", split, res);
+      final Serializable res = SerializationUtils.deserialize(epValue.getBytes(ISO_8859_1));
+      LOG.info("Translated: {} into VALUE of {}", epValue, res);
       return res;
     }
   }
@@ -419,27 +354,27 @@ public final class MetricUtils {
   /**
    * Receives the pair of execution property and value classes, and returns the optimized value of the EP.
    *
-   * @param epKeyIndex the EP Key index to retrieve the new EP from.
-   * @param split      the split point.
-   * @param tweak      the direction in which to tweak the execution property value.
+   * @param epKeyClass   the EP Key class to retrieve the new EP from.
+   * @param epValueClass the EP Value class to retrieve the new EP Value of.
+   * @param epValue      the execution property value, stringified or encoded to a string.
    * @return The execution property constructed from the key index and the split value.
    */
   public static ExecutionProperty<? extends Serializable> keyAndValueToEP(
-    final Integer epKeyIndex,
-    final Double split,
-    final Double tweak) {
-
-    final Serializable value = indexToValue(split, tweak, epKeyIndex);
-    final Class<? extends ExecutionProperty> epClass = getEpPairFromKeyIndex(epKeyIndex).left();
+    final String epKeyClass,
+    final String epValueClass,
+    final String epValue) {
 
     final ExecutionProperty<? extends Serializable> ep;
     try {
+      final Class<? extends ExecutionProperty> epClass = (Class<? extends ExecutionProperty>) Class.forName(epKeyClass);
+      final Serializable value = stringToValue(epValue, epValueClass);
+
       final Method staticConstructor = getMethodFor(epClass, "of", getParameterType(epClass, value.getClass()))
         .orElseThrow(NoSuchMethodException::new);
       ep = (ExecutionProperty<? extends Serializable>) staticConstructor.invoke(null, value);
     } catch (final NoSuchMethodException e) {
-      throw new MetricException("Class " + epClass.getName()
-        + " does not have a static method exposing the constructor 'of' with value type " + value.getClass().getName()
+      throw new MetricException("Class " + epKeyClass
+        + " does not have a static method exposing the constructor 'of' with value type " + epValueClass
         + ": " + e);
     } catch (final Exception e) {
       throw new MetricException(e);

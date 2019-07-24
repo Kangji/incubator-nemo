@@ -35,121 +35,100 @@ import java.io.Serializable;
 public class MetricUtilsTest {
 
   @Test
-  public void testEnumIndexAndValue() {
+  public void testEnumIndexAndValue() throws ClassNotFoundException {
     final DataFlowProperty.Value pull = DataFlowProperty.Value.Pull;
     final DataFlowProperty.Value push = DataFlowProperty.Value.Push;
 
-    final DataFlowProperty ep = DataFlowProperty.of(pull);
-    final Integer epKeyIndex = MetricUtils.getEpKeyIndex(ep);
-    final Integer idx = MetricUtils.valueToIndex(epKeyIndex, ep);
+    final DataFlowProperty pullEP = DataFlowProperty.of(pull);
+    final String epValuePull = MetricUtils.epValueToString(pullEP);
+    final String epValueClassPull = pullEP.getValue().getClass().getName();
     // Pull is of ordinal index 0
-    Assert.assertEquals(Integer.valueOf(0), idx);
+    Assert.assertEquals(0, Integer.parseInt(epValuePull));
 
-    final Object pull1 = MetricUtils.indexToValue(0.5, -0.1, epKeyIndex);
+    final DataFlowProperty pushEP = DataFlowProperty.of(push);
+    final String epValuePush = MetricUtils.epValueToString(pushEP);
+    final String epValueClassPush = pushEP.getValue().getClass().getName();
+    // Pull is of ordinal index 0
+    Assert.assertEquals(1, Integer.parseInt(epValuePush));
+
+    final Object pull1 = MetricUtils.stringToValue(epValuePull, epValueClassPull);
     Assert.assertEquals(pull, pull1);
-    final Object push1 = MetricUtils.indexToValue(0.5, 0.1, epKeyIndex);
+    final Object push1 = MetricUtils.stringToValue(epValuePush, epValueClassPush);
     Assert.assertEquals(push, push1);
-    final Object pull2 = MetricUtils.indexToValue(-0.5, -0.1, epKeyIndex);
-    Assert.assertEquals(pull, pull2);
-    final Object pull3 = MetricUtils.indexToValue(-0.5, 0.1, epKeyIndex);
-    Assert.assertEquals(pull, pull3);
-    final Object push2 = MetricUtils.indexToValue(2.0, 1.0, epKeyIndex);
-    Assert.assertEquals(push, push2);
-    final Object push3 = MetricUtils.indexToValue(1.1, -0.1, epKeyIndex);
-    Assert.assertEquals(push, push3);
-    final Object push4 = MetricUtils.indexToValue(1.1, 0.1, epKeyIndex);
-    Assert.assertEquals(push, push4);
   }
 
   @Test
-  public void testIntegerBooleanIndexAndValue() {
+  public void testIntegerBooleanIndexAndValue() throws ClassNotFoundException {
     final Integer one = 1;
     final Integer hundred = 100;
 
     final ParallelismProperty pEp1 = ParallelismProperty.of(one);
+    final String pEp1Value = MetricUtils.epValueToString(pEp1);
+    final String pEp1ValueClass = pEp1.getValue().getClass().getName();
+
     final ParallelismProperty pEp100 = ParallelismProperty.of(hundred);
-    final Integer pEp1KeyIndex = MetricUtils.getEpKeyIndex(pEp1);
-    final Integer pEp100KeyIndex = MetricUtils.getEpKeyIndex(pEp100);
-    Assert.assertEquals(Integer.valueOf(1), MetricUtils.valueToIndex(pEp1KeyIndex, pEp1));
-    Assert.assertEquals(Integer.valueOf(100), MetricUtils.valueToIndex(pEp100KeyIndex, pEp100));
+    final String pEp100Value = MetricUtils.epValueToString(pEp100);
+    final String pEp100ValueClass = pEp100.getValue().getClass().getName();
+
+    Assert.assertEquals(1, Integer.parseInt(pEp1Value));
+    Assert.assertEquals(100, Integer.parseInt(pEp100Value));
 
 
     final ResourceSlotProperty rsEpT = ResourceSlotProperty.of(true);
+    final String rsEpTValue = MetricUtils.epValueToString(rsEpT);
+    final String rsEpTValueClass = rsEpT.getValue().getClass().getName();
+
     final ResourceSlotProperty rsEpF = ResourceSlotProperty.of(false);
-    final Integer rsEpTKeyIndex = MetricUtils.getEpKeyIndex(rsEpT);
-    final Integer rsEpFKeyIndex = MetricUtils.getEpKeyIndex(rsEpF);
-    Assert.assertEquals(Integer.valueOf(1), MetricUtils.valueToIndex(rsEpTKeyIndex, rsEpT));
-    Assert.assertEquals(Integer.valueOf(0), MetricUtils.valueToIndex(rsEpFKeyIndex, rsEpF));
+    final String rsEpFValue = MetricUtils.epValueToString(rsEpF);
+    final String rsEpFValueClass = rsEpF.getValue().getClass().getName();
 
-    final Object one1 = MetricUtils.indexToValue(1.5, -0.1, pEp1KeyIndex);
-    final Object one2 = MetricUtils.indexToValue(0.5, 0.1, pEp1KeyIndex);
-    final Object one3 = MetricUtils.indexToValue(2.0, -0.6, pEp1KeyIndex);
-    final Object one4 = MetricUtils.indexToValue(0.0, 0.5, pEp1KeyIndex);
+    Assert.assertTrue(Boolean.parseBoolean(rsEpTValue));
+    Assert.assertFalse(Boolean.parseBoolean(rsEpFValue));
+
+    final Object one1 = MetricUtils.stringToValue(pEp1Value, pEp1ValueClass);
     Assert.assertEquals(one, one1);
-    Assert.assertEquals(one, one2);
-    Assert.assertEquals(one, one3);
-    Assert.assertEquals(one, one4);
 
-    final Object hundred1 = MetricUtils.indexToValue(100.5, -0.1, pEp100KeyIndex);
-    final Object hundred2 = MetricUtils.indexToValue(99.5, 0.1, pEp100KeyIndex);
+    final Object hundred1 = MetricUtils.stringToValue(pEp100Value, pEp100ValueClass);
     Assert.assertEquals(hundred, hundred1);
-    Assert.assertEquals(hundred, hundred2);
 
-    final Object t1 = MetricUtils.indexToValue(1.5, -0.1, rsEpTKeyIndex);
-    final Object t2 = MetricUtils.indexToValue(0.1, 0.5, rsEpTKeyIndex);
-    final Object t3 = MetricUtils.indexToValue(1.5, 0.1, rsEpTKeyIndex);
+    final Object t1 = MetricUtils.stringToValue(rsEpTValue, rsEpTValueClass);
     Assert.assertEquals(true, t1);
-    Assert.assertEquals(true, t2);
-    Assert.assertEquals(true, t3);
 
-    final Object f1 = MetricUtils.indexToValue(0.5, -0.1, rsEpFKeyIndex);
-    final Object f2 = MetricUtils.indexToValue(-0.5, 0.1, rsEpFKeyIndex);
-    final Object f3 = MetricUtils.indexToValue(-0.5, -0.1, rsEpFKeyIndex);
+    final Object f1 = MetricUtils.stringToValue(rsEpFValue, rsEpFValueClass);
     Assert.assertEquals(false, f1);
-    Assert.assertEquals(false, f2);
-    Assert.assertEquals(false, f3);
   }
 
   @Test
-  public void testOtherIndexAndValue() {
+  public void testOtherIndexAndValue() throws ClassNotFoundException {
     final EncoderFactory ef = new EncoderFactory.DummyEncoderFactory();
     final DecoderFactory df = new DecoderFactory.DummyDecoderFactory();
 
     final EncoderProperty eEp = EncoderProperty.of(ef);
+    final String eEpValue = MetricUtils.epValueToString(eEp);
+    final String eEpValueClass = eEp.getValue().getClass().getName();
+
     final DecoderProperty dEp = DecoderProperty.of(df);
-    final Integer eEpKeyIndex = MetricUtils.getEpKeyIndex(eEp);
-    final Integer dEpKeyIndex = MetricUtils.getEpKeyIndex(dEp);
-    final Integer efidx = MetricUtils.valueToIndex(eEpKeyIndex, eEp);
-    final Integer dfidx = MetricUtils.valueToIndex(dEpKeyIndex, dEp);
+    final String dEpValue = MetricUtils.epValueToString(dEp);
+    final String dEpValueClass = dEp.getValue().getClass().getName();
 
-    final Object ef1 = MetricUtils.indexToValue(0.1 + efidx, -0.1, eEpKeyIndex);
-    final Object ef2 = MetricUtils.indexToValue(-0.1 + efidx, 0.1, eEpKeyIndex);
-    Assert.assertEquals("EP_INDEX: (" + eEpKeyIndex + ", " + efidx + ")", ef.toString(), ef1.toString());
-    Assert.assertEquals("EP_INDEX: (" + eEpKeyIndex + ", " + efidx + ")", ef.toString(), ef2.toString());
+    final Object ef1 = MetricUtils.stringToValue(eEpValue, eEpValueClass);
+    Assert.assertEquals(ef.toString(), ef1.toString());
 
-    final Object df1 = MetricUtils.indexToValue(0.1 + dfidx, -0.1, dEpKeyIndex);
-    final Object df2 = MetricUtils.indexToValue(-0.1 + dfidx, 0.1, dEpKeyIndex);
-    Assert.assertEquals("EP_INDEX: (" + dEpKeyIndex + ", " + dfidx + ")", df.toString(), df1.toString());
-    Assert.assertEquals("EP_INDEX: (" + dEpKeyIndex + ", " + dfidx + ")", df.toString(), df2.toString());
+    final Object df1 = MetricUtils.stringToValue(dEpValue, dEpValueClass);
+    Assert.assertEquals(df.toString(), df1.toString());
   }
 
   @Test
   public void testPairAndValueToEP() {
     final DataFlowProperty.Value pull = DataFlowProperty.Value.Pull;
     final DataFlowProperty ep = DataFlowProperty.of(pull);
-    final Integer epKeyIndex = MetricUtils.getEpKeyIndex(ep);
-    final Integer idx = MetricUtils.valueToIndex(epKeyIndex, ep);
-    Assert.assertEquals(Integer.valueOf(0), idx);
+    final String epKeyClass = ep.getClass().getName();
+    final String epValueClass = pull.getClass().getName();
+    final String epValue = MetricUtils.epValueToString(ep);
+    Assert.assertEquals(0, Integer.parseInt(epValue));
 
     final ExecutionProperty<? extends Serializable> ep2 =
-      MetricUtils.keyAndValueToEP(epKeyIndex, 0.5, -0.1);
+      MetricUtils.keyAndValueToEP(epKeyClass, epValueClass, epValue);
     Assert.assertEquals(ep, ep2);
-  }
-
-  @Test
-  public void validateStaticConstructorsOfExecutionProperties() {
-    MetricUtils.EP_KEY_METADATA.values().forEach(p -> Assert.assertTrue(
-      p.left().getName() + "should have an 'of' method with its value class, " + p.right().getName(),
-      MetricUtils.getMethodFor(p.left(), "of", p.right()).isPresent()));
   }
 }

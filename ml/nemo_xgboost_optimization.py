@@ -19,236 +19,16 @@
 #
 
 import getopt
-import json
 import sys
 from pathlib import Path
 
 import numpy as np
-import psycopg2 as pg
-import sqlite3 as sq
 import xgboost as xgb
-from sklearn import preprocessing
 
+from tree import *
+from inout import *
 
-# import matplotlib.pyplot as plt
-
-# ########################################################
-# METHODS
-# ########################################################
-def format_row(duration, inputsize, jvmmemsize, totalmemsize, vertex_properties, edge_properties):
-  duration_in_sec = int(duration) // 1000
-  inputsize_in_10kb = int(inputsize) // 10240  # capable of expressing upto around 20TB with int range
-  jvmmemsize_in_mb = int(jvmmemsize) // 1048576
-  totalmemsize_in_mb = int(totalmemsize) // 1048576
-  return f'{duration_in_sec} 0:{inputsize_in_10kb} 1:{jvmmemsize_in_mb} 2:{totalmemsize_in_mb} {vertex_properties} {edge_properties}'
-
-
-
-# ########################################################
-def load_data_from_db(tablename):
-  conn = None
-
-  try:
-    host = "nemo-optimization.cabbufr3evny.us-west-2.rds.amazonaws.com"
-    dbname = "nemo_optimization"
-    dbuser = "postgres"
-    dbpwd = "fake_password"
-    conn = pg.connect(host=host, dbname=dbname, user=dbuser, password=dbpwd)
-    print("Connected to the PostgreSQL DB.")
-  except:
-    try:
-      sqlite_file = "./optimization_db.sqlite"
-      conn = sq.connect(sqlite_file)
-      print("Connected to the SQLite DB.")
-    except:
-      print("I am unable to connect to the database. Try running the script with `./bin/xgboost_optimization.sh`")
-
-  sql = "SELECT * from " + tablename
-  cur = conn.cursor()
-  try:
-    cur.execute(sql)
-    print("Loaded data from the DB.")
-  except:
-    print("I can't run " + sql)
-
-  rows = cur.fetchall()
-  processed_rows = [format_row(row[1], row[2], row[3], row[4], row[5], row[6]) for row in rows]
-  cur.close()
-  conn.close()
-  return processed_rows
-
-
-# ########################################################
-def write_to_file(filename, rows):
-  f = open(filename, 'w')
-  for row in rows:
-    f.write(row + "\n")
-  f.close()
-
-
-def encode_processed_rows(processed_rows, col_to_id):
-  for i, row in enumerate(processed_rows):
-    arr = row.split()
-    for j, it in enumerate(arr[1:]):
-      k, v = it.split(':')
-      ek = col_to_id[int(k)]
-      arr[j + 1] = f'{ek}:{v}'
-    processed_rows[i] = ' '.join(arr)
-  return processed_rows
-
-
-def decode_rows(rows, id_to_col):
-  for i, row in enumerate(rows):
-    arr = row.split()
-    for j, it in enumerate(arr[1:]):
-      ek, v = it.split(':')
-      k = id_to_col[int(ek)]
-      arr[j + 1] = f'{k}:{v}'
-    rows[i] = ' '.join(arr)
-  return rows
-
-
-# ########################################################
-def stringify_num(num):
-  return str(round(num, 2))
-
-
-def dict_union(d1, d2):
-  for k, v in d2.items():
-    if k in d1:
-      if type(d1[k]) is dict and type(v) is dict:  # When same 'feature'
-        d1[k] = dict_union(d1[k], v)
-      else:  # When same 'split'
-        d1[k] = d1[k] + v
-    elif type(v) is dict:  # When no initial data
-      d1[k] = v
-    else:  # k = split, v = diff. include if it does not violate.
-      if v > 0 > max(d1.values()) and k < max(d1.keys()):  # If no positive values yet
-        d1[k] = v
-      elif v > max(d1.values()) > 0:  # Update if greater value
-        max_key = max(d1, key=lambda key: d1[key])
-        del d1[max_key]
-        d1[k] = v
-      elif v < 0 < min(d1.values()) and min(d1.keys()) < k:  # If no negative values yet
-        d1[k] = v
-      elif v < min(d1.values()) < 0:  # Update if smaller value
-        min_key = min(d1, key=lambda key: d1[key])
-        del d1[min_key]
-        d1[k] = v
-  return d1
-
-
-# ########################################################
-class Tree:
-  root = None
-  idx_to_node = {}
-
-  def append_to_dict_if_not_exists(self, idx, node):
-    if idx not in self.idx_to_node:
-      self.idx_to_node[idx] = node
-
-  def addNode(self, index, feature_id, split, yes, no, missing, value):
-    n = None
-    if self.root == None:
-      self.root = Node(None)
-      n = self.root
-      self.append_to_dict_if_not_exists(index, n)
-    else:
-      n = self.idx_to_node[index]
-
-    self.append_to_dict_if_not_exists(yes, Node(n))
-    self.append_to_dict_if_not_exists(no, Node(n))
-    self.append_to_dict_if_not_exists(missing, Node(n))
-    n.addAttributes(index, feature_id, split, yes, no, missing, value, self.idx_to_node)
-
-  def importanceDict(self):
-    return self.root.importanceDict()
-
-  def __str__(self):
-    return json.dumps(json.loads(str(self.root)), indent=4)
-
-
-class Node:
-  parent = None
-  index = None
-
-  feature = None
-  split = None
-  left = None
-  right = None
-  missing = None
-
-  value = None
-
-  def __init__(self, parent):
-    self.parent = parent
-
-  def addAttributes(self, index, feature_id, split, yes, no, missing, value, idx_to_node):
-    self.index = index
-    if feature_id == 'Leaf':
-      self.value = value
-    else:
-      self.feature = feature_id
-      self.split = split
-      self.left = idx_to_node[yes]
-      self.right = idx_to_node[no]
-      self.missing = idx_to_node[missing]
-
-  def isLeaf(self):
-    return self.value != None
-
-  def isRoot(self):
-    return self.parent == None
-
-  def getIndex(self):
-    return self.index
-
-  def getLeft(self):
-    return self.left
-
-  def getRight(self):
-    return self.right
-
-  def getMissing(self):
-    return self.missing
-
-  def getApprox(self):
-    if self.isLeaf():
-      return self.value
-    else:
-      lapprox = self.left.getApprox()
-      rapprox = self.right.getApprox()
-      if rapprox != 0 and abs(lapprox / rapprox) < 0.04:  # smaller than 4% then ignore
-        return rapprox
-      elif lapprox != 0 and abs(rapprox / lapprox) < 0.04:
-        return lapprox
-      else:
-        return (lapprox + rapprox) / 2
-
-  def getDiff(self):
-    lapprox = self.left.getApprox()
-    rapprox = self.right.getApprox()
-    if (rapprox != 0 and abs(lapprox / rapprox) < 0.04) or (lapprox != 0 and abs(rapprox / lapprox) < 0.04):
-      return 0  # ignore
-    return lapprox - rapprox
-
-  def importanceDict(self):
-    if self.isLeaf():
-      return {}
-    else:
-      d = {}
-      d[self.feature] = {self.split: self.getDiff()}
-      return dict_union(d, dict_union(self.left.importanceDict(), self.right.importanceDict()))
-
-  def __str__(self):
-    if self.isLeaf():
-      return f'{stringify_num(self.value)}'
-    else:
-      left = str(self.left) if self.left.isLeaf() else json.loads(str(self.left))
-      right = str(self.right) if self.right.isLeaf() else json.loads(str(self.right))
-      return json.dumps({self.index: f'{self.feature}' + '{' + stringify_num(self.getApprox()) + ',' + stringify_num(
-        self.getDiff()) + '}', 'L' + self.left.getIndex(): left, 'R' + self.right.getIndex(): right})
-
+import matplotlib.pyplot as plt
 
 # ########################################################
 # MAIN FUNCTION
@@ -270,32 +50,19 @@ for opt, arg in opts:
     inputsize = arg
 
 modelname = tablename + "_bst.model"
-processed_rows = load_data_from_db(tablename)
+data = Data()
+encoded_rows = data.load_data_from_db(tablename)
 # write_to_file('process_test', processed_rows)
 
-## Make Dictionary
-col = []
-for row in processed_rows:
-  arr = row.split()
-  for it in arr[1:]:
-    k, v = it.split(':')
-    col.append(int(k))
-le = preprocessing.LabelEncoder()
-ids = le.fit_transform(col)
-col_to_id = dict(zip(col, ids))
-id_to_col = dict(zip(ids, col))
-
-## PREPROCESSING DATA FOR TAINING
-encoded_rows = encode_processed_rows(processed_rows, col_to_id)
-write_to_file('nemo_optimization.out', encoded_rows)
-# write_to_file('decode_test', decode_rows(encoded_rows, id_to_col))
+write_rows_to_file('nemo_optimization.out', encoded_rows)
+# write_to_file('decode_test', decode_rows(encoded_rows, id_to_col, value_is_digit, id_to_value))
 ddata = xgb.DMatrix('nemo_optimization.out')
 
 avg_20_duration = np.mean(ddata.get_label()[:20])
 print("average job duration: ", avg_20_duration)
 allowance = avg_20_duration // 25  # 4%
 
-row_size = len(processed_rows)
+row_size = len(encoded_rows)
 print("total_rows: ", row_size)
 
 ## TRAIN THE MODEL (REGRESSION)
@@ -354,16 +121,16 @@ for index, row in df.iterrows():
   if row['Tree'] not in trees:  # Tree number = index
     trees[row['Tree']] = Tree()
 
-  translated_feature = id_to_col[int(row['Feature'][1:])] if row['Feature'].startswith('f') else row['Feature']
+  # translated_feature = data.transform_id_to_key(int(row['Feature'][1:])) if row['Feature'].startswith('f') else row['Feature']
   # print(translated_feature)
-  trees[row['Tree']].addNode(row['ID'], translated_feature, row['Split'], row['Yes'], row['No'], row['Missing'],
+  trees[row['Tree']].addNode(row['ID'], row['Feature'], row['Split'], row['Yes'], row['No'], row['Missing'],
                              row['Gain'])
 
 results = {}
 print("\nGenerated Trees:")
 for t in trees.values():
   results = dict_union(results, t.importanceDict())
-  # print(t)
+  print(t)
 
 print("\nImportanceDict")
 print(json.dumps(results, indent=2))
@@ -372,10 +139,16 @@ print("\nSummary")
 resultsJson = []
 for k, v in results.items():
   for kk, vv in v.items():
-    resultsJson.append({'feature': k, 'split': kk, 'val': vv})
+    # k = feature, kk = split, vv = val
+    i, key, tpe = data.transform_id_to_keypair(int(k[1:]))
     how = 'greater' if vv > 0 else 'smaller'
-    restring = f'{k} should be {how} than {kk}'
+    restring = f'{key} should be {vv} {how} than {kk}'
     print(restring)
+    classes = key.split('/')
+    key_class = classes[0]
+    value_class = classes[1]
+    value = data.transform_id_to_value(key, data.derive_value_from(key, kk, vv))
+    resultsJson.append({'type': tpe, 'ID': i, 'EPKeyClass': key_class, 'EPValueClass': value_class, 'EPValue': value})
 
 with open("results.out", "w") as file:
   file.write(json.dumps(resultsJson, indent=2))

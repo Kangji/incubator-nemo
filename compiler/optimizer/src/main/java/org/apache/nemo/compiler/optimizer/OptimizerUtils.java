@@ -19,10 +19,12 @@
 
 package org.apache.nemo.compiler.optimizer;
 
-import org.apache.nemo.common.Pair;
-import org.apache.nemo.common.Util;
-import org.apache.nemo.common.exception.InvalidParameterException;
 import org.apache.nemo.common.exception.UnsupportedMethodException;
+import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.runtime.common.metric.MetricUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Utility class for optimizer.
@@ -36,28 +38,28 @@ public final class OptimizerUtils {
   }
 
   /**
-   * Restore the formatted string into a pair of vertex/edge id and the execution property.
+   * Get the list of objects to tune from the type, id, and the DAG.
+   * @param type the type of the optimization: pattern or id.
+   * @param id   the identifier for the pattern of the id of the component.
+   * @param dag  the DAG to find the component of.
    *
-   * @param string the formatted string.
-   * @return a pair of vertex/edge id and the execution property key index.
+   * @return the list of objects from the identifier.
    */
-  public static Pair<String, Integer> stringToIdAndEPKeyIndex(final String string) {
-    // Formatted into 9 digits: 0:vertex/edge 1-5:ID 5-9:EP Index.
-    if (string.length() != 9) {
-      throw new InvalidParameterException("The metric data should follow the format of "
-        + "[0]: index indicating vertex/edge, [1-4]: id of the component, and [5-8]: EP Key index. Current: " + string);
+  public static List<Object> getObjects(final String type, final String id, final IRDAG dag) {
+    final List<Object> objectList = new ArrayList<>();
+    if (type.equals("pattern")) {
+      objectList.addAll(MetricUtils.getObjectFromPatternString(id, dag));
+    } else if (type.equals("id")) {
+      if (id.startsWith("vertex")) {
+        objectList.add(dag.getVertexById(id));
+      } else if (id.startsWith("edge")) {
+        objectList.add(dag.getEdgeById(id));
+      } else {
+        throw new UnsupportedMethodException("The id " + id + " cannot be categorized into a vertex or an edge");
+      }
     }
-    final Integer idx = Integer.parseInt(string.substring(0, 1));
-    final Integer numericId = Integer.parseInt(string.substring(1, 5));
-    final String id;
-    if (idx == 1) {
-      id = Util.restoreVertexId(numericId);
-    } else if (idx == 2) {
-      id = Util.restoreEdgeId(numericId);
-    } else {
-      throw new UnsupportedMethodException("The index " + idx + " cannot be categorized into a vertex or an edge");
-    }
-    return Pair.of(id, Integer.parseInt(string.substring(5, 9)));
+
+    return objectList;
   }
 
   /**
