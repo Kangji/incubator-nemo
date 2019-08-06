@@ -236,6 +236,20 @@ def read_resource_info(resource_info_path):
   return data
 
 
+def read_dag_json(dagdirectory, jsonfile):
+  data = []
+  if jsonfile.endswith("json"):
+    if jsonfile.startswith("/") and dagdirectory.endswith("/"):
+      path = '{}{}'.format(dagdirectory, jsonfile[1:])
+    elif jsonfile.startswith("/") or dagdirectory.endswith("/"):
+      path = '{}{}'.format(dagdirectory, jsonfile)
+    else:
+      path = '{}/{}'.format(dagdirectory, jsonfile)
+    with open(path) as data_file:
+      data.append(json.load(data_file))
+  return data
+
+
 def write_rows_to_file(filename, rows):
   f = open(filename, 'w')
   for row in rows:

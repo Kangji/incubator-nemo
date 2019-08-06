@@ -58,7 +58,6 @@ public final class NemoOptimizer implements Optimizer {
   private final ClientRPC clientRPC;
 
   private final Map<UUID, Integer> cacheIdToParallelism = new HashMap<>();
-  private int irDagCount = 0;
 
 
   /**
@@ -91,8 +90,7 @@ public final class NemoOptimizer implements Optimizer {
 
   @Override
   public IRDAG optimizeAtCompileTime(final IRDAG dag) {
-    final String irDagId = "ir-" + irDagCount++ + "-";
-    dag.storeJSON(dagDirectory, irDagId, "IR before optimization");
+    dag.storeJSON(dagDirectory, "ir-0-initial", "IR before optimization");
 
     final IRDAG optimizedDAG;
     final Map<UUID, IREdge> cacheIdToEdge = new HashMap<>();
@@ -100,7 +98,7 @@ public final class NemoOptimizer implements Optimizer {
     // Handle caching first.
     final IRDAG cacheFilteredDag = handleCaching(dag, cacheIdToEdge);
     if (!cacheIdToEdge.isEmpty()) {
-      cacheFilteredDag.storeJSON(dagDirectory, irDagId + "FilterCache",
+      cacheFilteredDag.storeJSON(dagDirectory, "ir-0-FilterCache",
         "IR after cache filtering");
     }
 
@@ -108,7 +106,7 @@ public final class NemoOptimizer implements Optimizer {
     beforeCompileTimeOptimization(dag, optimizationPolicy);
     optimizedDAG = optimizationPolicy.runCompileTimeOptimization(cacheFilteredDag, dagDirectory);
     optimizedDAG
-      .storeJSON(dagDirectory, irDagId + optimizationPolicy.getClass().getSimpleName(),
+      .storeJSON(dagDirectory, "ir-afterpolicy-" + optimizationPolicy.getClass().getSimpleName(),
         "IR optimized for " + optimizationPolicy.getClass().getSimpleName());
 
     // Update cached list.
@@ -146,7 +144,8 @@ public final class NemoOptimizer implements Optimizer {
         .setType(ControlMessage.DriverToClientMessageType.LaunchOptimization)
         .setOptimizationType(ControlMessage.OptimizationType.XGBoost)
         .setDataCollected(ControlMessage.DataCollectMessage.newBuilder()
-          .setData(dag.irDAGSummary() + this.environmentTypeStr + " -r " + this.executorInfoPath)
+          .setData(dag.irDAGSummary() + this.environmentTypeStr + " "
+            + "-d " + this.dagDirectory + " -r " + this.executorInfoPath)
           .build())
         .build());
 

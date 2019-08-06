@@ -42,6 +42,7 @@ public final class PolicyImpl implements Policy {
   private final List<CompileTimePass> compileTimePasses;
   private final Set<RunTimePass<?>> runTimePasses;
   private static final Logger LOG = LoggerFactory.getLogger(PolicyImpl.class.getName());
+  private static int optimizationCount;
 
   /**
    * Constructor.
@@ -52,6 +53,7 @@ public final class PolicyImpl implements Policy {
   public PolicyImpl(final List<CompileTimePass> compileTimePasses, final Set<RunTimePass<?>> runTimePasses) {
     this.compileTimePasses = compileTimePasses;
     this.runTimePasses = runTimePasses;
+    optimizationCount = 1;
   }
 
   @Override
@@ -102,7 +104,8 @@ public final class PolicyImpl implements Policy {
         }
 
         // Save the processed JSON DAG.
-        processedDAG.storeJSON(dagDirectory, "ir-after-" + passToApply.getClass().getSimpleName(),
+        processedDAG.storeJSON(dagDirectory,
+          "ir-" + optimizationCount++ + "-after-" + passToApply.getClass().getSimpleName(),
           "DAG after optimization");
       } else {
         LOG.info("Condition unmet for applying {} to the DAG", passToApply.getClass().getSimpleName());
