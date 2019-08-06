@@ -117,7 +117,7 @@ class Data:
 
 
   # ########################################################
-  def load_data_from_db(self, tablename):
+  def load_data_from_db(self, tablename, dagpropertydir=None):
     conn = None
 
     try:
@@ -149,6 +149,8 @@ class Data:
     values = {}
     for row in rows:
       preprocess_properties(row[5], keypairs, values)
+    if dagpropertydir:
+      preprocess_properties(self.load_property_json(dagpropertydir), keypairs, values)
     # print("Pre-processing properties..")
 
     self.keyLE = preprocessing.LabelEncoder()
@@ -217,6 +219,22 @@ class Data:
     return max_value if max_value is not None and value > max_value else (min_value if value < min_value else value)
 
 
+  def process_property_json(self, dagdirectory):
+    return self.process_json(self.load_property_json(dagdirectory))
+
+
+  def load_property_json(self, dagdirectory):
+    jsonfile = 'ir-initial-properties.json'
+    if jsonfile.startswith("/") and dagdirectory.endswith("/"):
+      path = '{}{}'.format(dagdirectory, jsonfile[1:])
+    elif jsonfile.startswith("/") or dagdirectory.endswith("/"):
+      path = '{}{}'.format(dagdirectory, jsonfile)
+    else:
+      path = '{}/{}'.format(dagdirectory, jsonfile)
+    with open(path) as data_file:
+      return json.load(data_file)
+
+
 # ########################################################
 def read_resource_info(resource_info_path):
   data = []
@@ -233,20 +251,6 @@ def read_resource_info(resource_info_path):
           attr[a.tag] = int(a.text) if a.text.isdigit() else a.text
         nodes.append(attr)
       data.append(nodes)
-  return data
-
-
-def read_dag_json(dagdirectory, jsonfile):
-  data = []
-  if jsonfile.endswith("json"):
-    if jsonfile.startswith("/") and dagdirectory.endswith("/"):
-      path = '{}{}'.format(dagdirectory, jsonfile[1:])
-    elif jsonfile.startswith("/") or dagdirectory.endswith("/"):
-      path = '{}{}'.format(dagdirectory, jsonfile)
-    else:
-      path = '{}/{}'.format(dagdirectory, jsonfile)
-    with open(path) as data_file:
-      data.append(json.load(data_file))
   return data
 
 

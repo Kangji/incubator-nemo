@@ -41,11 +41,8 @@ public final class DefaultEdgeDecoderPass extends AnnotatingPass {
   @Override
   public IRDAG apply(final IRDAG dag) {
     dag.topologicalDo(irVertex ->
-      dag.getIncomingEdgesOf(irVertex).forEach(irEdge -> {
-        if (!irEdge.getPropertyValue(DecoderProperty.class).isPresent()) {
-          irEdge.setProperty(DEFAULT_DECODER_PROPERTY);
-        }
-      }));
+      dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+        irEdge.setPropertyIfAbsent(DEFAULT_DECODER_PROPERTY)));
     return dag;
   }
 }

@@ -161,9 +161,23 @@ public final class ExecutionPropertyMap<T extends ExecutionProperty> implements 
     if (finalizedProperties.contains(executionProperty.getClass())
       && properties.get(executionProperty.getClass()) != null
       && !properties.get(executionProperty.getClass()).equals(executionProperty)) {
-      return properties.get(executionProperty.getClass());
+      return properties.get(executionProperty.getClass());  // Ignored
     } else {
       return put(executionProperty);
+    }
+  }
+
+  /**
+   * Put the given execution property in the ExecutionPropertyMap if is it not present.
+   *
+   * @param executionProperty execution property to insert.
+   * @return the already existing execution property, or null if it was inserted and nothing was already present.
+   */
+  public T putIfAbsent(final T executionProperty) {
+    if (properties.get(executionProperty.getClass()) == null) {
+      return put(executionProperty);
+    } else {
+      return properties.get(executionProperty.getClass());
     }
   }
 

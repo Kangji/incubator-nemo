@@ -33,10 +33,10 @@ import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 public final class XGBoostPolicy implements Policy {
   public static final PolicyBuilder BUILDER =
     new PolicyBuilder()
-      .registerCompileTimePass(new DefaultCompositePass())
       .registerCompileTimePass(new BestInitialDAGConfFromDBPass())
       .registerCompileTimePass(new XGBoostPass())
-      .registerCompileTimePass(new ResourceExplorationPass());
+      .registerCompileTimePass(new ResourceExplorationPass())
+      .registerCompileTimePass(new DefaultCompositePass());
   private final Policy policy;
 
   /**

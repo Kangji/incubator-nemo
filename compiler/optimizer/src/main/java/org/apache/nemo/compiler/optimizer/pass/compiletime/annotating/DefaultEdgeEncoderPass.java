@@ -28,7 +28,7 @@ import org.apache.nemo.common.ir.edge.executionproperty.EncoderProperty;
 @Annotates(EncoderProperty.class)
 public final class DefaultEdgeEncoderPass extends AnnotatingPass {
 
-  private static final EncoderProperty DEFAULT_DECODER_PROPERTY =
+  private static final EncoderProperty DEFAULT_ENCODER_PROPERTY =
     EncoderProperty.of(EncoderFactory.DUMMY_ENCODER_FACTORY);
 
   /**
@@ -41,11 +41,8 @@ public final class DefaultEdgeEncoderPass extends AnnotatingPass {
   @Override
   public IRDAG apply(final IRDAG dag) {
     dag.topologicalDo(irVertex ->
-      dag.getIncomingEdgesOf(irVertex).forEach(irEdge -> {
-        if (!irEdge.getPropertyValue(EncoderProperty.class).isPresent()) {
-          irEdge.setProperty(DEFAULT_DECODER_PROPERTY);
-        }
-      }));
+      dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+        irEdge.setPropertyIfAbsent(DEFAULT_ENCODER_PROPERTY)));
     return dag;
   }
 }

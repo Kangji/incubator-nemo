@@ -27,7 +27,6 @@ import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Optimization pass for tagging parallelism execution property.
@@ -70,12 +69,9 @@ public final class DefaultParallelismPass extends AnnotatingPass {
           // After that, we set the parallelism as the number of split readers.
           // (It can be more/less than the desired value.)
           final SourceVertex sourceVertex = (SourceVertex) vertex;
-          final Optional<Integer> originalParallelism = vertex.getPropertyValue(ParallelismProperty.class);
-          // We manipulate them if it is set as default value of 1.
-          if (!originalParallelism.isPresent()) {
-            vertex.setProperty(ParallelismProperty.of(
-              sourceVertex.getReadables(desiredSourceParallelism).size()));
-          }
+          // We manipulate them if it is not set.
+          vertex.setPropertyIfAbsent(ParallelismProperty.of(
+            sourceVertex.getReadables(desiredSourceParallelism).size()));
         } else if (!inEdges.isEmpty()) {
           // No reason to propagate via Broadcast edges, as the data streams that will use the broadcasted data
           // as a sideInput will have their own number of parallelism
@@ -92,7 +88,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
             .max().orElse(1);
           // We set the greater value as the parallelism.
           final Integer parallelism = o2oParallelism > shuffleParallelism ? o2oParallelism : shuffleParallelism;
-          vertex.setProperty(ParallelismProperty.of(parallelism));
+          vertex.setPropertyIfAbsent(ParallelismProperty.of(parallelism));
           // synchronize one-to-one edges parallelism
           recursivelySynchronizeO2OParallelism(dag, vertex, parallelism);
         } else if (!vertex.getPropertyValue(ParallelismProperty.class).isPresent()) {

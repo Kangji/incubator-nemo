@@ -72,7 +72,7 @@ public final class MetricUtils {
    * @param irdag the IR DAG to observe.
    * @return stringified execution properties, grouped as patterns. Left is for vertices, right is for edges.
    */
-  static String stringifyIRDAGProperties(final IRDAG irdag) {
+  public static String stringifyIRDAGProperties(final IRDAG irdag) {
     return stringifyIRDAGProperties(irdag, 0);  // pattern recording is default
   }
 

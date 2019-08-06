@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 # MAIN FUNCTION
 # ########################################################
 try:
-  opts, args = getopt.getopt(sys.argv[1:], "ht:d:r:i:", ["tablename=", "dagdirectory=", "resourceinfo=", "inputsize="])
+  opts, args = getopt.getopt(sys.argv[1:], "ht:d:r:i:", ["tablename=", "dagpropertydir=", "resourceinfo=", "inputsize="])
 except getopt.GetoptError:
   print('nemo_xgboost_optimization.py -t <tablename>')
   sys.exit(2)
@@ -45,8 +45,8 @@ for opt, arg in opts:
     sys.exit()
   elif opt in ("-t", "--tablename"):
     tablename = arg
-  elif opt in ("-d", "--dagdirectory"):
-    dagdirectory = arg
+  elif opt in ("-d", "--dagpropertydir"):
+    dagpropertydir = arg
   elif opt in ("-r", "--resourceinfo"):
     resourceinfo = arg
   elif opt in ("-i", "--inputsize"):
@@ -54,7 +54,7 @@ for opt, arg in opts:
 
 modelname = tablename + "_bst.model"
 data = Data()
-encoded_rows = data.load_data_from_db(tablename)
+encoded_rows = data.load_data_from_db(tablename, dagpropertydir) if dagpropertydir else data.load_data_from_db(tablename)
 # write_to_file('process_test', processed_rows)
 
 write_rows_to_file('nemo_optimization.out', encoded_rows)
@@ -131,7 +131,7 @@ for index, row in df.iterrows():
 
 
 # Let's process the data now.
-dag_json = read_dag_json(dagdirectory, 'ir-0-initial.json')
+dag_json = data.process_property_json(dagpropertydir)
 print(dag_json)
 
 results = {}

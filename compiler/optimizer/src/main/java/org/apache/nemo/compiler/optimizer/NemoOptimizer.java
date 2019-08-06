@@ -36,9 +36,13 @@ import org.apache.nemo.compiler.optimizer.policy.XGBoostPolicy;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.ClientRPC;
+import org.apache.nemo.runtime.common.metric.MetricUtils;
 import org.apache.reef.tang.annotations.Parameter;
 
 import javax.inject.Inject;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -140,6 +144,17 @@ public final class NemoOptimizer implements Optimizer {
    */
   private void beforeCompileTimeOptimization(final IRDAG dag, final Policy policy) {
     if (policy instanceof XGBoostPolicy) {
+      if (this.dagDirectory != null || this.dagDirectory != "") {
+        final String properties = MetricUtils.stringifyIRDAGProperties(dag);
+        final File file = new File(this.dagDirectory, "ir-initial-properties.json");
+        file.getParentFile().mkdirs();
+        try (PrintWriter printWriter = new PrintWriter(file)) {
+          printWriter.println(properties);
+        } catch (IOException e) {
+          // ignore
+        }
+      }
+
       clientRPC.send(ControlMessage.DriverToClientMessage.newBuilder()
         .setType(ControlMessage.DriverToClientMessageType.LaunchOptimization)
         .setOptimizationType(ControlMessage.OptimizationType.XGBoost)

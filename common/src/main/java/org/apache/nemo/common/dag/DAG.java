@@ -317,7 +317,6 @@ public final class DAG<V extends Vertex, E extends Edge<V>> implements DAGInterf
     file.getParentFile().mkdirs();
     try (PrintWriter printWriter = new PrintWriter(file)) {
       printWriter.println(toString());
-      printWriter.close();
       LOG.debug(String.format("DAG JSON for %s is saved at %s"
         + " (Use https://service.jangho.kr/nemo-dag/ to visualize it.)", description, file.getPath()));
     } catch (IOException e) {

@@ -113,7 +113,7 @@ public final class SamplingSkewReshapingPass extends ReshapingPass {
           final KeyExtractor keyExtractor = e.getPropertyValue(KeyExtractorProperty.class).get();
           dag.insert(
             new TriggerVertex<>(SkewHandlingUtil.getMessageGenerator(keyExtractor)),
-            new MessageAggregatorVertex(() -> new HashMap<>(), SkewHandlingUtil.getMessageAggregator()),
+            new MessageAggregatorVertex<>(HashMap::new, SkewHandlingUtil.getMessageAggregator()),
             SkewHandlingUtil.getEncoder(e),
             SkewHandlingUtil.getDecoder(e),
             new HashSet<>(Arrays.asList(clonedShuffleEdge)), // this works although the clone is not in the dag
