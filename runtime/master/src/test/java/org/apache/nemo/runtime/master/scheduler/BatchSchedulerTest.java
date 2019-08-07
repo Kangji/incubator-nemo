@@ -20,7 +20,7 @@ package org.apache.nemo.runtime.master.scheduler;
 
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.eventhandler.PubSubEventHandlerWrapper;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageSender;
@@ -90,7 +90,7 @@ public final class BatchSchedulerTest {
 
     final ExecutorService serializationExecutorService = Executors.newSingleThreadExecutor();
     final ResourceSpecification computeSpec =
-      new ResourceSpecification(ResourcePriorityProperty.COMPUTE, EXECUTOR_CAPACITY, 0);
+      new ResourceSpecification(ResourceTypeProperty.COMPUTE, EXECUTOR_CAPACITY, 0);
     final Function<String, ExecutorRepresenter> computeSpecExecutorRepresenterGenerator = executorId ->
       new ExecutorRepresenter(executorId, computeSpec, mockMsgSender, activeContext, serializationExecutorService,
         executorId);
@@ -99,7 +99,7 @@ public final class BatchSchedulerTest {
     final ExecutorRepresenter a1 = computeSpecExecutorRepresenterGenerator.apply("a1");
 
     final ResourceSpecification storageSpec =
-      new ResourceSpecification(ResourcePriorityProperty.TRANSIENT, EXECUTOR_CAPACITY, 0);
+      new ResourceSpecification(ResourceTypeProperty.TRANSIENT, EXECUTOR_CAPACITY, 0);
     final Function<String, ExecutorRepresenter> storageSpecExecutorRepresenterGenerator = executorId ->
       new ExecutorRepresenter(executorId, storageSpec, mockMsgSender, activeContext, serializationExecutorService,
         executorId);

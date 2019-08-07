@@ -450,18 +450,6 @@ public final class IRDAGChecker {
     neighborCheckerList.add(additionalOutputEncoder);
 
     // TODO #342: Check Encoder/Decoder symmetry
-
-    final SingleEdgeChecker compressAndDecompress = (edge -> {
-      if (!isConnectedToStreamVertex(edge)) {
-        if (!edge.getPropertyValue(CompressionProperty.class)
-          .equals(edge.getPropertyValue(DecompressionProperty.class))) {
-          return failure("Compression and decompression must be symmetric",
-            edge, CompressionProperty.class, DecompressionProperty.class);
-        }
-      }
-      return success();
-    });
-    singleEdgeCheckerList.add(compressAndDecompress);
   }
 
 

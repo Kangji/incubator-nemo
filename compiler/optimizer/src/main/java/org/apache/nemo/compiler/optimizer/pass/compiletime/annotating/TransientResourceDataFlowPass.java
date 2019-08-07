@@ -21,7 +21,7 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
 import java.util.List;
@@ -32,7 +32,7 @@ import static org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Tra
  * Push from transient resources to reserved resources.
  */
 @Annotates(DataFlowProperty.class)
-@Requires(ResourcePriorityProperty.class)
+@Requires(ResourceTypeProperty.class)
 public final class TransientResourceDataFlowPass extends AnnotatingPass {
   /**
    * Default constructor.

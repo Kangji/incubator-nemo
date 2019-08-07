@@ -24,8 +24,8 @@ import org.apache.nemo.common.exception.CompileTimeOptimizationException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourceImportanceProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.OptimizerUtils;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.LargeShuffleCompositePass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.TransientResourceCompositePass;
@@ -37,7 +37,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * A pass for annotating vertices requiring more memory resources with the memory ResourceImportanceProperty, then
+ * A pass for annotating vertices requiring more memory resources with the memory ResourcePriorityProperty, then
  * conditionally running TransientResourcePass and LargeShufflePass, according to a specific condition in the DAG.
  */
 @Annotates()
@@ -64,7 +64,7 @@ public final class ResourceExplorationPass extends AnnotatingPass {
       OptimizerUtils.parseResourceSpecificationString(resourceSpecificationString);
 
     vertexStageIdMap.forEach((v, stageId) -> {
-      if (v.getPropertyValue(ResourceImportanceProperty.class).isPresent()) {
+      if (v.getPropertyValue(ResourcePriorityProperty.class).isPresent()) {
         return;
       }
       final long memoryEdgeNum = dag.getOutgoingEdgesOf(v).stream()
@@ -92,7 +92,7 @@ public final class ResourceExplorationPass extends AnnotatingPass {
 
     vertexStageIdMap.forEach((v, sid) -> {
       if (stagesRequiringMoreMemory.contains(sid)) {
-        v.setProperty(ResourceImportanceProperty.of(ResourceImportanceProperty.MEMORY));
+        v.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.MEMORY));
       }
     });
 
@@ -108,7 +108,7 @@ public final class ResourceExplorationPass extends AnnotatingPass {
       .map(Pair::left)
       .collect(Collectors.toList());
 
-    if (typeSpecs.stream().anyMatch(s -> s.equalsIgnoreCase(ResourcePriorityProperty.TRANSIENT))
+    if (typeSpecs.stream().anyMatch(s -> s.equalsIgnoreCase(ResourceTypeProperty.TRANSIENT))
       && new Random().nextBoolean()) {
       resultingDAG = new TransientResourceCompositePass().apply(resultingDAG);
     }

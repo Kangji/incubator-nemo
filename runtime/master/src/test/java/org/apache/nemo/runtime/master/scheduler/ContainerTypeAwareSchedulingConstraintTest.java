@@ -18,7 +18,7 @@
  */
 package org.apache.nemo.runtime.master.scheduler;
 
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.tang.Tang;
@@ -52,13 +52,13 @@ public final class ContainerTypeAwareSchedulingConstraintTest {
   public void testContainerTypeAware() throws InjectionException {
     final SchedulingConstraint schedulingConstraint = Tang.Factory.getTang().newInjector()
       .getInstance(ContainerTypeAwareSchedulingConstraint.class);
-    final ExecutorRepresenter a0 = mockExecutorRepresenter(ResourcePriorityProperty.TRANSIENT);
-    final ExecutorRepresenter a1 = mockExecutorRepresenter(ResourcePriorityProperty.RESERVED);
-    final ExecutorRepresenter a2 = mockExecutorRepresenter(ResourcePriorityProperty.NONE);
+    final ExecutorRepresenter a0 = mockExecutorRepresenter(ResourceTypeProperty.TRANSIENT);
+    final ExecutorRepresenter a1 = mockExecutorRepresenter(ResourceTypeProperty.RESERVED);
+    final ExecutorRepresenter a2 = mockExecutorRepresenter(ResourceTypeProperty.NONE);
 
     final Task task1 = mock(Task.class);
-    when(task1.getPropertyValue(ResourcePriorityProperty.class))
-      .thenReturn(Optional.of(ResourcePriorityProperty.RESERVED));
+    when(task1.getPropertyValue(ResourceTypeProperty.class))
+      .thenReturn(Optional.of(ResourceTypeProperty.RESERVED));
 
     final Set<ExecutorRepresenter> executorRepresenterList1 = new HashSet<>(Arrays.asList(a0, a1, a2));
 
@@ -71,8 +71,8 @@ public final class ContainerTypeAwareSchedulingConstraintTest {
     assertEquals(expectedExecutors1, candidateExecutors1);
 
     final Task task2 = mock(Task.class);
-    when(task2.getPropertyValue(ResourcePriorityProperty.class))
-      .thenReturn(Optional.of(ResourcePriorityProperty.NONE));
+    when(task2.getPropertyValue(ResourceTypeProperty.class))
+      .thenReturn(Optional.of(ResourceTypeProperty.NONE));
 
     final Set<ExecutorRepresenter> executorRepresenterList2 = new HashSet<>(Arrays.asList(a0, a1, a2));
 

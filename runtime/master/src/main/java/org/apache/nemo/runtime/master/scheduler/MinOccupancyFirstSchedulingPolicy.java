@@ -18,7 +18,7 @@
  */
 package org.apache.nemo.runtime.master.scheduler;
 
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourceImportanceProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
@@ -43,10 +43,10 @@ public final class MinOccupancyFirstSchedulingPolicy implements SchedulingPolicy
   @Override
   public ExecutorRepresenter selectExecutor(final Collection<ExecutorRepresenter> executors, final Task task) {
     final Collection<ExecutorRepresenter> candidates;
-    final String resourceImportance = task.getPropertyValue(ResourceImportanceProperty.class)
-      .orElse(ResourceImportanceProperty.NONE);
+    final String resourceImportance = task.getPropertyValue(ResourcePriorityProperty.class)
+      .orElse(ResourcePriorityProperty.NONE);
 
-    if (resourceImportance.equals(ResourceImportanceProperty.MEMORY)) {
+    if (resourceImportance.equals(ResourcePriorityProperty.MEMORY)) {
       final OptionalInt maxMemoryCapacity = executors.stream()
         .mapToInt(ExecutorRepresenter::getExecutorMemory)
         .max();

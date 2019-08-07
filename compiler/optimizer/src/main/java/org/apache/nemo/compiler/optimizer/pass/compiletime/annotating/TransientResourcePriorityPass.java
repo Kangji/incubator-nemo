@@ -21,7 +21,7 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
 import java.util.List;
@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * Place valuable computations on reserved resources, and the rest on transient resources.
  */
-@Annotates(ResourcePriorityProperty.class)
+@Annotates(ResourceTypeProperty.class)
 @Requires(CommunicationPatternProperty.class)
 public final class TransientResourcePriorityPass extends AnnotatingPass {
   /**
@@ -44,12 +44,12 @@ public final class TransientResourcePriorityPass extends AnnotatingPass {
     dag.topologicalDo(vertex -> {
       final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
       if (inEdges.isEmpty()) {
-        vertex.setPropertyPermanently(ResourcePriorityProperty.of(ResourcePriorityProperty.TRANSIENT));
+        vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT));
       } else {
         if (hasM2M(inEdges) || allO2OFromReserved(inEdges)) {
-          vertex.setPropertyPermanently(ResourcePriorityProperty.of(ResourcePriorityProperty.RESERVED));
+          vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.RESERVED));
         } else {
-          vertex.setPropertyPermanently(ResourcePriorityProperty.of(ResourcePriorityProperty.TRANSIENT));
+          vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT));
         }
       }
     });
@@ -78,7 +78,7 @@ public final class TransientResourcePriorityPass extends AnnotatingPass {
     return irEdges.stream()
       .allMatch(edge -> CommunicationPatternProperty.Value.OneToOne.equals(
         edge.getPropertyValue(CommunicationPatternProperty.class).get())
-        && edge.getSrc().getPropertyValue(ResourcePriorityProperty.class).get().equals(
-        ResourcePriorityProperty.RESERVED));
+        && edge.getSrc().getPropertyValue(ResourceTypeProperty.class).get().equals(
+        ResourceTypeProperty.RESERVED));
   }
 }

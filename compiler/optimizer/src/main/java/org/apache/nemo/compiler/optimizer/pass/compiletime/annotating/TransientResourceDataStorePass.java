@@ -21,7 +21,7 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
 import java.util.List;
@@ -31,7 +31,7 @@ import java.util.Optional;
  * Transient resource pass for tagging edges with DataStore ExecutionProperty.
  */
 @Annotates(DataStoreProperty.class)
-@Requires(ResourcePriorityProperty.class)
+@Requires(ResourceTypeProperty.class)
 public final class TransientResourceDataStorePass extends AnnotatingPass {
   /**
    * Default constructor.
@@ -67,10 +67,10 @@ public final class TransientResourceDataStorePass extends AnnotatingPass {
    * @return whether or not the edge satisfies the condition.
    */
   static boolean fromTransientToReserved(final IREdge irEdge) {
-    return ResourcePriorityProperty.TRANSIENT
-      .equals(irEdge.getSrc().getPropertyValue(ResourcePriorityProperty.class).get())
-      && ResourcePriorityProperty.RESERVED
-      .equals(irEdge.getDst().getPropertyValue(ResourcePriorityProperty.class).get());
+    return ResourceTypeProperty.TRANSIENT
+      .equals(irEdge.getSrc().getPropertyValue(ResourceTypeProperty.class).get())
+      && ResourceTypeProperty.RESERVED
+      .equals(irEdge.getDst().getPropertyValue(ResourceTypeProperty.class).get());
   }
 
   /**
@@ -80,9 +80,9 @@ public final class TransientResourceDataStorePass extends AnnotatingPass {
    * @return whether or not the edge satisfies the condition.
    */
   static boolean fromReservedToTransient(final IREdge irEdge) {
-    return ResourcePriorityProperty.RESERVED
-      .equals(irEdge.getSrc().getPropertyValue(ResourcePriorityProperty.class).get())
-      && ResourcePriorityProperty.TRANSIENT
-      .equals(irEdge.getDst().getPropertyValue(ResourcePriorityProperty.class).get());
+    return ResourceTypeProperty.RESERVED
+      .equals(irEdge.getSrc().getPropertyValue(ResourceTypeProperty.class).get())
+      && ResourceTypeProperty.TRANSIENT
+      .equals(irEdge.getDst().getPropertyValue(ResourceTypeProperty.class).get());
   }
 }

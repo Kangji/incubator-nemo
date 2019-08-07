@@ -18,7 +18,7 @@
  */
 package org.apache.nemo.runtime.master;
 
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.master.resource.ContainerManager;
@@ -51,11 +51,11 @@ import static org.mockito.Mockito.when;
  */
 public final class ContainerManagerTest {
   private static final ResourceSpecification RESOURCE_SPEC_A =
-    new ResourceSpecification(ResourcePriorityProperty.COMPUTE, 1, 1024);
+    new ResourceSpecification(ResourceTypeProperty.COMPUTE, 1, 1024);
   private static final ResourceSpecification RESOURCE_SPEC_B =
-    new ResourceSpecification(ResourcePriorityProperty.TRANSIENT, 2, 2048);
+    new ResourceSpecification(ResourceTypeProperty.TRANSIENT, 2, 2048);
   private static final ResourceSpecification RESOURCE_SPEC_C =
-    new ResourceSpecification(ResourcePriorityProperty.RESERVED, 3, 3072);
+    new ResourceSpecification(ResourceTypeProperty.RESERVED, 3, 3072);
 
   private ContainerManager containerManager;
   private AtomicInteger testIdNumber = new AtomicInteger(0);

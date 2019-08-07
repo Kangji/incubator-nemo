@@ -16,21 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.common.ir.edge.executionproperty;
+package org.apache.nemo.common.ir.vertex.executionproperty;
 
-import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
 /**
- * Decompression ExecutionProperty.
- * It shares the value with {@link CompressionProperty}.
+ * ExecutionPlacement ExecutionProperty.
  */
-public final class DecompressionProperty extends EdgeExecutionProperty<CompressionProperty.Value> {
+public final class ResourceTypeProperty extends VertexExecutionProperty<String> {
   /**
    * Constructor.
    *
    * @param value value of the execution property.
    */
-  private DecompressionProperty(final CompressionProperty.Value value) {
+  private ResourceTypeProperty(final String value) {
     super(value);
   }
 
@@ -40,7 +39,13 @@ public final class DecompressionProperty extends EdgeExecutionProperty<Compressi
    * @param value value of the new execution property.
    * @return the newly created execution property.
    */
-  public static DecompressionProperty of(final CompressionProperty.Value value) {
-    return new DecompressionProperty(value);
+  public static ResourceTypeProperty of(final String value) {
+    return new ResourceTypeProperty(value);
   }
+
+  // List of default pre-configured values.
+  public static final String NONE = "None";
+  public static final String TRANSIENT = "Transient";
+  public static final String RESERVED = "Reserved";
+  public static final String COMPUTE = "Compute";
 }

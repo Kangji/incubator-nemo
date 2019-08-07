@@ -30,7 +30,6 @@ import org.apache.nemo.common.exception.IllegalMessageException;
 import org.apache.nemo.common.exception.UnknownFailureCauseException;
 import org.apache.nemo.common.ir.edge.executionproperty.CompressionProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DecoderProperty;
-import org.apache.nemo.common.ir.edge.executionproperty.DecompressionProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.EncoderProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.conf.JobConf;
@@ -134,19 +133,16 @@ public final class Executor {
       task.getTaskIncomingEdges().forEach(e -> serializerManager.register(e.getId(),
         getEncoderFactory(e.getPropertyValue(EncoderProperty.class).get()),
         getDecoderFactory(e.getPropertyValue(DecoderProperty.class).get()),
-        e.getPropertyValue(CompressionProperty.class).orElse(null),
-        e.getPropertyValue(DecompressionProperty.class).orElse(null)));
+        e.getPropertyValue(CompressionProperty.class).orElse(null)));
       task.getTaskOutgoingEdges().forEach(e -> serializerManager.register(e.getId(),
         getEncoderFactory(e.getPropertyValue(EncoderProperty.class).get()),
         getDecoderFactory(e.getPropertyValue(DecoderProperty.class).get()),
-        e.getPropertyValue(CompressionProperty.class).orElse(null),
-        e.getPropertyValue(DecompressionProperty.class).orElse(null)));
+        e.getPropertyValue(CompressionProperty.class).orElse(null)));
       irDag.getVertices().forEach(v -> {
         irDag.getOutgoingEdgesOf(v).forEach(e -> serializerManager.register(e.getId(),
           getEncoderFactory(e.getPropertyValue(EncoderProperty.class).get()),
           getDecoderFactory(e.getPropertyValue(DecoderProperty.class).get()),
-          e.getPropertyValue(CompressionProperty.class).orElse(null),
-          e.getPropertyValue(DecompressionProperty.class).orElse(null)));
+          e.getPropertyValue(CompressionProperty.class).orElse(null)));
       });
 
       new TaskExecutor(task, irDag, taskStateManager, intermediateDataIOFactory, broadcastManagerWorker,

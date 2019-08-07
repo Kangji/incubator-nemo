@@ -27,7 +27,7 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ScheduleGroupProperty;
 import org.apache.reef.tang.exceptions.InjectionException;
 import org.junit.Before;
@@ -137,7 +137,7 @@ public final class StagePartitionerTest {
   public void testSplitByOtherProperty() {
     final DAGBuilder<IRVertex, IREdge> dagBuilder = new DAGBuilder<>();
     final IRVertex v0 = newVertex(1, 0,
-      Arrays.asList(ResourcePriorityProperty.of(ResourcePriorityProperty.RESERVED)));
+      Arrays.asList(ResourceTypeProperty.of(ResourceTypeProperty.RESERVED)));
     final IRVertex v1 = newVertex(1, 0, Collections.emptyList());
     dagBuilder.addVertex(v0);
     dagBuilder.addVertex(v1);

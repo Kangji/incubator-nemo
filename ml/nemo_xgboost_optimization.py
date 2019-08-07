@@ -122,22 +122,23 @@ df = bst_opt.trees_to_dataframe()
 trees = {}
 for index, row in df.iterrows():
   if row['Tree'] not in trees:  # Tree number = index
-    trees[row['Tree']] = Tree()
+    trees[row['Tree']] = Tree(data)
 
   # translated_feature = data.transform_id_to_key(int(row['Feature'][1:])) if row['Feature'].startswith('f') else row['Feature']
   # print(translated_feature)
-  trees[row['Tree']].addNode(row['ID'], row['Feature'], row['Split'], row['Yes'], row['No'], row['Missing'],
-                             row['Gain'])
+  trees[row['Tree']].add_node(row['ID'], row['Feature'], row['Split'], row['Yes'], row['No'], row['Missing'],
+                              row['Gain'])
 
 
 # Let's process the data now.
-dag_json = data.process_property_json(dagpropertydir)
-print(dag_json)
+dag_properties = data.process_property_json(dagpropertydir)
+# print(dag_properties)
 
+# Handle the generated trees
 results = {}
 print("\nGenerated Trees:")
 for t in trees.values():
-  results = dict_union(results, t.importanceDict())
+  results = dict_union(results, t.importance_dict())
   print(t)
 
 print("\nImportanceDict")
@@ -148,17 +149,16 @@ resultsJson = []
 for k, v in results.items():
   for kk, vv in v.items():
     # k = feature, kk = split, vv = val
-    i, key, tpe = data.transform_id_to_keypair(int(k[1:]))
+    i, key, tpe = data.transform_id_to_keypair(int(k[1:]))  # ex. (id), org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty/java.lang.Integer, pattern
     how = 'greater' if vv > 0 else 'smaller'
     # result_string = f'{key} should be {vv} ({how}) than {kk}'
     # print(result_string)
     classes = key.split('/')
-    key_class = classes[0]
-    value_class = classes[1]
-    value = data.transform_id_to_value(key, data.derive_value_from(key, kk, vv))
-    resultsJson.append({'type': tpe, 'ID': i, 'EPKeyClass': key_class, 'EPValueClass': value_class, 'EPValue': value})
-
-resultsJson = [item for item in resultsJson if not item['EPKeyClass'].endswith('ScheduleGroupProperty')]  # We don't want to fix schedule group property
+    key_class = classes[0]  # ex. org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty
+    value_class = classes[1]  # ex. java.lang.Integer
+    value = data.transform_id_to_value(key, data.derive_value_from(int(k[1:]), key, kk, vv))
+    if value:  # Only returned when the EP is valid
+      resultsJson.append({'type': tpe, 'ID': i, 'EPKeyClass': key_class, 'EPValueClass': value_class, 'EPValue': value})
 
 # Question: Manually use this resource information in the optimization?
 # cluster_information = read_resource_info(resourceinfo)

@@ -20,7 +20,7 @@ package org.apache.nemo.runtime.master.scheduler;
 
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceLocalityProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSlotProperty;
 import org.apache.nemo.runtime.master.BlockManagerMaster;
 import org.apache.reef.tang.Injector;
@@ -48,7 +48,7 @@ public final class SchedulingConstraintnRegistryTest {
       injector.getInstance(SchedulingConstraintRegistry.class);
     assertEquals(FreeSlotSchedulingConstraint.class, getConstraintOf(ResourceSlotProperty.class, registry));
     assertEquals(ContainerTypeAwareSchedulingConstraint.class,
-      getConstraintOf(ResourcePriorityProperty.class, registry));
+      getConstraintOf(ResourceTypeProperty.class, registry));
     assertEquals(LocalitySchedulingConstraint.class, getConstraintOf(ResourceLocalityProperty.class, registry));
   }
 

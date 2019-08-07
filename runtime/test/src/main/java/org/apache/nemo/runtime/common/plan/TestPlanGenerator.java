@@ -26,7 +26,7 @@ import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProp
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.common.ir.vertex.transform.Transform;
 import org.apache.nemo.common.test.EmptyComponents;
 import org.apache.nemo.compiler.optimizer.policy.BasicPullPolicy;
@@ -111,27 +111,27 @@ public final class TestPlanGenerator {
     final Transform t = new EmptyComponents.EmptyTransform("empty");
     final IRVertex v1 = new OperatorVertex(t);
     v1.setProperty(ParallelismProperty.of(3));
-    v1.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.COMPUTE));
+    v1.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.COMPUTE));
     dagBuilder.addVertex(v1);
 
     final IRVertex v2 = new OperatorVertex(t);
     v2.setProperty(ParallelismProperty.of(2));
-    v2.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.COMPUTE));
+    v2.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.COMPUTE));
     dagBuilder.addVertex(v2);
 
     final IRVertex v3 = new OperatorVertex(t);
     v3.setProperty(ParallelismProperty.of(3));
-    v3.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.COMPUTE));
+    v3.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.COMPUTE));
     dagBuilder.addVertex(v3);
 
     final IRVertex v4 = new OperatorVertex(t);
     v4.setProperty(ParallelismProperty.of(2));
-    v4.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.COMPUTE));
+    v4.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.COMPUTE));
     dagBuilder.addVertex(v4);
 
     final IRVertex v5 = new OperatorVertex(t);
     v5.setProperty(ParallelismProperty.of(2));
-    v5.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.COMPUTE));
+    v5.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.COMPUTE));
     dagBuilder.addVertex(v5);
 
     final IREdge e1 = EmptyComponents.newDummyShuffleEdge(v1, v2);
@@ -159,24 +159,24 @@ public final class TestPlanGenerator {
     final Transform t = new EmptyComponents.EmptyTransform("empty");
     final IRVertex v1 = new OperatorVertex(t);
     v1.setProperty(ParallelismProperty.of(3));
-    v1.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.COMPUTE));
+    v1.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.COMPUTE));
     dagBuilder.addVertex(v1);
 
     final IRVertex v2 = new OperatorVertex(t);
     v2.setProperty(ParallelismProperty.of(2));
     if (sameContainerType) {
-      v2.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.COMPUTE));
+      v2.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.COMPUTE));
     } else {
-      v2.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.TRANSIENT));
+      v2.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT));
     }
     dagBuilder.addVertex(v2);
 
     final IRVertex v3 = new OperatorVertex(t);
     v3.setProperty(ParallelismProperty.of(2));
     if (sameContainerType) {
-      v3.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.COMPUTE));
+      v3.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.COMPUTE));
     } else {
-      v3.setProperty(ResourcePriorityProperty.of(ResourcePriorityProperty.TRANSIENT));
+      v3.setProperty(ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT));
     }
     dagBuilder.addVertex(v3);
 

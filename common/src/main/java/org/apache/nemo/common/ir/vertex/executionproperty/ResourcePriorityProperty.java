@@ -21,31 +21,30 @@ package org.apache.nemo.common.ir.vertex.executionproperty;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
 /**
- * ExecutionPlacement ExecutionProperty.
+ * Resource property to specify the most important resource type for a vertex.
  */
 public final class ResourcePriorityProperty extends VertexExecutionProperty<String> {
   /**
    * Constructor.
    *
-   * @param value value of the execution property.
+   * @param importantResourceType the most important resource type for the vertex.
    */
-  private ResourcePriorityProperty(final String value) {
-    super(value);
+  private ResourcePriorityProperty(final String importantResourceType) {
+    super(importantResourceType);
   }
 
   /**
    * Static method exposing the constructor.
    *
-   * @param value value of the new execution property.
+   * @param importantResourceType value of the new execution property.
    * @return the newly created execution property.
    */
-  public static ResourcePriorityProperty of(final String value) {
-    return new ResourcePriorityProperty(value);
+  public static ResourcePriorityProperty of(final String importantResourceType) {
+    return new ResourcePriorityProperty(importantResourceType);
   }
 
   // List of default pre-configured values.
-  public static final String NONE = "None";
-  public static final String TRANSIENT = "Transient";
-  public static final String RESERVED = "Reserved";
-  public static final String COMPUTE = "Compute";
+  public static final String NONE = "NONE";
+  public static final String CPU = "CPU";
+  public static final String MEMORY = "MEMORY";
 }

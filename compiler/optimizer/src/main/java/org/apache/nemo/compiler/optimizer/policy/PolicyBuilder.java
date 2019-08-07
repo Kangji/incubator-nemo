@@ -26,7 +26,7 @@ import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.CompileTimePass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.CompositePass;
@@ -56,7 +56,7 @@ public final class PolicyBuilder {
     // DataCommunicationPattern is already set when creating the IREdge itself.
     annotatedExecutionProperties.add(CommunicationPatternProperty.class);
     // Some default values are already annotated.
-    annotatedExecutionProperties.add(ResourcePriorityProperty.class);
+    annotatedExecutionProperties.add(ResourceTypeProperty.class);
     annotatedExecutionProperties.add(ParallelismProperty.class);
     annotatedExecutionProperties.add(DataFlowProperty.class);
     annotatedExecutionProperties.add(DataStoreProperty.class);

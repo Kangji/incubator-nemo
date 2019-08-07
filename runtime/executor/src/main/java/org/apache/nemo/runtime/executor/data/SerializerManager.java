@@ -57,7 +57,7 @@ public final class SerializerManager {
   public void register(final String runtimeEdgeId,
                        final EncoderFactory encoderFactory,
                        final DecoderFactory decoderFactory) {
-    register(runtimeEdgeId, encoderFactory, decoderFactory, null, null);
+    register(runtimeEdgeId, encoderFactory, decoderFactory, null);
   }
 
   /**
@@ -67,13 +67,11 @@ public final class SerializerManager {
    * @param encoderFactory        the corresponding encoder factory.
    * @param decoderFactory        the corresponding decoder factory.
    * @param compressionProperty   compression property, or null not to enable compression
-   * @param decompressionProperty decompression property, or null not to enable decompression
    */
   public void register(final String runtimeEdgeId,
                        final EncoderFactory encoderFactory,
                        final DecoderFactory decoderFactory,
-                       @Nullable final CompressionProperty.Value compressionProperty,
-                       @Nullable final CompressionProperty.Value decompressionProperty) {
+                       @Nullable final CompressionProperty.Value compressionProperty) {
     LOG.debug("{} edge id registering to SerializerManager", runtimeEdgeId);
 
     final List<EncodeStreamChainer> encodeStreamChainers = new ArrayList<>();
@@ -84,11 +82,7 @@ public final class SerializerManager {
       LOG.debug("Adding {} compression chain for {}",
         compressionProperty, runtimeEdgeId);
       encodeStreamChainers.add(new CompressionStreamChainer(compressionProperty));
-    }
-    if (decompressionProperty != null) {
-      LOG.debug("Adding {} decompression chain for {}",
-        decompressionProperty, runtimeEdgeId);
-      decodeStreamChainers.add(new DecompressionStreamChainer(decompressionProperty));
+      decodeStreamChainers.add(new DecompressionStreamChainer(compressionProperty));
     }
 
     final Serializer serializer =

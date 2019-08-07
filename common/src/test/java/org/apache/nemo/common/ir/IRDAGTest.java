@@ -214,13 +214,6 @@ public class IRDAGTest {
   }
 
   @Test
-  public void testCompressionSymmetry() {
-    oneToOneEdge.setProperty(CompressionProperty.of(CompressionProperty.Value.Gzip));
-    oneToOneEdge.setProperty(DecompressionProperty.of(CompressionProperty.Value.LZ4)); // not symmetric - failure
-    mustFail();
-  }
-
-  @Test
   public void testScheduleGroupOrdering() {
     sourceVertex.setProperty(ScheduleGroupProperty.of(1));
     firstOperatorVertex.setProperty(ScheduleGroupProperty.of(2));
@@ -423,10 +416,10 @@ public class IRDAGTest {
     return ResourceLocalityProperty.of(random.nextBoolean());
   }
 
-  private ResourcePriorityProperty randomRPP() {
+  private ResourceTypeProperty randomRPP() {
     return random.nextBoolean()
-      ? ResourcePriorityProperty.of(ResourcePriorityProperty.TRANSIENT)
-      : ResourcePriorityProperty.of(ResourcePriorityProperty.NONE);
+      ? ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT)
+      : ResourceTypeProperty.of(ResourceTypeProperty.NONE);
   }
 
   private ResourceSlotProperty randomRSP() {

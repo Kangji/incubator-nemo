@@ -23,7 +23,7 @@ import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.CompilerTestUtil;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.TransientResourceDataStorePass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.TransientResourcePriorityPass;
@@ -53,10 +53,10 @@ public class TransientResourceCompositePassTest {
     final IRDAG processedDAG = new TransientResourceCompositePass().apply(compiledDAG);
 
     final IRVertex vertexX = processedDAG.getTopologicalSort().get(0);
-    assertEquals(ResourcePriorityProperty.TRANSIENT, vertexX.getPropertyValue(ResourcePriorityProperty.class).get());
+    assertEquals(ResourceTypeProperty.TRANSIENT, vertexX.getPropertyValue(ResourceTypeProperty.class).get());
 
     final IRVertex vertexY = processedDAG.getTopologicalSort().get(5);
-    assertEquals(ResourcePriorityProperty.TRANSIENT, vertexY.getPropertyValue(ResourcePriorityProperty.class).get());
+    assertEquals(ResourceTypeProperty.TRANSIENT, vertexY.getPropertyValue(ResourceTypeProperty.class).get());
     processedDAG.getIncomingEdgesOf(vertexY).forEach(irEdge -> {
       assertEquals(DataStoreProperty.Value.MemoryStore, irEdge.getPropertyValue(DataStoreProperty.class).get());
       assertEquals(DataFlowProperty.Value.Push, irEdge.getPropertyValue(DataFlowProperty.class).get());

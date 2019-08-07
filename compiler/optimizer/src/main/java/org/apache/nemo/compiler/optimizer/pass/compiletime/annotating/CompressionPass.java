@@ -20,7 +20,6 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.CompressionProperty;
-import org.apache.nemo.common.ir.edge.executionproperty.DecompressionProperty;
 
 
 /**
@@ -51,7 +50,6 @@ public final class CompressionPass extends AnnotatingPass {
   public IRDAG apply(final IRDAG dag) {
     dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge -> {
       edge.setPropertyIfAbsent(CompressionProperty.of(compression));
-      edge.setPropertyIfAbsent(DecompressionProperty.of(compression));
     }));
     return dag;
   }

@@ -25,6 +25,25 @@ from sklearn import preprocessing
 import xml.etree.ElementTree as ET
 
 
+configuration_space = [
+  'ClonedSchedulingProperty',
+  'ParallelismProperty',
+  'ResourceAntiAffinityProperty',
+  'ResourceLocalityProperty',
+  'ResourcePriorityProperty',
+  'ResourceSiteProperty',
+  'ResourceSlotProperty',
+  'ResourceTypeProperty',
+
+  'CompressionProperty',
+  'DataFlowProperty',
+  'DataPersistenceProperty',
+  'DataStoreProperty',
+  'PartitionerProperty',
+  'PartitionSetProperty',
+]
+
+
 def preprocess_properties(properties, keypairs, values):
   vertex_properties = properties['vertex']
   edge_properties = properties['edge']
@@ -56,6 +75,7 @@ def preprocess_properties(properties, keypairs, values):
 class Data:
   keyLE = None
   valueLE = {}
+  loaded_properties = {}
 
   def process_json(self, properties):
     vertex_properties = properties['vertex']
@@ -201,26 +221,49 @@ class Data:
     return self.valueLE[epkey]['isdigit']
 
 
-  def get_value_candidate(self, epkey):
+  def get_value_candidates(self, epkey):
     return None if self.value_of_key_isdigit(epkey) else self.valueLE[epkey]['le'].classes_
 
 
-  def derive_value_from(self, epkey, split, tweak):
-    value_candidates = self.get_value_candidate(epkey)
-    max_value = len(value_candidates) - 1 if value_candidates is not None else None
+  def derive_value_from(self, keyid, epkey, split, tweak):
+    if not self.is_in_configuration_space(epkey):  # ex. ParallelismProperty
+      return None
+
+    value_candidates = self.get_value_candidates(epkey)
+    max_value = len(value_candidates) - 1 if value_candidates else None
     min_value = 0
-    initial = int(split) if abs(split - int(split)) < 0.01 else split
-    correction = tweak / 5 if abs(tweak / 5) > 1 else \
-      (tweak / 2 if abs(tweak / 2) > 1 else
-       (tweak if abs(tweak) > 1 else
-        (0 if abs(tweak) < 0.5 else
-         (1 if tweak > 0 else -1))))
-    value = int(initial + correction)
-    return max_value if max_value is not None and value > max_value else (min_value if value < min_value else value)
+    initial = int(round(split)) if abs(split - int(split)) < 0.01 else split
+    correction = tweak / 3 if abs(tweak / 3) >= 1 else (tweak / 2 if abs(tweak / 2) >= 1 else tweak)
+    if keyid in self.loaded_properties:
+      if (self.loaded_properties[keyid] < split and tweak < 0) or (self.loaded_properties[keyid] > split and tweak > 0):
+        value = self.loaded_properties[keyid]
+      else:
+        value = int(round(initial + correction))
+    else:
+      value = int(round(initial + correction))
+    return max_value if max_value and value > max_value else (min_value if value < min_value else value)
+
+
+  def is_in_configuration_space(self, key):
+    if key and isinstance(key, int):
+      i, k, tpe = self.transform_id_to_keypair(key)
+      return self.is_in_configuration_space(k)
+    elif key and isinstance(key, str):
+      if key.startswith('f') and key[1:].isdigit():  # ex. f55
+        return self.is_in_configuration_space(int(key[1:]))
+      elif key.startswith('org'):  # ex. org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty/java.lang.Integer
+        return self.is_in_configuration_space(key.split('/')[0].split('.')[-1])
+      return key in configuration_space
+    else:
+      return False
 
 
   def process_property_json(self, dagdirectory):
-    return self.process_json(self.load_property_json(dagdirectory))
+    processed_json_string = self.process_json(self.load_property_json(dagdirectory))
+    for e in processed_json_string.split():
+      e = e.split(':')
+      self.loaded_properties[int(e[0])] = int(e[1])
+    return processed_json_string
 
 
   def load_property_json(self, dagdirectory):
