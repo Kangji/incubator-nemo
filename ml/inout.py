@@ -234,9 +234,10 @@ class Data:
     min_value = 0
     initial = int(round(split)) if abs(split - int(split)) < 0.01 else split
     correction = tweak / 3 if abs(tweak / 3) >= 1 else (tweak / 2 if abs(tweak / 2) >= 1 else tweak)
-    if keyid in self.loaded_properties:
-      if (self.loaded_properties[keyid] < split and tweak < 0) or (self.loaded_properties[keyid] > split and tweak > 0):
-        value = self.loaded_properties[keyid]
+    loaded_property_value = self.get_loaded_property(keyid)
+    if loaded_property_value:
+      if (loaded_property_value < split and tweak < 0) or (loaded_property_value > split and tweak > 0):
+        value = loaded_property_value
       else:
         value = int(round(initial + correction))
     else:
@@ -256,6 +257,15 @@ class Data:
       return key in configuration_space
     else:
       return False
+
+
+  def get_loaded_property(self, key):
+    if isinstance(key, str) and key.startswith('f') and key[1:].isdigit():
+      return self.get_loaded_property(int(key[1:]))
+    elif isinstance(key, int) and key in self.loaded_properties:
+      return self.loaded_properties[key]
+    else:
+      return None
 
 
   def process_property_json(self, dagdirectory):

@@ -148,9 +148,9 @@ print("\nSummary")
 resultsJson = []
 for k, v in results.items():
   for kk, vv in v.items():
-    # k = feature, kk = split, vv = val
+    # k is feature, kk is split, and vv is val
     i, key, tpe = data.transform_id_to_keypair(int(k[1:]))  # ex. (id), org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty/java.lang.Integer, pattern
-    how = 'greater' if vv > 0 else 'smaller'
+    # how = 'greater' if vv > 0 else 'smaller'
     # result_string = f'{key} should be {vv} ({how}) than {kk}'
     # print(result_string)
     classes = key.split('/')
