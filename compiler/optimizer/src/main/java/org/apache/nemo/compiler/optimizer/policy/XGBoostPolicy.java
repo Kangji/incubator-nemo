@@ -34,8 +34,8 @@ public final class XGBoostPolicy implements Policy {
   public static final PolicyBuilder BUILDER =
     new PolicyBuilder()
       .registerCompileTimePass(new BestInitialDAGConfFromDBPass())
-      .registerCompileTimePass(new XGBoostPass())
       .registerCompileTimePass(new ResourceExplorationPass())
+      .registerCompileTimePass(new XGBoostPass())
       .registerCompileTimePass(new DefaultCompositePass());
   private final Policy policy;
 
