@@ -43,12 +43,14 @@ public final class DefaultDataPersistencePass extends AnnotatingPass {
       dag.getIncomingEdgesOf(irVertex).forEach(irEdge -> {
         final DataStoreProperty.Value dataStoreValue
           = irEdge.getPropertyValue(DataStoreProperty.class).get();
+        /*
         if (DataStoreProperty.Value.MemoryStore.equals(dataStoreValue)
           || DataStoreProperty.Value.SerializedMemoryStore.equals(dataStoreValue)) {
           irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.Discard));
         } else {
-          irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.Keep));
-        }
+        */
+        irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.Keep));
+        //}
       }));
     return dag;
   }
