@@ -98,7 +98,7 @@ public final class PolicyImpl implements Policy {
         final IRDAGChecker.CheckerResult integrity = processedDAG.checkIntegrity();
         if (!integrity.isPassed()) {
           final long curTime = System.currentTimeMillis();
-          processedDAG.storeJSON("debug", String.valueOf(curTime), "integrity failure");
+          processedDAG.storeJSON(dagDirectory, String.valueOf(curTime), "integrity failure");
           throw new CompileTimeOptimizationException(integrity.getFailReason()
             + " / For DAG visualization, check out debug/" + curTime + ".json");
         }

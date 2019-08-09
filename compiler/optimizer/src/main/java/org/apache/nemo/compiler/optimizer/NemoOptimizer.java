@@ -43,9 +43,6 @@ import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -59,6 +56,7 @@ public final class NemoOptimizer implements Optimizer {
   private final Policy optimizationPolicy;
   private final String environmentTypeStr;
   private final String executorInfoPath;
+  private final String executorInfoContents;
   private final ClientRPC clientRPC;
 
   private final Map<UUID, Integer> cacheIdToParallelism = new HashMap<>();
@@ -69,6 +67,7 @@ public final class NemoOptimizer implements Optimizer {
    * @param policyName         the name of the optimization policy.
    * @param environmentTypeStr the environment type of the workload to optimize the DAG for.
    * @param executorInfoPath   the string containing the information about the executors provided.
+   * @param executorInfoContents the string of the information of the executors provided, in xml or json.
    * @param clientRPC          the RPC channel to communicate with the client.
    */
   @Inject
@@ -76,10 +75,12 @@ public final class NemoOptimizer implements Optimizer {
                         @Parameter(JobConf.OptimizationPolicy.class) final String policyName,
                         @Parameter(JobConf.EnvironmentType.class) final String environmentTypeStr,
                         @Parameter(JobConf.ExecutorInfoPath.class) final String executorInfoPath,
+                        @Parameter(JobConf.ExecutorInfoContents.class) final String executorInfoContents,
                         final ClientRPC clientRPC) {
     this.dagDirectory = dagDirectory;
     this.environmentTypeStr = OptimizerUtils.filterEnvironmentTypeString(environmentTypeStr);
     this.executorInfoPath = executorInfoPath;
+    this.executorInfoContents = executorInfoContents;
     this.clientRPC = clientRPC;
 
     try {
@@ -165,9 +166,7 @@ public final class NemoOptimizer implements Optimizer {
         .build());
 
       try {
-        final String contents = this.executorInfoPath.isEmpty() ? ""
-          : new String(Files.readAllBytes(Paths.get(this.executorInfoPath)), StandardCharsets.UTF_8);
-        ResourceExplorationPass.updateResourceSpecificationString(contents);
+        ResourceExplorationPass.updateResourceSpecificationString(this.executorInfoContents);
       } catch (Exception e) {
         throw new CompileTimeOptimizationException(e);
       }

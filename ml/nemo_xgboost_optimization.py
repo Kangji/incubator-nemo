@@ -39,6 +39,9 @@ try:
 except getopt.GetoptError:
   print('nemo_xgboost_optimization.py -t <tablename>')
   sys.exit(2)
+dagpropertydir = None
+resourceinfo = None
+inputsize = None
 for opt, arg in opts:
   if opt == '-h':
     print('nemo_xgboost_optimization.py -t <tablename>')
