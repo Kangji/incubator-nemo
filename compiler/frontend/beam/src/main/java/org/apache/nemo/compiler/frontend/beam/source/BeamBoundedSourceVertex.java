@@ -165,6 +165,7 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
         finished = !reader.advance();
       } catch (final IOException e) {
         e.printStackTrace();
+        System.exit(1);
 //        throw new RuntimeException(e);
       }
 
