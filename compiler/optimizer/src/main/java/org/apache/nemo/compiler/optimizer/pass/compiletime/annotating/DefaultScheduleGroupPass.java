@@ -112,8 +112,11 @@ public final class DefaultScheduleGroupPass extends AnnotatingPass {
       }
       groupIdToVertices.putIfAbsent(curId, new ArrayList<>());
       groupIdToVertices.get(curId).add(irVertex);
-
-      final List<IREdge> allOutEdges = dag.getOutgoingEdgesOf(irVertex);
+      final List<IRVertex> verticesOfGroup = groupIdToVertices.get(curId);
+      final List<IREdge> allOutEdges = groupIdToVertices.get(curId).stream()
+        .flatMap(vtx -> dag.getOutgoingEdgesOf(vtx).stream())
+        .filter(edge -> !verticesOfGroup.contains(edge.getDst()))
+        .collect(Collectors.toList());
       final List<IREdge> noCycleOutEdges = allOutEdges.stream().filter(curEdge -> {
         final List<IREdge> outgoingEdgesWithoutCurEdge = new ArrayList<>(allOutEdges);
         outgoingEdgesWithoutCurEdge.remove(curEdge);
@@ -132,10 +135,6 @@ public final class DefaultScheduleGroupPass extends AnnotatingPass {
     });
 
     // Step 2: Topologically sort schedule groups
-    final Map<Integer, List<Pair>> vIdTogId = irVertexToGroupIdMap.entrySet().stream()
-      .map(entry -> Pair.of(entry.getKey().getId(), entry.getValue()))
-      .collect(Collectors.groupingBy(p -> (Integer) ((Pair) p).right()));
-
     final DAGBuilder<ScheduleGroup, ScheduleGroupEdge> builder = new DAGBuilder<>();
     final Map<Integer, ScheduleGroup> idToGroup = new HashMap<>();
 
@@ -160,15 +159,11 @@ public final class DefaultScheduleGroupPass extends AnnotatingPass {
     // Step 3: Actually set new schedule group properties based on topological ordering
     final MutableInt actualScheduleGroup = new MutableInt(0);
     final DAG<ScheduleGroup, ScheduleGroupEdge> sgDAG = builder.buildWithoutSourceSinkCheck();
-    final List<ScheduleGroup> sorted = sgDAG.getTopologicalSort();
-    sorted.stream()
-      .map(sg -> groupIdToVertices.get(sg.getScheduleGroupId()))
-      .forEach(vertices -> {
-        vertices.forEach(vertex -> {
-          vertex.setPropertyPermanently(ScheduleGroupProperty.of(actualScheduleGroup.intValue()));
-        });
-        actualScheduleGroup.increment();
-      });
+    sgDAG.topologicalDo(sg -> {
+      sg.vertices.forEach(vertex ->
+        vertex.setPropertyPermanently(ScheduleGroupProperty.of(actualScheduleGroup.intValue())));
+      actualScheduleGroup.increment();
+    });
 
     return dag;
   }

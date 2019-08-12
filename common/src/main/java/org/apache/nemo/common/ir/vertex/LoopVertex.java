@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntPredicate;
 
 /**
@@ -41,7 +42,7 @@ import java.util.function.IntPredicate;
  */
 public final class LoopVertex extends IRVertex {
 
-  private static int duplicateEdgeGroupId = 0;
+  private final AtomicInteger duplicateEdgeGroupId = new AtomicInteger(0);
   // Contains DAG information
   private final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
   private final String compositeTransformFullName;
@@ -210,12 +211,20 @@ public final class LoopVertex extends IRVertex {
    * Marks duplicate edges with DuplicateEdgeGroupProperty.
    */
   public void markDuplicateEdges() {
-    nonIterativeIncomingEdges.forEach(((irVertex, irEdges) -> irEdges.forEach(irEdge ->
-      irEdge.setProperty(DuplicateEdgeGroupProperty.of(new DuplicateEdgeGroupPropertyValue(irEdge.getId()))))));
+    nonIterativeIncomingEdges.forEach(((irVertex, inEdges) -> inEdges.forEach(inEdge -> {
+      final DuplicateEdgeGroupPropertyValue value =
+        new DuplicateEdgeGroupPropertyValue(String.valueOf(duplicateEdgeGroupId.getAndIncrement()));
+      inEdge.setProperty(DuplicateEdgeGroupProperty.of(value));
+      getDagIncomingEdges().getOrDefault(irVertex, new HashSet<>()).stream()
+        .filter(irEdge -> irEdge.getSrc().equals(inEdge.getSrc()))
+        .forEach(irEdge -> irEdge.setProperty(DuplicateEdgeGroupProperty.of(value)));
+      })));
   }
 
   /**
    * Method for unrolling an iteration of the LoopVertex.
+   * So basically, in the original place of a LoopVertex, it puts a clone of the sub-DAG that iterates, and
+   * appends the LoopVertex after that, until the termination condition has been met.
    *
    * @param dagBuilder DAGBuilder to add the unrolled iteration to.
    * @return a LoopVertex with one less maximum iteration.
@@ -248,10 +257,9 @@ public final class LoopVertex extends IRVertex {
       edge.copyExecutionPropertiesTo(newIrEdge);
       dagBuilder.connectVertices(newIrEdge);
     }));
-    this.getDagIncomingEdges().clear();  // clear once we're done with the first loop.
 
     if (loopTerminationConditionMet()) {
-      // if termination condition met, we process the last DAG outgoing edges for the final loop.
+      // if termination condition met, we process the last DAG outgoing edges for the final loop. Otherwise, we leave it
       getDagOutgoingEdges().forEach((srcVertex, irEdges) -> irEdges.forEach(edge -> {
         final IREdge newIrEdge = new IREdge(edge.getPropertyValue(CommunicationPatternProperty.class).get(),
           originalToNewIRVertex.get(srcVertex), edge.getDst());
@@ -260,13 +268,10 @@ public final class LoopVertex extends IRVertex {
       }));
     }
 
-    // process next iteration's DAG incoming edges
-    this.nonIterativeIncomingEdges.forEach((dstVertex, irEdges) -> irEdges.forEach(edge -> {
-      final IREdge newIrEdge = new IREdge(edge.getPropertyValue(CommunicationPatternProperty.class).get(),
-        edge.getSrc(), dstVertex);
-      edge.copyExecutionPropertiesTo(newIrEdge);
-      this.addDagIncomingEdge(newIrEdge);
-    }));
+    // process next iteration's DAG incoming edges, and add them as the next loop's incoming edges.
+    this.getDagIncomingEdges().clear();
+    // clear, as we're done with the current loop and need to prepare it for the next one.
+    this.nonIterativeIncomingEdges.forEach((dstVertex, irEdges) -> irEdges.forEach(this::addDagIncomingEdge));
     this.iterativeIncomingEdges.forEach((dstVertex, irEdges) -> irEdges.forEach(edge -> {
       final IREdge newIrEdge = new IREdge(edge.getPropertyValue(CommunicationPatternProperty.class).get(),
         originalToNewIRVertex.get(edge.getSrc()), dstVertex);

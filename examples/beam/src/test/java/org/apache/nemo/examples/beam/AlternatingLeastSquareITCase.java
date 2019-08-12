@@ -42,6 +42,7 @@ public final class AlternatingLeastSquareITCase {
   private static final String outputFileName = "test_output_als";
   private static final String output = ExampleTestArgs.getFileBasePath() + outputFileName;
   private static final String expectedOutputFileName = "outputs/expected_output_als";
+  private static final String executorResourceFileName = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.xml";
   private static final String noPoisonResources = ExampleTestArgs.getFileBasePath() + "executors/beam_test_executor_resources.xml";
   private static final String poisonedResource = ExampleTestArgs.getFileBasePath() + "executors/beam_test_poisoned_executor_resources.xml";
   private static final String numFeatures = "10";
@@ -76,7 +77,7 @@ public final class AlternatingLeastSquareITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testTransient() throws Exception {
     JobLauncher.main(builder
-      .addResourceJson(noPoisonResources)
+      .addResourceJson(executorResourceFileName)
       .addJobId(AlternatingLeastSquareITCase.class.getSimpleName() + "_transient")
       .addOptimizationPolicy(TransientResourcePolicy.class.getCanonicalName())
       .build());
