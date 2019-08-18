@@ -389,7 +389,7 @@ public final class MetricUtils {
   }
 
   /**
-   * Configuration space
+   * Configuration space.
    */
   private static Set<String> configurationSpace = Stream.of(
     ClonedSchedulingProperty.class.getName(),
