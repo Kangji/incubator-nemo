@@ -46,8 +46,8 @@ for opt, arg in opts:
   if opt == '-h':
     print('nemo_xgboost_optimization.py -t <tablename>')
     sys.exit()
-  elif opt in ("-t", "--tablename"):
-    tablename = arg
+  elif opt in ("-s", "--dagsummary"):
+    dagsummary = arg
   elif opt in ("-d", "--dagpropertydir"):
     dagpropertydir = arg
   elif opt in ("-r", "--resourceinfo"):
@@ -55,9 +55,9 @@ for opt, arg in opts:
   elif opt in ("-i", "--inputsize"):
     inputsize = arg
 
-modelname = tablename + "_bst.model"
+modelname = "nemo_bst.model"
 data = Data()
-encoded_rows = data.load_data_from_db(tablename, dagpropertydir) if dagpropertydir else data.load_data_from_db(tablename)
+encoded_rows = data.load_data_from_db(dagsummary, dagpropertydir) if dagpropertydir else data.load_data_from_db(dagsummary)
 # write_to_file('process_test', processed_rows)
 
 write_rows_to_file('nemo_optimization.out', encoded_rows)

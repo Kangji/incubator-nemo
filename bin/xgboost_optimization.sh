@@ -22,5 +22,5 @@ echo "Usage: ./bin/nemo_xgboost_optimization.sh <tablename>"
 pushd ml
 touch results.out
 pip3 install -r requirements.txt
-python3 nemo_xgboost_optimization.py -t "$@"
+python3 nemo_xgboost_optimization.py -s "$@"
 popd

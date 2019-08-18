@@ -124,7 +124,7 @@ class Data:
     return properties_string.strip()
 
 
-  def format_row(self, duration, inputsize, jvmmemsize, totalmemsize, properties):
+  def format_row(self, duration, inputsize, jvmmemsize, totalmemsize, dagsummary, properties):
     duration_in_sec = int(duration) // 1000
     inputsize_id = self.transform_keypair_to_id("env,inputsize,ignore")
     inputsize_in_10kb = int(inputsize) // 10240  # capable of expressing upto around 20TB with int range
@@ -132,12 +132,14 @@ class Data:
     jvmmemsize_in_mb = int(jvmmemsize) // 1048576
     totalmemsize_id = self.transform_keypair_to_id("env,totalmemsize,ignore")
     totalmemsize_in_mb = int(totalmemsize) // 1048576
+    dagsummary_id = self.transform_keypair_to_id("env,dagsummary,ignore")
+    dagsummary_value_id = self.transform_value_to_id('dagsummary',dagsummary)
     processed_properties = self.process_json(properties)
-    return f'{duration_in_sec} {inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {processed_properties}'
+    return f'{duration_in_sec} {inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id} {processed_properties}'
 
 
   # ########################################################
-  def load_data_from_db(self, tablename, dagpropertydir=None):
+  def load_data_from_db(self, dagsummary, dagpropertydir=None):
     conn = None
 
     try:
@@ -155,7 +157,7 @@ class Data:
       except:
         print("I am unable to connect to the database. Try running the script with `./bin/xgboost_optimization.sh`")
 
-    sql = "SELECT * from " + tablename
+    sql = "SELECT * from nemo_data"
     cur = conn.cursor()
     try:
       cur.execute(sql)
@@ -167,8 +169,16 @@ class Data:
 
     keypairs = ["env,inputsize,ignore", "env,jvmmemsize,ignore", "env,totalmemsize,ignore"]  # 0 is the id for the row-wide variables
     values = {}
+    if dagsummary:
+      key = 'dagsummary'
+      keypairs.append('env,{},ignore'.format(key))
+      if key not in values:
+        values[key] = {'data': []}
+      values[key]['isdigit'] = False
+      for row in rows:
+        values[key]['data'].append(row[5])
     for row in rows:
-      preprocess_properties(row[5], keypairs, values)
+      preprocess_properties(row[6], keypairs, values)
     if dagpropertydir:
       preprocess_properties(self.load_property_json(dagpropertydir), keypairs, values)
     # print("Pre-processing properties..")
@@ -185,7 +195,7 @@ class Data:
         self.valueLE[k]['le'].fit(v['data'])
         # print("VALUE FOR ", k, ":", list(self.valueLE[k]['le'].classes_))
 
-    processed_rows = [self.format_row(row[1], row[2], row[3], row[4], row[5]) for row in rows]
+    processed_rows = [self.format_row(row[1], row[2], row[3], row[4], row[5], row[6]) for row in rows]
     cur.close()
     conn.close()
     print("Pre-processing complete")
@@ -269,12 +279,23 @@ class Data:
 
 
   def process_property_json(self, dagdirectory):
-    processed_json_string = self.process_json(self.load_property_json(dagdirectory))
-    for e in processed_json_string.split():
+    property_json = self.load_property_json(dagdirectory)
+    processed_json_string = self.process_json(property_json)
+
+    inputsize_id = self.transform_keypair_to_id("env,inputsize,ignore")
+    inputsize_in_10kb = int(property_json['inputsize']) // 10240  # capable of expressing upto around 20TB with int range
+    jvmmemsize_id = self.transform_keypair_to_id("env,jvmmemsize,ignore")
+    jvmmemsize_in_mb = int(property_json['jvmmemsize']) // 1048576
+    totalmemsize_id = self.transform_keypair_to_id("env,totalmemsize,ignore")
+    totalmemsize_in_mb = int(property_json['totalmemsize']) // 1048576
+    dagsummary_id = self.transform_keypair_to_id("env,dagsummary,ignore")
+    dagsummary_value_id = self.transform_value_to_id('dagsummary',property_json['dagsummary'])
+
+    processed = f'{duration_in_sec} {inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id} {processed_json_string}'
+    for e in processed.split():
       e = e.split(':')
       self.loaded_properties[int(e[0])] = int(e[1])
-    return processed_json_string
-
+    return processed
 
   def load_property_json(self, dagdirectory):
     jsonfile = 'ir-initial-properties.json'

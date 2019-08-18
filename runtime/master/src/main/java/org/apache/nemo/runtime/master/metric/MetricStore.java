@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.exception.UnsupportedMetricException;
 import org.apache.nemo.runtime.common.metric.*;
@@ -31,7 +30,10 @@ import org.apache.nemo.runtime.common.state.PlanState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.sql.*;
 import java.util.HashMap;
@@ -296,7 +298,7 @@ public final class MetricStore {
 
       getMetricMap(JobMetric.class).values().forEach(o -> {
         final JobMetric jobMetric = (JobMetric) o;
-        final String tableName = jobMetric.getIrDagSummary();
+        final String dagSummary = jobMetric.getIrDagSummary();
 
         final long startTime = jobMetric.getStateTransitionEvents().stream()
           .filter(ste -> ste.getPrevState().equals(PlanState.State.READY)
@@ -315,24 +317,24 @@ public final class MetricStore {
           .getOperatingSystemMXBean()).getTotalPhysicalMemorySize();
 
         try {
-          statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + tableName
-            + " (id " + syntax[0] + ", duration BIGINT NOT NULL, inputsize BIGINT NOT NULL, "
-            + "jvmmemsize BIGINT NOT NULL, memsize BIGINT NOT NULL, "
-            + "properties JSON NOT NULL, dag BYTEA, metrics JSON,"
+          statement.executeUpdate("CREATE TABLE IF NOT EXISTS nemo_data "
+            + "(id " + syntax[0] + ", duration BIGINT NOT NULL, inputsize BIGINT NOT NULL, "
+            + "jvmmemsize BIGINT NOT NULL, memsize BIGINT NOT NULL, dagsummary TEXT NOT NULL, "
+            + "properties JSON NOT NULL, metrics JSON,"
             + "note TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);");
-          LOG.info("CREATED TABLE For {} IF NOT PRESENT", tableName);
+          LOG.info("CREATED TABLE For {} IF NOT PRESENT", dagSummary);
 
-          try (PreparedStatement pstmt = c.prepareStatement("INSERT INTO " + tableName
-            + " (duration, inputsize, jvmmemsize, memsize, properties, dag, metrics, note) "
+          try (PreparedStatement pstmt = c.prepareStatement("INSERT INTO nemo_data "
+            + "(duration, inputsize, jvmmemsize, memsize, dagsummary, properties, metrics, note) "
             + "VALUES (" + duration + ", " + inputSize + ", "
-            + jvmMemSize + ", " + memSize + ", (?::json), ?, (?::json), '" + jobId + "');")) {
+            + jvmMemSize + ", " + memSize + "," + dagSummary + " (?::json), (?::json), '" + jobId + "');")) {
             pstmt.setString(1, properties);
-            pstmt.setBinaryStream(2,
-              new ByteArrayInputStream(SerializationUtils.serialize(jobMetric.getIrdag())));
-            pstmt.setString(3, dumpAllMetricToJson());
+            // pstmt.setBinaryStream(2,
+            //   new ByteArrayInputStream(SerializationUtils.serialize(jobMetric.getIrdag())));
+            pstmt.setString(2, dumpAllMetricToJson());
             pstmt.executeUpdate();
           }
-          LOG.info("Recorded metrics on the table for {}", tableName);
+          LOG.info("Recorded metrics on the table for {}", dagSummary);
         } catch (SQLException | IOException e) {
           LOG.error("Error while saving optimization metrics: {}", e);
         }

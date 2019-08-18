@@ -28,9 +28,13 @@ import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
+import org.apache.nemo.common.ir.edge.executionproperty.*;
+import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +42,8 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
@@ -380,5 +386,68 @@ public final class MetricUtils {
       throw new MetricException(e);
     }
     return ep;
+  }
+
+  /**
+   * Configuration space
+   */
+  private static Set<String> configurationSpace = Stream.of(
+    ClonedSchedulingProperty.class.getName(),
+    ParallelismProperty.class.getName(),
+    ResourceAntiAffinityProperty.class.getName(),
+    ResourceLocalityProperty.class.getName(),
+    ResourcePriorityProperty.class.getName(),
+    ResourceSiteProperty.class.getName(),
+    ResourceSlotProperty.class.getName(),
+    ResourceTypeProperty.class.getName(),
+
+    CompressionProperty.class.getName(),
+    DataFlowProperty.class.getName(),
+    DataPersistenceProperty.class.getName(),
+    DataStoreProperty.class.getName(),
+    PartitionerProperty.class.getName(),
+    PartitionSetProperty.class.getName()
+  ).collect(Collectors.toSet());
+
+  /**
+   * Static method to apply new EPs to the list of objects.
+   *
+   * @param objectList the list of objects to apply the EPs to.
+   * @param newEP the new EP to apply to the objects.
+   * @param dag the DAG to observe.
+   */
+  public static void applyNewEPs(final List<Object> objectList, final ExecutionProperty<? extends Serializable> newEP,
+                                 final IRDAG dag) {
+    if (!configurationSpace.contains(newEP.getClass().getName())) { // only handle those in conf space.
+      return;
+    }
+
+    for (final Object obj: objectList) {
+      if (obj instanceof IRVertex) {
+        final IRVertex v = (IRVertex) obj;
+        final VertexExecutionProperty<?> originalEP = v.getExecutionProperties().stream()
+          .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
+        v.setPropertyIfPossible((VertexExecutionProperty) newEP);
+        if (!dag.checkIntegrity().isPassed()) {
+          if (originalEP == null) {
+            v.getExecutionProperties().remove((Class<? extends VertexExecutionProperty>) newEP.getClass());
+          } else {
+            v.setPropertyIfPossible(originalEP);
+          }
+        }
+      } else if (obj instanceof IREdge) {
+        final IREdge e = (IREdge) obj;
+        final EdgeExecutionProperty<?> originalEP = e.getExecutionProperties().stream()
+          .filter(ep -> ep.getClass().isAssignableFrom(newEP.getClass())).findFirst().orElse(null);
+        e.setPropertyIfPossible((EdgeExecutionProperty) newEP);
+        if (!dag.checkIntegrity().isPassed()) {
+          if (originalEP == null) {
+            e.getExecutionProperties().remove((Class<? extends EdgeExecutionProperty>) newEP.getClass());
+          } else {
+            e.setPropertyIfPossible(originalEP);
+          }
+        }
+      }
+    }
   }
 }

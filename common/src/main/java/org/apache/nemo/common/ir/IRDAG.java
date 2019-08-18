@@ -38,13 +38,14 @@ import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.utility.MessageAggregatorVertex;
-import org.apache.nemo.common.ir.vertex.utility.TriggerVertex;
 import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
 import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
+import org.apache.nemo.common.ir.vertex.utility.TriggerVertex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.NotThreadSafe;
+import java.lang.management.ManagementFactory;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -664,7 +665,13 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
 
   @Override
   public ObjectNode asJsonNode() {
-    return modifiedDAG.asJsonNode();
+    final ObjectNode node = modifiedDAG.asJsonNode();
+    node.put("inputsize", this.getInputSize());
+    node.put("jvmmemsize", Runtime.getRuntime().maxMemory());
+    node.put("memsize", ((com.sun.management.OperatingSystemMXBean) ManagementFactory
+      .getOperatingSystemMXBean()).getTotalPhysicalMemorySize());
+    node.put("dagsummary", this.irDAGSummary());
+    return node;
   }
 
   @Override

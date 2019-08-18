@@ -19,22 +19,25 @@
 
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
-import org.apache.commons.lang3.SerializationUtils;
-import org.apache.nemo.common.exception.IllegalEdgeOperationException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
+import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
-import org.apache.nemo.common.ir.vertex.OperatorVertex;
-import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
+import org.apache.nemo.compiler.optimizer.OptimizerUtils;
 import org.apache.nemo.runtime.common.metric.MetricUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.Serializable;
 import java.sql.*;
-import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 /**
  * Pass for applying the best existing execution properties & DAG from the DB.
@@ -54,60 +57,33 @@ public final class BestInitialDAGConfFromDBPass extends AnnotatingPass {
       try (Statement statement = c.createStatement()) {
         statement.setQueryTimeout(30);  // set timeout to 30sec.
 
-        try (ResultSet rs = statement.executeQuery("SELECT dag FROM " + dag.irDAGSummary()
+        try (ResultSet rs = statement.executeQuery("SELECT properties FROM " + dag.irDAGSummary()
           + " WHERE duration = (SELECT MIN (duration) FROM " + dag.irDAGSummary() + ")")) {
           LOG.info("Configuration loaded from DB");
           if (rs.next()) {
-            final IRDAG bestDAG = SerializationUtils.deserialize(rs.getBytes("dag"));  // best dag.
+            final ObjectMapper mapper = new ObjectMapper();
+            final Map<String, Object> jsonObject = mapper.readValue(rs.getString("properties"),
+              new TypeReference<Map<String, Object>>() {
+              });
 
-//            LOG.info("best dag:" + bestDAG.getTopologicalSort());
-//            LOG.info("curr dag:" + dag.getTopologicalSort());
-
-            final Iterator<IRVertex> bestDAGVertices = bestDAG.getTopologicalSort().iterator();
-            final Iterator<IRVertex> dagVertices = dag.getTopologicalSort().iterator();
-
-            while (bestDAGVertices.hasNext() && dagVertices.hasNext()) {
-              final IRVertex bestVertex = bestDAGVertices.next();
-
-              if (bestVertex.isUtilityVertex()) {
-                if (bestVertex instanceof RelayVertex) {
-                  final List<IRVertex> srcVertices = bestDAG.getIncomingEdgesOf(bestVertex).stream()
-                    .map(IREdge::getSrc).collect(Collectors.toList());
-                  final List<IRVertex> dstVertices = bestDAG.getOutgoingEdgesOf(bestVertex).stream()
-                    .map(IREdge::getDst).collect(Collectors.toList());
-
-                  srcVertices.forEach(srcVertex ->
-                    dstVertices.forEach(dstVertex -> {
-                      try {
-                        final IREdge edge = dag.getEdgeBetween(srcVertex.getId(), dstVertex.getId());
-
-                        if (edge != null) {
-                          dag.insert(new RelayVertex(), edge);
-                        }
-                      } catch (IllegalEdgeOperationException e) {
-                        // ignore
-                      }
-                    }));
-                }
-              } else {
-                final IRVertex irVertex = dagVertices.next();
-
-                if (bestVertex.getClass().equals(irVertex.getClass())  // First, same class instances,
-                  && !(bestVertex instanceof OperatorVertex)  // and either not an operator vertex,
-                  || (bestVertex instanceof OperatorVertex && irVertex instanceof OperatorVertex  // or both are
-                  && ((OperatorVertex) bestVertex).getTransform().getClass()  // operators with equivalent transforms.
-                  .equals(((OperatorVertex) irVertex).getTransform().getClass()))) {
-                  bestVertex.copyExecutionPropertiesTo(irVertex);
-                } else {
-                  LOG.warn("DAG topology doesn't match while comparing {}({}) from the ideal DAG with {}({})",
-                    bestVertex.getId(), bestVertex, irVertex.getId(), irVertex);
-                }
+            final String type = (String) jsonObject.get("type");
+            jsonObject.forEach((key, value) -> {
+              LOG.info("key:" + key);
+              if ("vertex".equals(key) || "edge".equals(key)) {
+                ((List<Map<String, Object>>) value).forEach(e -> {
+                  final List<Object> objectList = OptimizerUtils.getObjects(type, (String) e.get("ID"), dag);
+                  final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(
+                    (String) e.get("EPKeyClass"), (String) e.get("EPValueClass"), (String) e.get("EPValue"));
+                  MetricUtils.applyNewEPs(objectList, newEP, dag);
+                });
               }
-            }
+            });
           }
         }
       }
     } catch (SQLException e) {
+      throw new MetricException(e);
+    } catch (IOException e) {
       throw new MetricException(e);
     }
     return dag;
