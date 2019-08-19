@@ -67,15 +67,15 @@ public final class ClientUtils {
   /**
    * launches the XGBoost Script.
    *
-   * @param irDagSummary the IR DAG to run the script for.
+   * @param arguments the arguments for the IR DAG to run the script for.
    * @return the results file converted into string.
    */
-  private static String launchXGBoostScript(final String irDagSummary) {
+  private static String launchXGBoostScript(final String arguments) {
     try {
       final String projectRootPath = Util.fetchProjectRootPath();
       final String scriptPath = projectRootPath + "/bin/xgboost_optimization.sh";
       // It trains the model with the metric data of previous jobs with the same IRDAG signature.
-      final String[] command = {scriptPath, irDagSummary};
+      final String[] command = {scriptPath, arguments};
       LOG.info("Running the python script at {}", scriptPath);
       final ProcessBuilder builder = new ProcessBuilder(command);
       builder.directory(new File(projectRootPath));

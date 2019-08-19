@@ -327,7 +327,7 @@ public final class MetricStore {
           try (PreparedStatement pstmt = c.prepareStatement("INSERT INTO nemo_data "
             + "(duration, inputsize, jvmmemsize, memsize, dagsummary, properties, metrics, note) "
             + "VALUES (" + duration + ", " + inputSize + ", "
-            + jvmMemSize + ", " + memSize + "," + dagSummary + " (?::json), (?::json), '" + jobId + "');")) {
+            + jvmMemSize + ", " + memSize + ",'" + dagSummary + "', (?::json), (?::json), '" + jobId + "');")) {
             pstmt.setString(1, properties);
             // pstmt.setBinaryStream(2,
             //   new ByteArrayInputStream(SerializationUtils.serialize(jobMetric.getIrdag())));
