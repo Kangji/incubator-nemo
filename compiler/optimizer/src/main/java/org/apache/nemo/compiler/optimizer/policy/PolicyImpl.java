@@ -100,6 +100,7 @@ public final class PolicyImpl implements Policy {
           final long curTime = System.currentTimeMillis();
           processedDAG.storeJSON(dagDirectory, String.valueOf(curTime), "integrity failure");
           throw new CompileTimeOptimizationException(integrity.getFailReason()
+            + " while applying " + passToApply.getClass().getSimpleName()
             + " / For DAG visualization, check out debug/" + curTime + ".json");
         }
 

@@ -152,16 +152,16 @@ class Node:
         return self.reachable
 
   def is_always_right(self):
-    if self.tree.data.is_in_configuration_space(self.feature):
-      return False
-    else:
+    if self.tree.data.get_loaded_property(self.feature) is not None and not self.tree.data.is_in_configuration_space(self.feature):
       return self.tree.data.get_loaded_property(self.feature) > self.split
+    else:
+      return False
 
   def is_always_left(self):
-    if self.tree.data.is_in_configuration_space(self.feature):
-      return False
-    else:
+    if self.tree.data.get_loaded_property(self.feature) is not None and not self.tree.data.is_in_configuration_space(self.feature):
       return self.tree.data.get_loaded_property(self.feature) < self.split
+    else:
+      return False
 
   def is_always_missing(self):
     return not self.tree.data.is_in_configuration_space(self.feature) and self.tree.data.get_loaded_property(self.feature) is None
@@ -180,18 +180,11 @@ class Node:
         return (self.left.get_approx() + self.right.get_approx()) / 2
 
   def get_diff(self):
-    if not self.left.is_reachable() or self.is_always_right():
-      return self.right.get_diff()
-    elif not self.right.is_reachable() or self.is_always_left():
-      return self.left.get_diff()
-    elif self.is_always_missing():
-      return self.missing.get_diff()
-    else:
-      lapprox = self.left.get_approx()
-      rapprox = self.right.get_approx()
-      if (rapprox != 0 and abs(lapprox / rapprox) < 0.04) or (lapprox != 0 and abs(rapprox / lapprox) < 0.04):
-        return 0  # ignore: too much difference (4%) - dangerous for skews
-      return lapprox - rapprox
+    lapprox = self.left.get_approx()
+    rapprox = self.right.get_approx()
+    if (rapprox != 0 and abs(lapprox / rapprox) < 0.04) or (lapprox != 0 and abs(rapprox / lapprox) < 0.04):
+      return 0  # ignore: too much difference (4%) - dangerous for skews
+    return lapprox - rapprox
 
   def importance_dict(self):
     if self.is_leaf():

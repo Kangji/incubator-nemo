@@ -291,7 +291,7 @@ class Data:
     dagsummary_id = self.transform_keypair_to_id("env,dagsummary,ignore")
     dagsummary_value_id = self.transform_value_to_id('dagsummary',property_json['dagsummary'])
 
-    processed = f'{duration_in_sec} {inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id} {processed_json_string}'
+    processed = f'{inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id} {processed_json_string}'
     for e in processed.split():
       e = e.split(':')
       self.loaded_properties[int(e[0])] = int(e[1])

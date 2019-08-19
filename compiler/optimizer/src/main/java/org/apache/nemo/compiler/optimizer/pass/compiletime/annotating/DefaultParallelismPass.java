@@ -70,7 +70,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
           // (It can be more/less than the desired value.)
           final SourceVertex sourceVertex = (SourceVertex) vertex;
           // We manipulate them if it is not set.
-          vertex.setPropertyIfAbsent(ParallelismProperty.of(
+          vertex.setPropertyIfPossible(ParallelismProperty.of(
             sourceVertex.getReadables(desiredSourceParallelism).size()));
         } else if (!inEdges.isEmpty()) {
           // No reason to propagate via Broadcast edges, as the data streams that will use the broadcasted data
@@ -88,7 +88,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
             .max().orElse(1);
           // We set the greater value as the parallelism.
           final Integer parallelism = o2oParallelism > shuffleParallelism ? o2oParallelism : shuffleParallelism;
-          vertex.setPropertyIfAbsent(ParallelismProperty.of(parallelism));
+          vertex.setPropertyIfPossible(ParallelismProperty.of(parallelism));
           // synchronize one-to-one edges parallelism
           recursivelySynchronizeO2OParallelism(dag, vertex, parallelism);
         } else if (!vertex.getPropertyValue(ParallelismProperty.class).isPresent()) {
@@ -124,7 +124,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
 
     // update the vertex with the max value.
     if (maxParallelism > myParallelism) {
-      vertex.setProperty(ParallelismProperty.of(maxParallelism));
+      vertex.setPropertyIfPossible(ParallelismProperty.of(maxParallelism));
       return maxParallelism;
     }
     return myParallelism;

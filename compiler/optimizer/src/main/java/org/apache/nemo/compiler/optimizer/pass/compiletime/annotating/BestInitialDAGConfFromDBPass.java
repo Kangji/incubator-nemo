@@ -53,8 +53,8 @@ public final class BestInitialDAGConfFromDBPass extends AnnotatingPass {
       try (Statement statement = c.createStatement()) {
         statement.setQueryTimeout(30);  // set timeout to 30sec.
 
-        try (ResultSet rs = statement.executeQuery("SELECT properties FROM " + dag.irDAGSummary()
-          + " WHERE duration = (SELECT MIN (duration) FROM " + dag.irDAGSummary() + ")")) {
+        try (ResultSet rs = statement.executeQuery("SELECT properties FROM nemo_data"
+          + " WHERE duration = (SELECT MIN (duration) FROM nemo_data)")) {
           LOG.info("Configuration loaded from DB");
           if (rs.next()) {
             final ObjectMapper mapper = new ObjectMapper();

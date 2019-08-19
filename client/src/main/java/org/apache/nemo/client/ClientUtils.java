@@ -75,8 +75,11 @@ public final class ClientUtils {
       final String projectRootPath = Util.fetchProjectRootPath();
       final String scriptPath = projectRootPath + "/bin/xgboost_optimization.sh";
       // It trains the model with the metric data of previous jobs with the same IRDAG signature.
-      final String[] command = {scriptPath, arguments};
-      LOG.info("Running the python script at {}", scriptPath);
+      final String[] argumentsArray = arguments.split(" ");
+      final String[] command = new String[argumentsArray.length + 1];
+      command[0] = scriptPath;
+      System.arraycopy(argumentsArray, 0, command, 1, argumentsArray.length);
+      LOG.info("Running the python script: {} {}", scriptPath, arguments);
       final ProcessBuilder builder = new ProcessBuilder(command);
       builder.directory(new File(projectRootPath));
       builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);

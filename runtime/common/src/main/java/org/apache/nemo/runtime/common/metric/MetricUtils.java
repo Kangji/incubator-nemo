@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -94,6 +95,12 @@ public final class MetricUtils {
     final ObjectNode node = mapper.createObjectNode();
     final ArrayNode verticesNode = mapper.createArrayNode();
     final ArrayNode edgesNode = mapper.createArrayNode();
+
+    node.put("inputsize", irdag.getInputSize());
+    node.put("jvmmemsize", Runtime.getRuntime().maxMemory());
+    node.put("totalmemsize", ((com.sun.management.OperatingSystemMXBean) ManagementFactory
+      .getOperatingSystemMXBean()).getTotalPhysicalMemorySize());
+    node.put("dagsummary", irdag.irDAGSummary());
 
     if (mode == 0) {  // Patterns
       node.put("type", "pattern");

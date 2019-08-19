@@ -35,16 +35,17 @@ import matplotlib.pyplot as plt
 # MAIN FUNCTION
 # ########################################################
 try:
-  opts, args = getopt.getopt(sys.argv[1:], "ht:d:r:i:", ["tablename=", "dagpropertydir=", "resourceinfo=", "inputsize="])
+  opts, args = getopt.getopt(sys.argv[1:], "hs:d:r:i:", ["dagsummary=", "dagpropertydir=", "resourceinfo=", "inputsize="])
 except getopt.GetoptError:
-  print('nemo_xgboost_optimization.py -t <tablename>')
+  print('nemo_xgboost_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
   sys.exit(2)
+dagsummary = None
 dagpropertydir = None
 resourceinfo = None
 inputsize = None
 for opt, arg in opts:
   if opt == '-h':
-    print('nemo_xgboost_optimization.py -t <tablename>')
+    print('nemo_xgboost_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
     sys.exit()
   elif opt in ("-s", "--dagsummary"):
     dagsummary = arg
@@ -82,7 +83,7 @@ labels = dtest.get_label()
 bst_opt = xgb.Booster(model_file=modelname) if Path(modelname).is_file() else None
 preds_opt = bst_opt.predict(dtest) if bst_opt is not None else None
 error_opt = (sum(1 for i in range(len(preds_opt)) if abs(preds_opt[i] - labels[i]) > allowance) / float(
-  len(preds_opt))) if preds_opt is not None else 1
+  len(preds_opt))) if preds_opt is not None and len(preds_opt) != 0 else 1
 print('opt_error=%f' % error_opt)
 min_error = error_opt
 

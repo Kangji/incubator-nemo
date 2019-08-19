@@ -45,7 +45,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.lang.management.ManagementFactory;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -665,13 +664,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
 
   @Override
   public ObjectNode asJsonNode() {
-    final ObjectNode node = modifiedDAG.asJsonNode();
-    node.put("inputsize", this.getInputSize());
-    node.put("jvmmemsize", Runtime.getRuntime().maxMemory());
-    node.put("memsize", ((com.sun.management.OperatingSystemMXBean) ManagementFactory
-      .getOperatingSystemMXBean()).getTotalPhysicalMemorySize());
-    node.put("dagsummary", this.irDAGSummary());
-    return node;
+    return modifiedDAG.asJsonNode();
   }
 
   @Override
