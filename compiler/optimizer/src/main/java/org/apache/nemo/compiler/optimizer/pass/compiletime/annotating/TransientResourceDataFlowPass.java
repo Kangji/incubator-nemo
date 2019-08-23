@@ -67,11 +67,11 @@ public final class TransientResourceDataFlowPass extends AnnotatingPass {
    * @param val the boolean value.
    */
   private static void recursivelySetResourceSlotProperty(final IRVertex v, final IRDAG dag, final boolean val) {
-    v.setPropertyPermanently(ResourceSlotProperty.of(val));
     dag.getOutgoingEdgesOf(v).forEach(e -> {
       if (StagePartitioner.testMergeability(e, dag)) {
         recursivelySetResourceSlotProperty(e.getDst(), dag, val);
       }
     });
+    v.setPropertyPermanently(ResourceSlotProperty.of(val));
   }
 }
