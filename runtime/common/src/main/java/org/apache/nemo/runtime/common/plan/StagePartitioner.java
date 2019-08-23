@@ -46,7 +46,8 @@ import java.util.stream.Collectors;
 @DriverSide
 @ThreadSafe
 public final class StagePartitioner implements Function<IRDAG, Map<IRVertex, Integer>> {
-  private static final Set<Class<? extends VertexExecutionProperty>> IGNORED_PROPERTY_KEYS = ConcurrentHashMap.newKeySet();
+  private static final Set<Class<? extends VertexExecutionProperty>> IGNORED_PROPERTY_KEYS =
+    ConcurrentHashMap.newKeySet();
   private final MutableInt nextStageIndex = new MutableInt(0);
 
   /**
