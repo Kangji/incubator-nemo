@@ -231,6 +231,13 @@ public final class ContainerManager {
    */
   private ResourceSpecification selectResourceSpecForContainer() {
     ResourceSpecification selectedResourceSpec = null;
+
+    if (pendingContainerRequestsByContainerType.containsKey("Reserved")) {
+      if (!pendingContainerRequestsByContainerType.get("Reserved").isEmpty()) {
+        return pendingContainerRequestsByContainerType.get("Reserved").remove(0);
+      }
+    }
+
     for (final Map.Entry<String, List<ResourceSpecification>> entry
       : pendingContainerRequestsByContainerType.entrySet()) {
       if (entry.getValue().size() > 0) {
