@@ -21,6 +21,7 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSlotProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
@@ -31,7 +32,7 @@ import static org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Tra
 /**
  * Push from transient resources to reserved resources.
  */
-@Annotates(DataFlowProperty.class)
+@Annotates({DataFlowProperty.class, ResourceSlotProperty.class})
 @Requires(ResourceTypeProperty.class)
 public final class TransientResourceDataFlowPass extends AnnotatingPass {
   /**
@@ -49,6 +50,7 @@ public final class TransientResourceDataFlowPass extends AnnotatingPass {
         inEdges.forEach(edge -> {
           if (fromTransientToReserved(edge)) {
             edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.Push));
+            edge.getDst().setPropertyPermanently(ResourceSlotProperty.of(false));
           }
         });
       }
