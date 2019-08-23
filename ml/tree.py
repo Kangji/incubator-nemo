@@ -177,12 +177,13 @@ class Node:
       elif self.is_always_missing():
         return self.missing.get_approx()
       else:
-        return (self.left.get_approx() + self.right.get_approx()) / 2
+        # return (self.left.get_approx() + self.right.get_approx()) / 2
+        return min(self.left.get_approx(), self.right.get_approx())
 
   def get_diff(self):
     lapprox = self.left.get_approx()
     rapprox = self.right.get_approx()
-    if (rapprox != 0 and abs(lapprox / rapprox) < 0.04) or (lapprox != 0 and abs(rapprox / lapprox) < 0.04):
+    if (rapprox != 0 and rapprox > lapprox and abs(lapprox / rapprox) < 0.04) or (lapprox != 0 and lapprox > rapprox and abs(rapprox / lapprox) < 0.04):
       return 0  # ignore: too much difference (4%) - dangerous for skews
     return lapprox - rapprox
 
