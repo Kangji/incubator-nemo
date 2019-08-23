@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 @DriverSide
 @ThreadSafe
 public final class StagePartitioner implements Function<IRDAG, Map<IRVertex, Integer>> {
-  private final Set<Class<? extends VertexExecutionProperty>> ignoredPropertyKeys = ConcurrentHashMap.newKeySet();
+  private static final Set<Class<? extends VertexExecutionProperty>> IGNORED_PROPERTY_KEYS = ConcurrentHashMap.newKeySet();
   private final MutableInt nextStageIndex = new MutableInt(0);
 
   /**
@@ -57,8 +57,8 @@ public final class StagePartitioner implements Function<IRDAG, Map<IRVertex, Int
    *
    * @param ignoredPropertyKey a property that will be ignored during the stage partitioning.
    */
-  public void addIgnoredPropertyKey(final Class<? extends VertexExecutionProperty> ignoredPropertyKey) {
-    ignoredPropertyKeys.add(ignoredPropertyKey);
+  static void addIgnoredPropertyKey(final Class<? extends VertexExecutionProperty> ignoredPropertyKey) {
+    IGNORED_PROPERTY_KEYS.add(ignoredPropertyKey);
   }
 
   /**
@@ -100,7 +100,7 @@ public final class StagePartitioner implements Function<IRDAG, Map<IRVertex, Int
    * @param dag  IR DAG which contains {@code edge}
    * @return {@code true} if and only if the source and the destination vertex of the edge can be merged into one stage.
    */
-  private boolean testMergeability(final IREdge edge, final IRDAG dag) {
+  public static boolean testMergeability(final IREdge edge, final IRDAG dag) {
     // If the destination vertex has multiple inEdges, return false
     if (dag.getIncomingEdgesOf(edge.getDst()).size() > 1) {
       return false;
@@ -118,9 +118,9 @@ public final class StagePartitioner implements Function<IRDAG, Map<IRVertex, Int
    * @param vertex a vertex in a stage
    * @return set of stage-level properties for the stage
    */
-  public Set<VertexExecutionProperty> getStageProperties(final IRVertex vertex) {
+  static Set<VertexExecutionProperty> getStageProperties(final IRVertex vertex) {
     return vertex.getExecutionProperties().stream()
-      .filter(p -> !ignoredPropertyKeys.contains(p.getClass()))
+      .filter(p -> !IGNORED_PROPERTY_KEYS.contains(p.getClass()))
       .collect(Collectors.toSet());
   }
 }

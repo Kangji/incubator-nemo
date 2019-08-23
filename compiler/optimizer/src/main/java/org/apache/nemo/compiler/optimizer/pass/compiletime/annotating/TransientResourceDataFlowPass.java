@@ -21,9 +21,11 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSlotProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
+import org.apache.nemo.runtime.common.plan.StagePartitioner;
 
 import java.util.List;
 
@@ -50,11 +52,26 @@ public final class TransientResourceDataFlowPass extends AnnotatingPass {
         inEdges.forEach(edge -> {
           if (fromTransientToReserved(edge)) {
             edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.Push));
-            edge.getDst().setPropertyPermanently(ResourceSlotProperty.of(false));
+            recursivelySetResourceSlotProperty(edge.getDst(), dag, false);
           }
         });
       }
     });
     return dag;
+  }
+
+  /**
+   * Static method to recursively set the resource slot property to the vertices of the same stage.
+   * @param v the vertex to start from.
+   * @param dag the IRDAG to observe.
+   * @param val the boolean value.
+   */
+  private static void recursivelySetResourceSlotProperty(final IRVertex v, final IRDAG dag, final boolean val) {
+    v.setPropertyPermanently(ResourceSlotProperty.of(val));
+    dag.getOutgoingEdgesOf(v).forEach(e -> {
+      if (StagePartitioner.testMergeability(e, dag)) {
+        recursivelySetResourceSlotProperty(e.getDst(), dag, val);
+      }
+    });
   }
 }
