@@ -105,9 +105,9 @@ public final class SparkFrontendUtils {
 
     final IREdge newEdge = new IREdge(getEdgeCommunicationPattern(lastVertex, collectVertex),
       lastVertex, collectVertex);
-    newEdge.setProperty(EncoderProperty.of(new SparkEncoderFactory(serializer)));
-    newEdge.setProperty(DecoderProperty.of(new SparkDecoderFactory(serializer)));
-    newEdge.setProperty(SPARK_KEY_EXTRACTOR_PROP);
+    newEdge.setPropertyPermanently(EncoderProperty.of(new SparkEncoderFactory(serializer)));
+    newEdge.setPropertyPermanently(DecoderProperty.of(new SparkDecoderFactory(serializer)));
+    newEdge.setPropertyPermanently(SPARK_KEY_EXTRACTOR_PROP);
     builder.connectVertices(newEdge);
 
     // launch DAG

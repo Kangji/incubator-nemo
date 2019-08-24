@@ -195,7 +195,8 @@ public class IRDAGTest {
 
   @Test
   public void testPartitionWriteAndRead() {
-    firstOperatorVertex.setProperty(ParallelismProperty.of(1));
+    sourceVertex.setProperty(ParallelismProperty.of(MIN_THREE_SOURCE_READABLES));
+    firstOperatorVertex.setProperty(ParallelismProperty.of(MIN_THREE_SOURCE_READABLES));
     secondOperatorVertex.setProperty(ParallelismProperty.of(2));
     shuffleEdge.setProperty(PartitionerProperty.of(PartitionerProperty.Type.Hash, 3));
     shuffleEdge.setProperty(PartitionSetProperty.of(new ArrayList<>(Arrays.asList(

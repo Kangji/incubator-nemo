@@ -18,11 +18,12 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
-import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
@@ -34,27 +35,23 @@ import java.util.List;
 @Annotates(ParallelismProperty.class)
 @Requires(CommunicationPatternProperty.class)
 public final class DefaultParallelismPass extends AnnotatingPass {
-  private final int desiredSourceParallelism;
   // we decrease the number of parallelism by this number on each shuffle boundary.
   private final int shuffleDecreaseFactor;
 
   /**
-   * Default constructor with desired number of source parallelism 1, shuffle decreasing factor 2.
+   * Default constructor with a default number of source parallelism, and a shuffle decreasing factor of 2.
    */
   public DefaultParallelismPass() {
-    this(1, 2);
+    this(2);
   }
 
   /**
    * Default constructor.
    *
-   * @param desiredSourceParallelism the desired number of source parallelism.
    * @param shuffleDecreaseFactor    the parallelism decrease factor for shuffle edge.
    */
-  public DefaultParallelismPass(final int desiredSourceParallelism,
-                                final int shuffleDecreaseFactor) {
+  public DefaultParallelismPass(final int shuffleDecreaseFactor) {
     super(DefaultParallelismPass.class);
-    this.desiredSourceParallelism = desiredSourceParallelism;
     this.shuffleDecreaseFactor = shuffleDecreaseFactor;
   }
 
@@ -64,15 +61,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
     dag.topologicalDo(vertex -> {
       try {
         final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
-        if (inEdges.isEmpty() && vertex instanceof SourceVertex) {
-          // For source vertices, we try to split the source reader by the desired source parallelism.
-          // After that, we set the parallelism as the number of split readers.
-          // (It can be more/less than the desired value.)
-          final SourceVertex sourceVertex = (SourceVertex) vertex;
-          // We manipulate them if it is not set.
-          vertex.setPropertyIfPossible(ParallelismProperty.of(
-            sourceVertex.getReadables(desiredSourceParallelism).size()));
-        } else if (!inEdges.isEmpty()) {
+        if (!inEdges.isEmpty()) {  // Source vertices are already allocated with source parallelismat NemoOptimizer.
           // No reason to propagate via Broadcast edges, as the data streams that will use the broadcasted data
           // as a sideInput will have their own number of parallelism
           final Integer o2oParallelism = inEdges.stream()
@@ -138,19 +127,16 @@ public final class DefaultParallelismPass extends AnnotatingPass {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final DefaultParallelismPass that = (DefaultParallelismPass) o;
-
-    if (desiredSourceParallelism != that.desiredSourceParallelism) {
-      return false;
-    }
-    return shuffleDecreaseFactor == that.shuffleDecreaseFactor;
+    DefaultParallelismPass that = (DefaultParallelismPass) o;
+    return new EqualsBuilder()
+      .append(shuffleDecreaseFactor, that.shuffleDecreaseFactor)
+      .isEquals();
   }
 
   @Override
   public int hashCode() {
-    int result = desiredSourceParallelism;
-    result = 31 * result + shuffleDecreaseFactor;
-    return result;
+    return new HashCodeBuilder(17, 37)
+      .append(shuffleDecreaseFactor)
+      .toHashCode();
   }
 }

@@ -165,11 +165,11 @@ public final class CommonSubexpressionEliminationPass extends ReshapingPass {
                 operatorVertexToUse, e.getDst());
               final Optional<EncoderFactory> encoderProperty = e.getPropertyValue(EncoderProperty.class);
               if (encoderProperty.isPresent()) {
-                newIrEdge.setProperty(EncoderProperty.of(encoderProperty.get()));
+                newIrEdge.setPropertyPermanently(EncoderProperty.of(encoderProperty.get()));
               }
               final Optional<DecoderFactory> decoderProperty = e.getPropertyValue(DecoderProperty.class);
               if (decoderProperty.isPresent()) {
-                newIrEdge.setProperty(DecoderProperty.of(decoderProperty.get()));
+                newIrEdge.setPropertyPermanently(DecoderProperty.of(decoderProperty.get()));
               }
               outListToModify.add(newIrEdge);
             });

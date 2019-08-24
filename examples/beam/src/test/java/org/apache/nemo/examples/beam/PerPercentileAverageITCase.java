@@ -22,7 +22,7 @@ import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
-import org.apache.nemo.examples.beam.policy.DefaultPolicyParallelismFive;
+import org.apache.nemo.compiler.optimizer.policy.DefaultPolicy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,7 +70,8 @@ public final class PerPercentileAverageITCase {
   public void test() throws Exception {
     JobLauncher.main(builder
       .addJobId(PerPercentileAverage.class.getSimpleName())
-      .addOptimizationPolicy(DefaultPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
       .build());
   }
 }

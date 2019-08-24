@@ -119,6 +119,15 @@ public final class ArgBuilder {
   }
 
   /**
+   * @param desiredSourceParallelism the desired source parallelism.
+   * @return builder with the source parallelism set.
+   */
+  public ArgBuilder addSourceParallelism(final Integer desiredSourceParallelism) {
+    args.add(Arrays.asList("-source_parallelism", desiredSourceParallelism.toString()));
+    return this;
+  }
+
+  /**
    * @return the built arguments.
    */
   public String[] build() {

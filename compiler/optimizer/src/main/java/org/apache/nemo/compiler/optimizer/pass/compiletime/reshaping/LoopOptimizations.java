@@ -289,8 +289,8 @@ public final class LoopOptimizations {
               edgesToRemove.add(edge);
               final IREdge newEdge = new IREdge(edge.getPropertyValue(CommunicationPatternProperty.class).get(),
                 candidate.getKey(), edge.getDst());
-              newEdge.setProperty(EncoderProperty.of(edge.getPropertyValue(EncoderProperty.class).get()));
-              newEdge.setProperty(DecoderProperty.of(edge.getPropertyValue(DecoderProperty.class).get()));
+              newEdge.setPropertyPermanently(EncoderProperty.of(edge.getPropertyValue(EncoderProperty.class).get()));
+              newEdge.setPropertyPermanently(DecoderProperty.of(edge.getPropertyValue(DecoderProperty.class).get()));
               edgesToAdd.add(newEdge);
             });
           final List<IREdge> listToModify = inEdges.getOrDefault(loopVertex, new ArrayList<>());

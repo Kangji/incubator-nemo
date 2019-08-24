@@ -21,7 +21,7 @@ package org.apache.nemo.examples.beam;
 import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestUtil;
-import org.apache.nemo.examples.beam.policy.StreamingPolicyParallelismFive;
+import org.apache.nemo.compiler.optimizer.policy.StreamingPolicy;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -55,7 +55,8 @@ public final class WindowedBroadcastITCase {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(WindowedBroadcastITCase.class.getSimpleName())
-      .addOptimizationPolicy(StreamingPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     try {

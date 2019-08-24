@@ -22,10 +22,9 @@ import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
-import org.apache.nemo.compiler.optimizer.policy.ConditionalLargeShufflePolicy;
-import org.apache.nemo.compiler.optimizer.policy.DefaultPolicy;
-import org.apache.nemo.compiler.optimizer.policy.XGBoostPolicy;
-import org.apache.nemo.examples.beam.policy.*;
+import org.apache.nemo.compiler.optimizer.policy.*;
+import org.apache.nemo.examples.beam.policy.AggressiveSpeculativeCloningPolicy;
+import org.apache.nemo.examples.beam.policy.UpfrontSchedulingPolicy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,7 +69,8 @@ public final class WordCountITCase {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(WordCountITCase.class.getSimpleName())
-      .addOptimizationPolicy(DefaultPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
       .build());
   }
 
@@ -99,7 +99,8 @@ public final class WordCountITCase {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(WordCountITCase.class.getSimpleName() + "_largeShuffle")
-      .addOptimizationPolicy(LargeShufflePolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(LargeShufflePolicy.class.getCanonicalName())
       .build());
   }
 
@@ -108,7 +109,8 @@ public final class WordCountITCase {
     JobLauncher.main(builder
       .addResourceJson(oneExecutorResourceFileName)
       .addJobId(WordCountITCase.class.getSimpleName() + "_largeshuffleInOneExecutor")
-      .addOptimizationPolicy(LargeShufflePolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(LargeShufflePolicy.class.getCanonicalName())
       .build());
   }
 
@@ -126,7 +128,8 @@ public final class WordCountITCase {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(WordCountITCase.class.getSimpleName() + "_transient")
-      .addOptimizationPolicy(TransientResourcePolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(TransientResourcePolicy.class.getCanonicalName())
       .build());
   }
 
@@ -136,7 +139,8 @@ public final class WordCountITCase {
       .addResourceJson(executorResourceFileName)
       .addJobId(WordCountITCase.class.getSimpleName() + "_clonedscheduling")
       .addMaxTaskAttempt(Integer.MAX_VALUE)
-      .addOptimizationPolicy(UpfrontSchedulingPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(UpfrontSchedulingPolicy.class.getCanonicalName())
       .build());
   }
 
@@ -146,7 +150,8 @@ public final class WordCountITCase {
       .addResourceJson(executorResourceFileName)
       .addJobId(WordCountITCase.class.getSimpleName() + "_speculative")
       .addMaxTaskAttempt(Integer.MAX_VALUE)
-      .addOptimizationPolicy(AggressiveSpeculativeCloningPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(AggressiveSpeculativeCloningPolicy.class.getCanonicalName())
       .build());
   }
 }

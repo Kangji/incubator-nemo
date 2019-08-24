@@ -69,7 +69,7 @@ public final class ExecutionPropertyMap<T extends ExecutionProperty> implements 
     final IREdge irEdge,
     final CommunicationPatternProperty.Value commPattern) {
     final ExecutionPropertyMap<EdgeExecutionProperty> map = new ExecutionPropertyMap<>(irEdge.getId());
-    map.put(CommunicationPatternProperty.of(commPattern));
+    map.put(CommunicationPatternProperty.of(commPattern), true);
     map.put(EncoderProperty.of(EncoderFactory.DUMMY_ENCODER_FACTORY));
     map.put(DecoderProperty.of(DecoderFactory.DUMMY_DECODER_FACTORY));
     switch (commPattern) {

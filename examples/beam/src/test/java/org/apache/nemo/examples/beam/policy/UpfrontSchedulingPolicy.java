@@ -19,27 +19,23 @@
 package org.apache.nemo.examples.beam.policy;
 
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.CompileTimePass;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AggressiveSpeculativeCloningPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.UpfrontCloningPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.DefaultCompositePass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
-import org.apache.nemo.compiler.optimizer.policy.DefaultPolicy;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
-import org.apache.nemo.compiler.optimizer.policy.PolicyImpl;
-
-import java.util.List;
+import org.apache.nemo.compiler.optimizer.policy.PolicyBuilder;
 
 /**
- * A default policy with (aggressive) speculative execution.
+ * A default policy with upfront cloning.
  */
-public final class AggressiveSpeculativeCloningPolicyParallelismFive implements Policy {
+public final class UpfrontSchedulingPolicy implements Policy {
+  public static final PolicyBuilder BUILDER = new PolicyBuilder()
+    .registerCompileTimePass(new UpfrontCloningPass())  // CLONING!
+    .registerCompileTimePass(new DefaultCompositePass());
   private final Policy policy;
 
-  public AggressiveSpeculativeCloningPolicyParallelismFive() {
-    final List<CompileTimePass> overwritingPasses = DefaultPolicy.BUILDER.getCompileTimePasses();
-    overwritingPasses.add(new AggressiveSpeculativeCloningPass()); // CLONING!
-    this.policy = new PolicyImpl(
-      PolicyTestUtil.overwriteParallelism(5, overwritingPasses),
-      DefaultPolicy.BUILDER.getRunTimePasses());
+  public UpfrontSchedulingPolicy() {
+    this.policy = BUILDER.build();
   }
 
   @Override

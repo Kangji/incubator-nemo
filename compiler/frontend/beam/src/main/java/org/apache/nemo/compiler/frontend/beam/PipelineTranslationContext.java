@@ -138,8 +138,8 @@ final class PipelineTranslationContext {
       srcVertex.setPropertyPermanently(ParallelismProperty.of(1));
       sideInputTransformVertex.setPropertyPermanently(ParallelismProperty.of(1));
 
-      secondEdge.setProperty(EncoderProperty.of(new BeamEncoderFactory(sideInputElementCoder)));
-      secondEdge.setProperty(DecoderProperty.of(new BeamDecoderFactory(sideInputElementCoder)));
+      secondEdge.setPropertyPermanently(EncoderProperty.of(new BeamEncoderFactory(sideInputElementCoder)));
+      secondEdge.setPropertyPermanently(DecoderProperty.of(new BeamDecoderFactory(sideInputElementCoder)));
       builder.connectVertices(secondEdge);
     }
   }
@@ -163,7 +163,7 @@ final class PipelineTranslationContext {
       final IREdge edge = new IREdge(communicationPattern, src, dst);
 
       if (pValueToTag.containsKey(input)) {
-        edge.setProperty(AdditionalOutputTagProperty.of(pValueToTag.get(input).getId()));
+        edge.setPropertyPermanently(AdditionalOutputTagProperty.of(pValueToTag.get(input).getId()));
       }
 
       addEdge(edge, elementCoder, windowCoder);
@@ -178,16 +178,16 @@ final class PipelineTranslationContext {
    * @param windowCoder  window coder.
    */
   void addEdge(final IREdge edge, final Coder elementCoder, final Coder windowCoder) {
-    edge.setProperty(KeyExtractorProperty.of(new BeamKeyExtractor()));
+    edge.setPropertyPermanently(KeyExtractorProperty.of(new BeamKeyExtractor()));
     if (elementCoder instanceof KvCoder) {
       Coder keyCoder = ((KvCoder) elementCoder).getKeyCoder();
-      edge.setProperty(KeyEncoderProperty.of(new BeamEncoderFactory(keyCoder)));
-      edge.setProperty(KeyDecoderProperty.of(new BeamDecoderFactory(keyCoder)));
+      edge.setPropertyPermanently(KeyEncoderProperty.of(new BeamEncoderFactory(keyCoder)));
+      edge.setPropertyPermanently(KeyDecoderProperty.of(new BeamDecoderFactory(keyCoder)));
     }
 
     final WindowedValue.FullWindowedValueCoder coder = WindowedValue.getFullCoder(elementCoder, windowCoder);
-    edge.setProperty(EncoderProperty.of(new BeamEncoderFactory<>(coder)));
-    edge.setProperty(DecoderProperty.of(new BeamDecoderFactory<>(coder)));
+    edge.setPropertyPermanently(EncoderProperty.of(new BeamEncoderFactory<>(coder)));
+    edge.setPropertyPermanently(DecoderProperty.of(new BeamDecoderFactory<>(coder)));
 
     builder.connectVertices(edge);
   }

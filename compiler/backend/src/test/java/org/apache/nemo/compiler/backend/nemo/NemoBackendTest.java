@@ -24,6 +24,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.test.EmptyComponents;
 import org.apache.nemo.compiler.optimizer.policy.TransientResourcePolicy;
 import org.apache.nemo.conf.JobConf;
@@ -52,6 +53,7 @@ public final class NemoBackendTest<I, O> {
 
   @Before
   public void setUp() throws Exception {
+    source.setProperty(ParallelismProperty.of(3));
     this.dag = new IRDAG(builder.addVertex(source).addVertex(map1).addVertex(groupByKey).addVertex(combine).addVertex(map2)
       .connectVertices(new IREdge(CommunicationPatternProperty.Value.OneToOne, source, map1))
       .connectVertices(EmptyComponents.newDummyShuffleEdge(map1, groupByKey))

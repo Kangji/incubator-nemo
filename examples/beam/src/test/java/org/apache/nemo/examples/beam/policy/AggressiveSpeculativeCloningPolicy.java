@@ -19,22 +19,26 @@
 package org.apache.nemo.examples.beam.policy;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AggressiveSpeculativeCloningPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.DefaultCompositePass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
-import org.apache.nemo.compiler.optimizer.policy.PolicyImpl;
-import org.apache.nemo.compiler.optimizer.policy.TransientResourcePolicy;
+import org.apache.nemo.compiler.optimizer.policy.PolicyBuilder;
 
 /**
- * A transient resource policy with fixed parallelism 5 for tests.
+ * A default policy with (aggressive) speculative execution.
  */
-public final class TransientResourcePolicyParallelismFive implements Policy {
+public final class AggressiveSpeculativeCloningPolicy implements Policy {
+  public static final PolicyBuilder BUILDER = new PolicyBuilder()
+    .registerCompileTimePass(new AggressiveSpeculativeCloningPass())
+    .registerCompileTimePass(new DefaultCompositePass());
   private final Policy policy;
 
-  public TransientResourcePolicyParallelismFive() {
-    this.policy = new PolicyImpl(
-      PolicyTestUtil.overwriteParallelism(5,
-        TransientResourcePolicy.BUILDER.getCompileTimePasses()),
-      TransientResourcePolicy.BUILDER.getRunTimePasses());
+  /**
+   * Default constructor.
+   */
+  public AggressiveSpeculativeCloningPolicy() {
+    this.policy = BUILDER.build();
   }
 
   @Override

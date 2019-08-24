@@ -27,16 +27,16 @@ import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
  * Streaming policy.
  */
 public final class StreamingPolicy implements Policy {
+  public static final PolicyBuilder BUILDER = new PolicyBuilder()
+    .registerCompileTimePass(new PipeTransferForAllEdgesPass())
+    .registerCompileTimePass(new DefaultCompositePass());
   private final Policy policy;
 
   /**
    * Default constructor.
    */
   public StreamingPolicy() {
-    final PolicyBuilder builder = new PolicyBuilder();
-    builder.registerCompileTimePass(new DefaultCompositePass());
-    builder.registerCompileTimePass(new PipeTransferForAllEdgesPass());
-    this.policy = builder.build();
+    this.policy = BUILDER.build();
   }
 
   @Override

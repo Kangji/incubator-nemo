@@ -21,27 +21,27 @@ package org.apache.nemo.compiler.frontend.spark.core.rdd
 import java.util
 import java.util.UUID
 
+import org.apache.hadoop.io.WritableFactory
+import org.apache.hadoop.io.compress.CompressionCodec
 import org.apache.nemo.client.JobLauncher
 import org.apache.nemo.common.dag.{DAG, DAGBuilder}
+import org.apache.nemo.common.ir.IRDAG
 import org.apache.nemo.common.ir.edge.IREdge
 import org.apache.nemo.common.ir.edge.executionproperty._
 import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty
 import org.apache.nemo.common.ir.vertex.{IRVertex, LoopVertex, OperatorVertex}
 import org.apache.nemo.common.test.EmptyComponents.EmptyTransform
-import org.apache.nemo.compiler.frontend.spark.{SparkBroadcastVariables, SparkKeyExtractor}
 import org.apache.nemo.compiler.frontend.spark.coder.{SparkDecoderFactory, SparkEncoderFactory}
 import org.apache.nemo.compiler.frontend.spark.core.SparkFrontendUtils
 import org.apache.nemo.compiler.frontend.spark.transform._
-import org.apache.hadoop.io.WritableFactory
-import org.apache.hadoop.io.compress.CompressionCodec
-import org.apache.nemo.common.ir.IRDAG
+import org.apache.nemo.compiler.frontend.spark.{SparkBroadcastVariables, SparkKeyExtractor}
 import org.apache.spark.api.java.function.{FlatMapFunction, Function, Function2}
 import org.apache.spark.partial.{BoundedDouble, PartialResult}
 import org.apache.spark.rdd.{AsyncRDDActions, DoubleRDDFunctions, OrderedRDDFunctions, PartitionCoalescer, SequenceFileRDDFunctions}
 import org.apache.spark.serializer.Serializer
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.{Dependency, Partition, Partitioner, SparkContext, SparkEnv, TaskContext}
+import org.apache.spark.{Dependency, Partition, Partitioner, SparkContext, TaskContext}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -150,9 +150,9 @@ final class RDD[T: ClassTag] protected[rdd] (
 
     val newEdge: IREdge = new IREdge(SparkFrontendUtils.getEdgeCommunicationPattern(lastVertex, mapVertex),
       lastVertex, mapVertex)
-    newEdge.setProperty(encoderProperty)
-    newEdge.setProperty(decoderProperty)
-    newEdge.setProperty(keyExtractorProperty)
+    newEdge.setPropertyPermanently(encoderProperty)
+    newEdge.setPropertyPermanently(decoderProperty)
+    newEdge.setPropertyPermanently(keyExtractorProperty)
     builder.connectVertices(newEdge)
 
     new RDD[U](_sc, builder.buildWithoutSourceSinkCheck, mapVertex, Option.empty)
@@ -170,9 +170,9 @@ final class RDD[T: ClassTag] protected[rdd] (
 
     val newEdge = new IREdge(SparkFrontendUtils.getEdgeCommunicationPattern(lastVertex, flatMapVertex),
       lastVertex, flatMapVertex)
-    newEdge.setProperty(encoderProperty)
-    newEdge.setProperty(decoderProperty)
-    newEdge.setProperty(keyExtractorProperty)
+    newEdge.setPropertyPermanently(encoderProperty)
+    newEdge.setPropertyPermanently(decoderProperty)
+    newEdge.setPropertyPermanently(keyExtractorProperty)
     builder.connectVertices(newEdge)
 
     new RDD[U](_sc, builder.buildWithoutSourceSinkCheck, flatMapVertex, Option.empty)
@@ -201,9 +201,9 @@ final class RDD[T: ClassTag] protected[rdd] (
 
     val newEdge = new IREdge(SparkFrontendUtils.getEdgeCommunicationPattern(lastVertex, reduceVertex),
       lastVertex, reduceVertex)
-    newEdge.setProperty(encoderProperty)
-    newEdge.setProperty(decoderProperty)
-    newEdge.setProperty(keyExtractorProperty)
+    newEdge.setPropertyPermanently(encoderProperty)
+    newEdge.setPropertyPermanently(decoderProperty)
+    newEdge.setPropertyPermanently(keyExtractorProperty)
 
     builder.connectVertices(newEdge)
     ReduceTransform.reduceIterator(
@@ -226,9 +226,9 @@ final class RDD[T: ClassTag] protected[rdd] (
     builder.addVertex(flatMapVertex, loopVertexStack)
     val newEdge = new IREdge(SparkFrontendUtils.getEdgeCommunicationPattern(lastVertex, flatMapVertex),
       lastVertex, flatMapVertex)
-    newEdge.setProperty(encoderProperty)
-    newEdge.setProperty(decoderProperty)
-    newEdge.setProperty(keyExtractorProperty)
+    newEdge.setPropertyPermanently(encoderProperty)
+    newEdge.setPropertyPermanently(decoderProperty)
+    newEdge.setPropertyPermanently(keyExtractorProperty)
 
     builder.connectVertices(newEdge)
     JobLauncher.launchDAG(new IRDAG(builder.build), SparkBroadcastVariables.getAll, "")
@@ -292,9 +292,9 @@ final class RDD[T: ClassTag] protected[rdd] (
 
     val newEdge = new IREdge(CommunicationPatternProperty.Value.OneToOne, lastVertex, ghostVertex)
     // Setup default properties
-    newEdge.setProperty(encoderProperty)
-    newEdge.setProperty(decoderProperty)
-    newEdge.setProperty(keyExtractorProperty)
+    newEdge.setPropertyPermanently(encoderProperty)
+    newEdge.setPropertyPermanently(decoderProperty)
+    newEdge.setPropertyPermanently(keyExtractorProperty)
     // Setup cache-related properties
     if (actualUseDisk) {
       newEdge.setProperty(DataStoreProperty.of(DataStoreProperty.Value.LocalFileStore))

@@ -74,17 +74,17 @@ final class PairRDDFunctions[K: ClassTag, V: ClassTag] protected[rdd] (
 
     val newEdge = new IREdge(SparkFrontendUtils.getEdgeCommunicationPattern(self.lastVertex, reduceByKeyVertex),
       self.lastVertex, reduceByKeyVertex)
-    newEdge.setProperty(
+    newEdge.setPropertyPermanently(
       EncoderProperty.of(new SparkEncoderFactory[Tuple2[K, V]](self.serializer))
         .asInstanceOf[EdgeExecutionProperty[_ <: Serializable]])
-    newEdge.setProperty(
+    newEdge.setPropertyPermanently(
       DecoderProperty.of(new SparkDecoderFactory[Tuple2[K, V]](self.serializer))
         .asInstanceOf[EdgeExecutionProperty[_ <: Serializable]])
     // For Tuple2 type data, set KeyEn(De)coderFactoryProperty
     // in case it is subjected to dynamic optimization.
-    newEdge.setProperty(KeyEncoderProperty.of(new SparkEncoderFactory[K](self.serializer)))
-    newEdge.setProperty(KeyDecoderProperty.of(new SparkDecoderFactory[K](self.serializer)))
-    newEdge.setProperty(KeyExtractorProperty.of(new SparkKeyExtractor))
+    newEdge.setPropertyPermanently(KeyEncoderProperty.of(new SparkEncoderFactory[K](self.serializer)))
+    newEdge.setPropertyPermanently(KeyDecoderProperty.of(new SparkDecoderFactory[K](self.serializer)))
+    newEdge.setPropertyPermanently(KeyExtractorProperty.of(new SparkKeyExtractor))
     builder.connectVertices(newEdge)
 
     new RDD[(K, V)](self._sc, builder.buildWithoutSourceSinkCheck, reduceByKeyVertex, Option.empty)

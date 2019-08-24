@@ -27,6 +27,7 @@ import org.apache.nemo.common.ir.edge.executionproperty.CacheIDProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.vertex.CachedSourceVertex;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.ResourceExplorationPass;
@@ -55,6 +56,7 @@ public final class NemoOptimizer implements Optimizer {
   private final String dagDirectory;
   private final Policy optimizationPolicy;
   private final String environmentTypeStr;
+  private final Integer desiredSourceParallelism;
   private final String executorInfoPath;
   private final String executorInfoContents;
   private final ClientRPC clientRPC;
@@ -66,6 +68,7 @@ public final class NemoOptimizer implements Optimizer {
    * @param dagDirectory       to store JSON representation of intermediate DAGs.
    * @param policyName         the name of the optimization policy.
    * @param environmentTypeStr the environment type of the workload to optimize the DAG for.
+   * @param desiredSourceParallelism the desired source parallelism.
    * @param executorInfoPath   the string containing the information about the executors provided.
    * @param executorInfoContents the string of the information of the executors provided, in xml or json.
    * @param clientRPC          the RPC channel to communicate with the client.
@@ -74,11 +77,13 @@ public final class NemoOptimizer implements Optimizer {
   private NemoOptimizer(@Parameter(JobConf.DAGDirectory.class) final String dagDirectory,
                         @Parameter(JobConf.OptimizationPolicy.class) final String policyName,
                         @Parameter(JobConf.EnvironmentType.class) final String environmentTypeStr,
+                        @Parameter(JobConf.DesiredSourceParallelism.class) final Integer desiredSourceParallelism,
                         @Parameter(JobConf.ExecutorInfoPath.class) final String executorInfoPath,
                         @Parameter(JobConf.ExecutorInfoContents.class) final String executorInfoContents,
                         final ClientRPC clientRPC) {
     this.dagDirectory = dagDirectory;
     this.environmentTypeStr = OptimizerUtils.filterEnvironmentTypeString(environmentTypeStr);
+    this.desiredSourceParallelism = desiredSourceParallelism;
     this.executorInfoPath = executorInfoPath;
     this.executorInfoContents = executorInfoContents;
     this.clientRPC = clientRPC;
@@ -98,10 +103,13 @@ public final class NemoOptimizer implements Optimizer {
     dag.storeJSON(dagDirectory, "ir-0-initial", "IR before optimization");
 
     final IRDAG optimizedDAG;
-    final Map<UUID, IREdge> cacheIdToEdge = new HashMap<>();
 
-    // Handle caching first.
-    final IRDAG cacheFilteredDag = handleCaching(dag, cacheIdToEdge);
+    // Set source parallelism first.
+    final IRDAG sourceParallelismSetIRDAG = setSourceParallelism(dag);
+
+    // Handle caching prior to compile-time optimizations.
+    final Map<UUID, IREdge> cacheIdToEdge = new HashMap<>();
+    final IRDAG cacheFilteredDag = handleCaching(sourceParallelismSetIRDAG, cacheIdToEdge);
     if (!cacheIdToEdge.isEmpty()) {
       cacheFilteredDag.storeJSON(dagDirectory, "ir-0-FilterCache",
         "IR after cache filtering");
@@ -171,6 +179,45 @@ public final class NemoOptimizer implements Optimizer {
         throw new CompileTimeOptimizationException(e);
       }
     }
+  }
+
+  /**
+   * Set the initial source parallelism.
+   *
+   * @param dag the original IR DAG.
+   * @return the IR DAG with the source parallelism set.
+   */
+  private IRDAG setSourceParallelism(final IRDAG dag) {
+    dag.getVertices().stream()
+      .filter(v -> dag.getIncomingEdgesOf(v).isEmpty() && v instanceof SourceVertex)
+      .forEach(v -> {
+        try {
+          // For source vertices, we try to split the source reader by the desired source parallelism.
+          // After that, we set the parallelism as the number of split readers.
+          // (It can be more/less than the desired value.)
+          final SourceVertex sourceVertex = (SourceVertex) v;
+          final int sourceParallelism;
+          if (this.desiredSourceParallelism == 1) {
+            final long estimatedSizeBytes = sourceVertex.getEstimatedSizeBytes();
+
+            if (estimatedSizeBytes < 64 * 1024 * 1024) {  // less than 64 MB.
+              sourceParallelism = sourceVertex.getReadables(1).size();  // 1 block.
+            } else if (estimatedSizeBytes < 16 * 1024 * 1024 * 1024L) {  // less than 16 GB.
+              sourceParallelism = sourceVertex.getReadables(
+                (int) (estimatedSizeBytes / 64 * 1024 * 1024)).size();  // partition in 64MB blocks [1, 256].
+            } else {  // greater than 16 GB.
+              sourceParallelism = sourceVertex.getReadables(
+                (int) (estimatedSizeBytes / 256 * 1024 * 1024)).size();  // partition in 256MB blocks [64, ].
+            }
+          } else {
+            sourceParallelism = sourceVertex.getReadables(this.desiredSourceParallelism).size();
+          }
+          sourceVertex.setPropertyPermanently(ParallelismProperty.of(sourceParallelism));
+        } catch (Exception e) {
+          throw new CompileTimeOptimizationException(e);
+        }
+      });
+    return dag;
   }
 
   /**

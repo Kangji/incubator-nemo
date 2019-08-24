@@ -32,6 +32,7 @@ import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.transform.NoWatermarkEmitTransform;
 import org.apache.nemo.common.ir.vertex.transform.Transform;
 
@@ -53,13 +54,11 @@ public final class EmptyComponents {
 
   public static IREdge newDummyShuffleEdge(final IRVertex src, final IRVertex dst) {
     final IREdge edge = new IREdge(CommunicationPatternProperty.Value.Shuffle, src, dst);
-    edge.setProperty(KeyExtractorProperty.of(new DummyBeamKeyExtractor()));
-    edge.setProperty(KeyEncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
-    edge.setProperty(KeyDecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
-    edge.setProperty(EncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
-    edge.setProperty(DecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
-    edge.setProperty(KeyEncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
-    edge.setProperty(KeyDecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
+    edge.setPropertyPermanently(KeyExtractorProperty.of(new DummyBeamKeyExtractor()));
+    edge.setPropertyPermanently(KeyEncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
+    edge.setPropertyPermanently(KeyDecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
+    edge.setPropertyPermanently(EncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
+    edge.setPropertyPermanently(DecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
     return edge;
   }
 
@@ -71,6 +70,7 @@ public final class EmptyComponents {
   public static IRDAG buildEmptyDAG() {
     DAGBuilder<IRVertex, IREdge> dagBuilder = new DAGBuilder<>();
     final IRVertex s = new EmptyComponents.EmptySourceVertex<>("s");
+    s.setPropertyPermanently(ParallelismProperty.of(5));
     final IRVertex t1 = new OperatorVertex(new EmptyComponents.EmptyTransform("t1"));
     final IRVertex t2 = new OperatorVertex(new EmptyComponents.EmptyTransform("t2"));
     final IRVertex t3 = new OperatorVertex(new EmptyComponents.EmptyTransform("t3"));
@@ -100,6 +100,7 @@ public final class EmptyComponents {
   public static IRDAG buildEmptyDAGForSkew() {
     DAGBuilder<IRVertex, IREdge> dagBuilder = new DAGBuilder<>();
     final IRVertex s = new EmptyComponents.EmptySourceVertex<>("s");
+    s.setPropertyPermanently(ParallelismProperty.of(5));
     final IRVertex t1 = new OperatorVertex(new EmptyComponents.EmptyTransform("t1"));
     final IRVertex t2 = new OperatorVertex(new EmptyComponents.EmptyTransform("t2"));
     final IRVertex t3 = new OperatorVertex(new EmptyComponents.EmptyTransform("t3"));

@@ -23,8 +23,7 @@ import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
 import org.apache.nemo.compiler.optimizer.policy.DefaultPolicy;
-import org.apache.nemo.examples.beam.policy.DefaultPolicyParallelismFive;
-import org.apache.nemo.examples.beam.policy.StreamingPolicyParallelismFive;
+import org.apache.nemo.compiler.optimizer.policy.StreamingPolicy;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -59,7 +58,8 @@ public final class WindowedWordCountITCase {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(WindowedWordCountITCase.class.getSimpleName() + "testBatchFixedWindow")
-      .addOptimizationPolicy(DefaultPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
       .build());
 
     try {
@@ -99,7 +99,8 @@ public final class WindowedWordCountITCase {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(WindowedWordCountITCase.class.getSimpleName() + "testStreamingSchedulerAndPipeFixedWindow")
-      .addOptimizationPolicy(StreamingPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     try {
@@ -120,7 +121,8 @@ public final class WindowedWordCountITCase {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(WindowedWordCountITCase.class.getSimpleName() + "testStreamingSchedulerAndPipeSlidingWindow")
-      .addOptimizationPolicy(StreamingPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     try {
@@ -142,7 +144,8 @@ public final class WindowedWordCountITCase {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(WindowedWordCountITCase.class.getSimpleName())
-      .addOptimizationPolicy(StreamingPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     try {

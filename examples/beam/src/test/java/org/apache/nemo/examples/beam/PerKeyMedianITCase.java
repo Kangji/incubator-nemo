@@ -22,8 +22,8 @@ import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
+import org.apache.nemo.compiler.optimizer.policy.DataSkewPolicy;
 import org.apache.nemo.compiler.optimizer.policy.SamplingLargeShuffleSkewPolicy;
-import org.apache.nemo.examples.beam.policy.DataSkewPolicyParallelismFive;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -72,7 +72,8 @@ public final class PerKeyMedianITCase {
   public void testDataSkew() throws Exception {
     JobLauncher.main(builder
       .addJobId(PerKeyMedianITCase.class.getSimpleName())
-      .addOptimizationPolicy(DataSkewPolicyParallelismFive.class.getCanonicalName())
+      .addSourceParallelism(5)
+      .addOptimizationPolicy(DataSkewPolicy.class.getCanonicalName())
       .build());
   }
 

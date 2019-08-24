@@ -183,6 +183,14 @@ public final class JobConf extends ConfigurationModuleBuilder {
   //////////////////////////////// Runtime Executor Configurations
 
   /**
+   * Desired number of source parallelism.
+   */
+  @NamedParameter(doc = "Desired source parallelism",
+    short_name = "source_parallelism", default_value = "1")
+  public final class DesiredSourceParallelism implements Name<Integer> {
+  }
+
+  /**
    * Used for fault-injected tests.
    */
   @NamedParameter(doc = "Executor crashes after expected time, does not crash when -1",
@@ -213,7 +221,6 @@ public final class JobConf extends ConfigurationModuleBuilder {
   @NamedParameter(doc = "Contents of JSON file that specifies bandwidth between locations")
   public final class BandwidthJSONContents implements Name<String> {
   }
-
 
   /**
    * Contents of the JSON/XML file that specifies resource layout.
