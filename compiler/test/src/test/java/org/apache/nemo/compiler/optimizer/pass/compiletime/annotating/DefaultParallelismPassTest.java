@@ -20,7 +20,6 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
 import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.CompilerTestUtil;
 import org.junit.Before;
@@ -57,16 +56,5 @@ public class DefaultParallelismPassTest {
 
     processedDAG.getTopologicalSort().forEach(irVertex ->
       assertEquals(1, irVertex.getPropertyValue(ParallelismProperty.class).get().longValue()));
-  }
-
-  @Test
-  public void testParallelismTen() {
-    final int desiredSourceParallelism = 10;
-    final IRDAG processedDAG = new DefaultParallelismPass(desiredSourceParallelism, 2).apply(compiledDAG);
-
-    processedDAG.getTopologicalSort().stream()
-      .filter(irVertex -> irVertex instanceof SourceVertex)
-      .forEach(irVertex -> assertEquals(desiredSourceParallelism,
-        irVertex.getPropertyValue(ParallelismProperty.class).get().longValue()));
   }
 }
