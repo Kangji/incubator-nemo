@@ -197,7 +197,7 @@ public final class NemoOptimizer implements Optimizer {
           // (It can be more/less than the desired value.)
           final SourceVertex sourceVertex = (SourceVertex) v;
           final int sourceParallelism;
-          if (this.desiredSourceParallelism == 1) {
+          if (this.desiredSourceParallelism == 0) {
             final long estimatedSizeBytes = sourceVertex.getEstimatedSizeBytes();
 
             if (estimatedSizeBytes < 64 * 1024 * 1024) {  // less than 64 MB.

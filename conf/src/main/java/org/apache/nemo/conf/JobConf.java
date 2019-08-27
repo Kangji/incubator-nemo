@@ -197,7 +197,7 @@ public final class JobConf extends ConfigurationModuleBuilder {
    * Desired number of source parallelism.
    */
   @NamedParameter(doc = "Desired source parallelism",
-    short_name = "source_parallelism", default_value = "1")
+    short_name = "source_parallelism", default_value = "0")
   public final class DesiredSourceParallelism implements Name<Integer> {
   }
 
