@@ -26,8 +26,11 @@ import org.apache.nemo.common.exception.BlockFetchException;
 import org.apache.nemo.common.exception.BlockWriteException;
 import org.apache.nemo.common.exception.UnsupportedBlockStoreException;
 import org.apache.nemo.common.exception.UnsupportedExecutionPropertyException;
+import org.apache.nemo.common.ir.edge.executionproperty.BlockFetchFailureProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataPersistenceProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
+import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
@@ -148,14 +151,14 @@ public final class BlockManagerWorker {
    *
    * @param blockIdWildcard of the block.
    * @param runtimeEdgeId   id of the runtime edge that corresponds to the block.
-   * @param blockStore      for the data storage.
+   * @param edgeProperties  for the edge.
    * @param keyRange        the key range descriptor
    * @return the {@link CompletableFuture} of the block.
    */
   public CompletableFuture<DataUtil.IteratorWithNumBytes> readBlock(
     final String blockIdWildcard,
     final String runtimeEdgeId,
-    final DataStoreProperty.Value blockStore,
+    final ExecutionPropertyMap<EdgeExecutionProperty> edgeProperties,
     final KeyRange keyRange) {
     // Let's see if a remote worker has it
     final CompletableFuture<ControlMessage.Message> blockLocationFuture =
@@ -199,6 +202,7 @@ public final class BlockManagerWorker {
       // This is the executor id that we wanted to know
       final String blockId = blockLocationInfoMsg.getBlockId();
       final String targetExecutorId = blockLocationInfoMsg.getOwnerExecutorId();
+      final DataStoreProperty.Value blockStore = edgeProperties.get(DataStoreProperty.class).get();
       if (targetExecutorId.equals(executorId) || targetExecutorId.equals(REMOTE_FILE_STORE)) {
         // Block resides in the evaluator
         return getDataFromLocalBlock(blockId, blockStore, keyRange);
@@ -228,9 +232,34 @@ public final class BlockManagerWorker {
           }
         });
 
-        return contextFuture
-          .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(),
-            serializerManager.getSerializer(runtimeEdgeId)));
+        final BlockFetchFailureProperty.Value fetchFailure = edgeProperties.get(BlockFetchFailureProperty.class)
+          .orElse(BlockFetchFailureProperty.Value.CANCEL_TASK); // the default behavior.
+        if (!fetchFailure.equals(BlockFetchFailureProperty.Value.CANCEL_TASK)) {
+          /**
+           * Wait until fetching "all elements" of each block.
+           *
+           * Problem: If the task won't be cancelled upon fetch failure, then the task can potentially
+           * process blocks partially or process the same elements more than once.
+           *
+           * Solution: With this waiting, a task that fetches a block either
+           * - Processes all elements of the block
+           * - Processes no element of the block (i.e., Runs into a block fetch exception while waiting)
+           */
+          return contextFuture
+            .thenCompose(ByteInputContext::getCompletedFuture)
+            // thenApply waits for the future.
+            .thenApply(streams -> new DataUtil.InputStreamIterator(
+              streams, serializerManager.getSerializer(runtimeEdgeId)));
+        } else {
+          /**
+           * Process "each element" of a block as soon as the element comes in.
+           * No worries about partial/duplicate processing here, as the task will be cancelled and restarted cleanly.
+           * Probably best performance when there is no failure.
+           */
+          return contextFuture
+            .thenApply(context -> new DataUtil.InputStreamIterator(context.getInputStreams(),
+              serializerManager.getSerializer(runtimeEdgeId)));
+        }
       }
     });
   }
