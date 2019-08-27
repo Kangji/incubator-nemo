@@ -20,6 +20,7 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
+import org.apache.nemo.common.ir.edge.executionproperty.BlockFetchFailureProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSlotProperty;
@@ -51,6 +52,8 @@ public final class TransientResourceDataFlowPass extends AnnotatingPass {
       if (!inEdges.isEmpty()) {
         inEdges.forEach(edge -> {
           if (fromTransientToReserved(edge)) {
+            edge.setPropertyPermanently(
+              BlockFetchFailureProperty.of(BlockFetchFailureProperty.Value.RETRY_AFTER_TWO_SECONDS_FOREVER));
             edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.Push));
             recursivelySetResourceSlotProperty(edge.getDst(), dag, false);
           }
