@@ -120,7 +120,8 @@ public final class MetricUtils {
         // The vertex itself
         final ObjectNode vertexNode = mapper.createObjectNode();
         v.getExecutionProperties().forEachProperties(ep ->
-          epFormatter(vertexNode, subDAGString + "-" + idx.get(), ep));
+          epFormatter(vertexNode, subDAGString + "-" + idx.get(),
+            ep, v.getExecutionProperties().isPropertyFinalized(ep)));
         verticesNode.add(vertexNode);
         // Main incoming edges & vertex
         idx.getAndIncrement();
@@ -129,13 +130,15 @@ public final class MetricUtils {
           .forEachOrdered(e -> {
             e.getExecutionProperties().forEachProperties(ep -> {
               final ObjectNode eNode = mapper.createObjectNode();
-              epFormatter(eNode, subDAGString + "-" + idx.get(), ep);
+              epFormatter(eNode, subDAGString + "-" + idx.get(),
+                ep, e.getExecutionProperties().isPropertyFinalized(ep));
               edgesNode.add(eNode);
             });
             idx.getAndIncrement();
             e.getSrc().getExecutionProperties().forEachProperties(ep -> {
               final ObjectNode vNode = mapper.createObjectNode();
-              epFormatter(vNode, subDAGString + "-" + idx.get(), ep);
+              epFormatter(vNode, subDAGString + "-" + idx.get(),
+                ep, e.getSrc().getExecutionProperties().isPropertyFinalized(ep));
               verticesNode.add(vNode);
             });
             idx.getAndIncrement();
@@ -146,7 +149,7 @@ public final class MetricUtils {
       irdag.getVertices().forEach(v ->
         v.getExecutionProperties().forEachProperties(ep -> {
           final ObjectNode vertexNode = mapper.createObjectNode();
-          epFormatter(vertexNode, v.getId(), ep);
+          epFormatter(vertexNode, v.getId(), ep, v.getExecutionProperties().isPropertyFinalized(ep));
           verticesNode.add(vertexNode);
         }));
 
@@ -154,7 +157,7 @@ public final class MetricUtils {
         irdag.getIncomingEdgesOf(v).forEach(e ->
           e.getExecutionProperties().forEachProperties(ep -> {
             final ObjectNode edgeNode = mapper.createObjectNode();
-            epFormatter(edgeNode, e.getId(), ep);
+            epFormatter(edgeNode, e.getId(), ep, e.getExecutionProperties().isPropertyFinalized(ep));
             edgesNode.add(edgeNode);
           })));
     }
@@ -171,13 +174,16 @@ public final class MetricUtils {
    * @param node node append the metrics to.
    * @param id   the string of the ID or the pattern of the vertex or the edge.
    * @param ep   the execution property.
+   * @param isPermanent whether or not the execution property is permanent.
    */
-  private static void epFormatter(final ObjectNode node, final String id, final ExecutionProperty<?> ep) {
+  private static void epFormatter(final ObjectNode node, final String id,
+                                  final ExecutionProperty<?> ep, final Boolean isPermanent) {
     node.put("ID", id);
     node.put("EPKeyClass", ep.getClass().getName());
     node.put("EPValueClass", ep.getValue().getClass().getName());
     final String epValueStr = epValueToString(ep);
     node.put("EPValue", epValueStr);
+    node.put("isPermanent", isPermanent);
   }
 
   /**

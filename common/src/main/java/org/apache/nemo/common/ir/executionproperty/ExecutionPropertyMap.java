@@ -212,6 +212,16 @@ public final class ExecutionPropertyMap<T extends ExecutionProperty> implements 
   }
 
   /**
+   * Determine if the execution property is finalized and permanently set.
+   *
+   * @param ep the execution property.
+   * @return whether or not the execution property is permanently set.
+   */
+  public boolean isPropertyFinalized(final ExecutionProperty ep) {
+    return finalizedProperties.contains(ep.getClass());
+  }
+
+  /**
    * Same as forEach function in Java 8, but for execution properties.
    *
    * @param action action to apply to each of the execution properties.
