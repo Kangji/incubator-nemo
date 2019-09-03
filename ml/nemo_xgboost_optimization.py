@@ -153,14 +153,15 @@ resultsJson = []
 for k, v in results.items():
   for kk, vv in v.items():
     # k is feature, kk is split, and vv is val
-    i, key, tpe = data.transform_id_to_keypair(int(k[1:]))  # ex. (id), org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty/java.lang.Integer, pattern
+    feature_id = int(k[1:])
+    i, key, tpe = data.transform_id_to_keypair(feature_id)  # ex. (id), org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty/java.lang.Integer, pattern
     # how = 'greater' if vv > 0 else 'smaller'
     # result_string = f'{key} should be {vv} ({how}) than {kk}'
     # print(result_string)
     classes = key.split('/')
     key_class = classes[0]  # ex. org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty
     value_class = classes[1]  # ex. java.lang.Integer
-    value = data.transform_id_to_value(key, data.derive_value_from(int(k[1:]), key, kk, vv))
+    value = data.transform_id_to_value(key, data.derive_value_from(feature_id, key, kk, vv))
     if value:  # Only returned when the EP is valid
       resultsJson.append({'type': tpe, 'ID': i, 'EPKeyClass': key_class, 'EPValueClass': value_class, 'EPValue': value})
 

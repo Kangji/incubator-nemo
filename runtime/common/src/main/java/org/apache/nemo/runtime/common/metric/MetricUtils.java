@@ -174,16 +174,16 @@ public final class MetricUtils {
    * @param node node append the metrics to.
    * @param id   the string of the ID or the pattern of the vertex or the edge.
    * @param ep   the execution property.
-   * @param isPermanent whether or not the execution property is permanent.
+   * @param isFinalized whether or not the execution property is permanent/finalized.
    */
   private static void epFormatter(final ObjectNode node, final String id,
-                                  final ExecutionProperty<?> ep, final Boolean isPermanent) {
+                                  final ExecutionProperty<?> ep, final Boolean isFinalized) {
     node.put("ID", id);
     node.put("EPKeyClass", ep.getClass().getName());
     node.put("EPValueClass", ep.getValue().getClass().getName());
     final String epValueStr = epValueToString(ep);
     node.put("EPValue", epValueStr);
-    node.put("isPermanent", isPermanent);
+    node.put("isFinalized", isFinalized.toString());
   }
 
   /**

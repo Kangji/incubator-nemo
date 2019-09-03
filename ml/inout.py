@@ -75,7 +75,8 @@ def preprocess_properties(properties, keypairs, values):
 class Data:
   keyLE = None
   valueLE = {}
-  loaded_properties = {}
+  loaded_properties = {}  # dictionary of key_id:value_ids (int:int)
+  finalized_properties = []  # list of key_ids (int) - values can be accessed from loaded_properties
 
   def process_json(self, properties):
     vertex_properties = properties['vertex']
@@ -84,42 +85,67 @@ class Data:
 
     digit_keypairs = []
     digit_values = []
+    digit_finalized = []
     keypairs_to_translate = []
-    values_to_translate = {}
+    values_to_translate = []
+    finalized = []
 
     for vp in vertex_properties:
       i = f'{vp["ID"]}'
       key = f'{vp["EPKeyClass"]}/{vp["EPValueClass"]}'
       value = f'{vp["EPValue"]}'
+      is_finalized = f'{vp["isFinalized"]}'
       if value.isdigit():
         digit_keypairs.append(f'{i},{key},{tpe}')
         digit_values.append(value)
+        if is_finalized and is_finalized == 'true':
+          digit_finalized.append(True)
+        else:
+          digit_finalized.append(False)
       else:
         keypairs_to_translate.append(f'{i},{key},{tpe}')
-        values_to_translate[key] = value
+        values_to_translate.append((key, value))
+        if is_finalized and is_finalized == 'true':
+          finalized.append(True)
+        else:
+          finalized.append(False)
+
 
     for ep in edge_properties:
       i = f'{ep["ID"]}'
       key = f'{ep["EPKeyClass"]}/{ep["EPValueClass"]}'
       value = f'{ep["EPValue"]}'
+      is_finalized = f'{vp["isFinalized"]}'
       if value.isdigit():
         digit_keypairs.append(f'{i},{key},{tpe}')
         digit_values.append(value)
+        if is_finalized and is_finalized == 'true':
+          digit_finalized.append(True)
+        else:
+          digit_finalized.append(False)
       else:
         keypairs_to_translate.append(f'{i},{key},{tpe}')
-        values_to_translate[key] = value
+        values_to_translate.append((key, value))
+        if is_finalized and is_finalized == 'true':
+          finalized.append(True)
+        else:
+          finalized.append(False)
 
     digit_key_ids = self.transform_keypairs_to_ids(digit_keypairs)
     digit_value_ids = digit_values
     translated_key_ids = self.transform_keypairs_to_ids(keypairs_to_translate)
-    translated_value_ids = [self.transform_value_to_id(k, v) for k, v in values_to_translate.items()]
+    translated_value_ids = [self.transform_value_to_id(k, v) for k, v in values_to_translate]
 
     properties_string = ""
-    for ek, ev in zip(digit_key_ids, digit_value_ids):
+    for ek, ev, ef in zip(digit_key_ids, digit_value_ids, digit_finalized):
       properties_string = properties_string + f' {ek}:{ev}'
+      if ef:
+        self.finalized_properties.append(int(ek))
 
-    for ek, ev in zip(translated_key_ids, translated_value_ids):
+    for ek, ev, ef in zip(translated_key_ids, translated_value_ids, finalized):
       properties_string = properties_string + f' {ek}:{ev}'
+      if ef:
+        self.finalized_properties.append(int(ek))
 
     return properties_string.strip()
 
@@ -236,7 +262,7 @@ class Data:
 
 
   def derive_value_from(self, keyid, epkey, split, tweak):
-    if not self.is_in_configuration_space(epkey):  # ex. ParallelismProperty
+    if not self.is_in_configuration_space(keyid):  # ex. ParallelismProperty or finalized property
       return None
 
     value_candidates = self.get_value_candidates(epkey)
@@ -255,10 +281,10 @@ class Data:
     return max_value if max_value and value > max_value else (min_value if value < min_value else value)
 
 
-  def is_in_configuration_space(self, key):
+  def is_in_configuration_space(self, key):  #key is recommended to be the feature id, but it could also be the name (e.g. ParallelismProperty)
     if key and isinstance(key, int):
       i, k, tpe = self.transform_id_to_keypair(key)
-      return self.is_in_configuration_space(k)
+      return self.is_in_configuration_space(k) and not self.is_finalized_property(key)
     elif key and isinstance(key, str):
       if key.startswith('f') and key[1:].isdigit():  # ex. f55
         return self.is_in_configuration_space(int(key[1:]))
@@ -278,6 +304,15 @@ class Data:
       return None
 
 
+  def is_finalized_property(self, key):
+    if isinstance(key, str) and key.startswith('f') and key[1:].isdigit():
+      return self.is_finalized_property(int(key[1:]))
+    elif isinstance(key, int):
+      return key in self.finalized_properties
+    else:
+      return False
+
+
   def process_property_json(self, dagdirectory):
     property_json = self.load_property_json(dagdirectory)
     processed_json_string = self.process_json(property_json)
@@ -291,10 +326,16 @@ class Data:
     dagsummary_id = self.transform_keypair_to_id("env,dagsummary,ignore")
     dagsummary_value_id = self.transform_value_to_id('dagsummary',property_json['dagsummary'])
 
-    processed = f'{inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id} {processed_json_string}'
+    processed_env = f'{inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id}'
+    for e in processed_env.split():
+      e = e.split(':')
+      self.finalized_properties.append(int(e[0]))
+
+    processed = f'{processed_env} {processed_json_string}'
     for e in processed.split():
       e = e.split(':')
       self.loaded_properties[int(e[0])] = int(e[1])
+
     return processed
 
   def load_property_json(self, dagdirectory):
