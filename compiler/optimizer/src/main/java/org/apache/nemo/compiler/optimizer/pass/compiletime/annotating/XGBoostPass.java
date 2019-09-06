@@ -23,7 +23,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.nemo.common.exception.*;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.PartitionSetProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceAntiAffinityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSiteProperty;
 import org.apache.nemo.compiler.optimizer.OptimizerUtils;
 import org.apache.nemo.runtime.common.metric.MetricUtils;
 import org.slf4j.Logger;
@@ -80,8 +87,42 @@ public final class XGBoostPass extends AnnotatingPass {
             final List<Object> objectList = OptimizerUtils.getObjects(m.get("type"), m.get("ID"), dag);
             LOG.info("Tuning: tuning with {} of {} for {} with {} with {}", m.get("type"), m.get("ID"),
               m.get("EPKeyClass"), m.get("EPValueClass"), m.get("EPValue"));
-            final ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(
+            ExecutionProperty<? extends Serializable> newEP = MetricUtils.keyAndValueToEP(
               epKeyClass, epValueClass, epValue);
+
+            // Check the new EP if it is applicable.
+            if (newEP.getClass().isAssignableFrom(ParallelismProperty.class)) {
+              for (final Object o : objectList) {
+                final Integer val = (Integer) newEP.getValue();
+                if (o instanceof IRVertex) {
+                  final IRVertex v = (IRVertex) o;
+                  final Integer oneToOneParallelismVal = dag.getIncomingEdgesOf(v).stream()
+                    .filter(e -> CommunicationPatternProperty.Value.OneToOne
+                      .equals(e.getPropertyValue(CommunicationPatternProperty.class).orElse(null)))
+                    .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(0))
+                    .max().orElse(0);
+                  final Integer shuffleParallelismVal = dag.getIncomingEdgesOf(v).stream()
+                    .filter(e -> CommunicationPatternProperty.Value.Shuffle
+                      .equals(e.getPropertyValue(CommunicationPatternProperty.class).orElse(null)))
+                    .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(0))
+                    .max().orElse(0);
+                  final Integer parallelism = oneToOneParallelismVal > shuffleParallelismVal
+                    ? oneToOneParallelismVal : shuffleParallelismVal;
+                  if (val > parallelism && parallelism > 0) {
+                    newEP = ParallelismProperty.of(parallelism);
+                  }
+                }
+              }
+            } else if (newEP.getClass().isAssignableFrom(ResourceSiteProperty.class)) {
+
+            } else if (newEP.getClass().isAssignableFrom(ResourceAntiAffinityProperty.class)) {
+
+            } else if (newEP.getClass().isAssignableFrom(PartitionerProperty.class)) {
+
+            } else if (newEP.getClass().isAssignableFrom(PartitionSetProperty.class)) {
+
+            }
+
             try {
               MetricUtils.applyNewEPs(objectList, newEP, dag);
             } catch (IllegalVertexOperationException | IllegalEdgeOperationException e) {

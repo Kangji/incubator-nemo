@@ -144,6 +144,11 @@ public final class MetricUtils {
             idx.getAndIncrement();
           });
       }
+//    } else if (mode == 1) {  // Learning the 'rules'.
+//      node.put("type", "rule");
+//      irdag.getVertices().forEach(v -> {
+//
+//      });
     } else {  // By Vertex / Edge IDs.
       node.put("type", "id");
       irdag.getVertices().forEach(v ->
