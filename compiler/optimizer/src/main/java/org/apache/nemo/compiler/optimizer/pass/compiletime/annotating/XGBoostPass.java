@@ -21,6 +21,8 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.nemo.common.KeyRange;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.*;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
@@ -37,8 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -114,13 +115,33 @@ public final class XGBoostPass extends AnnotatingPass {
                 }
               }
             } else if (newEP.getClass().isAssignableFrom(ResourceSiteProperty.class)) {
-
+              for (final Object o : objectList) {
+                final HashMap<String, Integer> val = (HashMap<String, Integer>) newEP.getValue();
+                if (o instanceof IRVertex) {
+                  final IRVertex v = (IRVertex) o;
+                }
+              }
             } else if (newEP.getClass().isAssignableFrom(ResourceAntiAffinityProperty.class)) {
-
+              for (final Object o : objectList) {
+                final HashSet<Integer> val = (HashSet<Integer>) newEP.getValue();
+                if (o instanceof IRVertex) {
+                  final IRVertex v = (IRVertex) o;
+                }
+              }
             } else if (newEP.getClass().isAssignableFrom(PartitionerProperty.class)) {
-
+              for (final Object o : objectList) {
+                final Pair<PartitionerProperty.Type, Integer> val = (Pair<PartitionerProperty.Type, Integer>) newEP.getValue();
+                if (o instanceof IRVertex) {
+                  final IRVertex v = (IRVertex) o;
+                }
+              }
             } else if (newEP.getClass().isAssignableFrom(PartitionSetProperty.class)) {
-
+              for (final Object o : objectList) {
+                final ArrayList<KeyRange> val = (ArrayList<KeyRange>) newEP.getValue();
+                if (o instanceof IRVertex) {
+                  final IRVertex v = (IRVertex) o;
+                }
+              }
             }
 
             try {
