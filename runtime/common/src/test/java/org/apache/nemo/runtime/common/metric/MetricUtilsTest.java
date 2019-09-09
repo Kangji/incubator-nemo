@@ -36,8 +36,8 @@ public class MetricUtilsTest {
 
   @Test
   public void testEnumIndexAndValue() throws ClassNotFoundException {
-    final DataFlowProperty.Value pull = DataFlowProperty.Value.Pull;
-    final DataFlowProperty.Value push = DataFlowProperty.Value.Push;
+    final DataFlowProperty.Value pull = DataFlowProperty.Value.PULL;
+    final DataFlowProperty.Value push = DataFlowProperty.Value.PUSH;
 
     final DataFlowProperty pullEP = DataFlowProperty.of(pull);
     final String epValuePull = MetricUtils.epValueToString(pullEP);
@@ -120,7 +120,7 @@ public class MetricUtilsTest {
 
   @Test
   public void testPairAndValueToEP() {
-    final DataFlowProperty.Value pull = DataFlowProperty.Value.Pull;
+    final DataFlowProperty.Value pull = DataFlowProperty.Value.PULL;
     final DataFlowProperty ep = DataFlowProperty.of(pull);
     final String epKeyClass = ep.getClass().getName();
     final String epValueClass = pull.getClass().getName();

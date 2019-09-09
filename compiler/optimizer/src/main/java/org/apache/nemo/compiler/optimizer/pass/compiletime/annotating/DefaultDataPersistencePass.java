@@ -49,7 +49,7 @@ public final class DefaultDataPersistencePass extends AnnotatingPass {
           irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.Discard));
         } else {
         */
-        irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.Keep));
+        irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.KEEP));
         //}
       }));
     return dag;

@@ -63,7 +63,7 @@ public final class BroadcastITCase {
     }
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void test() throws Exception {
     JobLauncher.main(builder
       .addJobId(BroadcastITCase.class.getSimpleName())
@@ -72,7 +72,7 @@ public final class BroadcastITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testTransientResource() throws Exception {
     JobLauncher.main(builder
       .addJobId(BroadcastITCase.class.getSimpleName() + "_transient")

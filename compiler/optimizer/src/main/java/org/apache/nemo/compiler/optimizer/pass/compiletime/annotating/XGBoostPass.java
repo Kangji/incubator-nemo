@@ -99,12 +99,12 @@ public final class XGBoostPass extends AnnotatingPass {
                 if (o instanceof IRVertex) {
                   final IRVertex v = (IRVertex) o;
                   final Integer oneToOneParallelismVal = dag.getIncomingEdgesOf(v).stream()
-                    .filter(e -> CommunicationPatternProperty.Value.OneToOne
+                    .filter(e -> CommunicationPatternProperty.Value.ONE_TO_ONE
                       .equals(e.getPropertyValue(CommunicationPatternProperty.class).orElse(null)))
                     .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(0))
                     .max().orElse(0);
                   final Integer shuffleParallelismVal = dag.getIncomingEdgesOf(v).stream()
-                    .filter(e -> CommunicationPatternProperty.Value.Shuffle
+                    .filter(e -> CommunicationPatternProperty.Value.SHUFFLE
                       .equals(e.getPropertyValue(CommunicationPatternProperty.class).orElse(null)))
                     .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(0))
                     .max().orElse(0);
@@ -146,10 +146,10 @@ public final class XGBoostPass extends AnnotatingPass {
                 final Pair<PartitionerProperty.Type, Integer> val = (Pair<PartitionerProperty.Type, Integer>) newEP.getValue();
                 if (o instanceof IREdge) {
                   final IREdge e = (IREdge) o;
-                  if (val.left() == PartitionerProperty.Type.Hash && !CommunicationPatternProperty.Value.Shuffle
+                  if (val.left() == PartitionerProperty.Type.HASH && !CommunicationPatternProperty.Value.SHUFFLE
                     .equals(e.getPropertyValue(CommunicationPatternProperty.class)
-                      .orElse(CommunicationPatternProperty.Value.OneToOne))) {
-                    newEP = PartitionerProperty.of(PartitionerProperty.Type.Intact);
+                      .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE))) {
+                    newEP = PartitionerProperty.of(PartitionerProperty.Type.INTACT);
                   }
                 }
               }

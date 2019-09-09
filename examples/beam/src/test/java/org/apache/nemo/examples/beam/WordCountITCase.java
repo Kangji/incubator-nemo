@@ -64,7 +64,7 @@ public final class WordCountITCase {
     }
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void test() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
@@ -74,7 +74,7 @@ public final class WordCountITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testDBEnabled() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
@@ -94,7 +94,7 @@ public final class WordCountITCase {
 //      .build());
 //  }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testLargeShuffle() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
@@ -104,7 +104,7 @@ public final class WordCountITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testLargeShuffleInOneExecutor() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(oneExecutorResourceFileName)
@@ -114,7 +114,7 @@ public final class WordCountITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testConditionalLargeShuffle() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
@@ -123,7 +123,7 @@ public final class WordCountITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testTransientResource() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
@@ -133,7 +133,7 @@ public final class WordCountITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testClonedScheduling() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
@@ -144,7 +144,7 @@ public final class WordCountITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testSpeculativeExecution() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)

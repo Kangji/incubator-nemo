@@ -250,7 +250,7 @@ public final class JobLauncher {
       LOG.info("Waiting for the driver to be ready");
       driverReadyLatch.await();
     } catch (final InterruptedException e) {
-      LOG.warn("Interrupted: " + e);
+      LOG.warn("Interrupted: ", e);
       // clean up state...
       Thread.currentThread().interrupt();
     }
@@ -272,7 +272,7 @@ public final class JobLauncher {
       LOG.info("Waiting for the DAG to finish execution");
       jobDoneLatch.await();
     } catch (final InterruptedException e) {
-      LOG.warn("Interrupted: " + e);
+      LOG.warn("Interrupted: ", e);
       // clean up state...
       Thread.currentThread().interrupt();
       throw new RuntimeException(e);

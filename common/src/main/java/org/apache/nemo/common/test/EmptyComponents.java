@@ -53,12 +53,23 @@ public final class EmptyComponents {
   }
 
   public static IREdge newDummyShuffleEdge(final IRVertex src, final IRVertex dst) {
+<<<<<<< HEAD
     final IREdge edge = new IREdge(CommunicationPatternProperty.Value.Shuffle, src, dst);
     edge.setPropertyPermanently(KeyExtractorProperty.of(new DummyBeamKeyExtractor()));
     edge.setPropertyPermanently(KeyEncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
     edge.setPropertyPermanently(KeyDecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
     edge.setPropertyPermanently(EncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
     edge.setPropertyPermanently(DecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
+=======
+    final IREdge edge = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, src, dst);
+    edge.setProperty(KeyExtractorProperty.of(new DummyBeamKeyExtractor()));
+    edge.setProperty(KeyEncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
+    edge.setProperty(KeyDecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
+    edge.setProperty(EncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
+    edge.setProperty(DecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
+    edge.setProperty(KeyEncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
+    edge.setProperty(KeyDecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
+>>>>>>> master
     return edge;
   }
 
@@ -82,11 +93,11 @@ public final class EmptyComponents {
     dagBuilder.addVertex(t3);
     dagBuilder.addVertex(t4);
     dagBuilder.addVertex(t5);
-    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.OneToOne, s, t1));
+    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.ONE_TO_ONE, s, t1));
     dagBuilder.connectVertices(newDummyShuffleEdge(t1, t2));
-    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.OneToOne, t2, t3));
+    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.ONE_TO_ONE, t2, t3));
     dagBuilder.connectVertices(newDummyShuffleEdge(t3, t4));
-    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.OneToOne, t2, t5));
+    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.ONE_TO_ONE, t2, t5));
     return new IRDAG(dagBuilder.build());
   }
 
@@ -116,11 +127,11 @@ public final class EmptyComponents {
     dagBuilder.addVertex(t3);
     dagBuilder.addVertex(t4);
     dagBuilder.addVertex(t5);
-    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.OneToOne, s, t1));
+    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.ONE_TO_ONE, s, t1));
     dagBuilder.connectVertices(shuffleEdgeBetweenT1AndT2);
-    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.OneToOne, t2, t3));
+    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.ONE_TO_ONE, t2, t3));
     dagBuilder.connectVertices(shuffleEdgeBetweenT3AndT4);
-    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.OneToOne, t2, t5));
+    dagBuilder.connectVertices(new IREdge(CommunicationPatternProperty.Value.ONE_TO_ONE, t2, t5));
     return new IRDAG(dagBuilder.build());
   }
 
@@ -169,14 +180,17 @@ public final class EmptyComponents {
 
     @Override
     public void prepare(final Context context, final OutputCollector<O> outputCollector) {
+      // Do nothing in an EmptyTransform.
     }
 
     @Override
     public void onData(final I element) {
+      // Do nothing in an EmptyTransform.
     }
 
     @Override
     public void close() {
+      // Do nothing in an EmptyTransform.
     }
   }
 
