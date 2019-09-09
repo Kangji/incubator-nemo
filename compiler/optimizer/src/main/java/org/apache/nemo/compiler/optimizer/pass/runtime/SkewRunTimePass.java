@@ -141,8 +141,8 @@ public final class SkewRunTimePass extends RunTimePass<Map<Object, Long>> {
     Long currentAccumulatedSize = partitionSizeList.get(startingKey);
     Long prevAccumulatedSize = 0L;
     final ArrayList<KeyRange> keyRanges = new ArrayList<>();
-
     final HashSet<Integer> skewedTaskIndices = new HashSet<>();
+
     for (int dstTaskIndex = 0; dstTaskIndex < dstParallelism; dstTaskIndex++) {
       if (dstTaskIndex < (dstParallelism - 1)) {
         // Ideal accumulated partition size for this task.
@@ -187,12 +187,10 @@ public final class SkewRunTimePass extends RunTimePass<Map<Object, Long>> {
         LOG.debug("KeyRange {}~{}, Size {}", startingKey, lastKey + 1,
           currentAccumulatedSize - prevAccumulatedSize);
       }
-
     }
 
     return Pair.of(PartitionSetProperty.of(keyRanges), ResourceAntiAffinityProperty.of(skewedTaskIndices));
   }
-
 
   private List<Long> getTopNLargeKeySizes(final List<Long> partitionSizeList) {
     return partitionSizeList.stream()

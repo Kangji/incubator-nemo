@@ -25,6 +25,7 @@ import org.apache.nemo.common.KeyRange;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.*;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionSetProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
@@ -126,20 +127,40 @@ public final class XGBoostPass extends AnnotatingPass {
                 final HashSet<Integer> val = (HashSet<Integer>) newEP.getValue();
                 if (o instanceof IRVertex) {
                   final IRVertex v = (IRVertex) o;
+                  final Integer upperLimitOfTaskIndex =
+                    v.getPropertyValue(ParallelismProperty.class).orElse(Integer.MAX_VALUE);
+                  final HashSet<Integer> newVal = new HashSet<>();
+
+                  for (final Integer i : val) {
+                    if (i < upperLimitOfTaskIndex) {
+                      newVal.add(i);
+                    }
+                  }
+                  if (newVal.size() < val.size()) {
+                    newEP = ResourceAntiAffinityProperty.of(newVal);
+                  }
                 }
               }
             } else if (newEP.getClass().isAssignableFrom(PartitionerProperty.class)) {
               for (final Object o : objectList) {
                 final Pair<PartitionerProperty.Type, Integer> val = (Pair<PartitionerProperty.Type, Integer>) newEP.getValue();
-                if (o instanceof IRVertex) {
-                  final IRVertex v = (IRVertex) o;
+                if (o instanceof IREdge) {
+                  final IREdge e = (IREdge) o;
+                  if (val.left() == PartitionerProperty.Type.Hash && !CommunicationPatternProperty.Value.Shuffle
+                    .equals(e.getPropertyValue(CommunicationPatternProperty.class)
+                      .orElse(CommunicationPatternProperty.Value.OneToOne))) {
+                    newEP = PartitionerProperty.of(PartitionerProperty.Type.Intact);
+                  }
                 }
               }
             } else if (newEP.getClass().isAssignableFrom(PartitionSetProperty.class)) {
               for (final Object o : objectList) {
                 final ArrayList<KeyRange> val = (ArrayList<KeyRange>) newEP.getValue();
-                if (o instanceof IRVertex) {
-                  final IRVertex v = (IRVertex) o;
+                if (o instanceof IREdge) {
+                  final IREdge e = (IREdge) o;
+                  if (val.size() > e.getDst().getPropertyValue(ParallelismProperty.class).orElse(0)) {
+                    newEP = null;
+                  }
                 }
               }
             }

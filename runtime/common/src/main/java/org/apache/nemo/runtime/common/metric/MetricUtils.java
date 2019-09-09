@@ -436,7 +436,7 @@ public final class MetricUtils {
    */
   public static void applyNewEPs(final List<Object> objectList, final ExecutionProperty<? extends Serializable> newEP,
                                  final IRDAG dag) {
-    if (!configurationSpace.contains(newEP.getClass().getName())) { // only handle those in conf space.
+    if (newEP == null || !configurationSpace.contains(newEP.getClass().getName())) { // only handle those in conf space.
       return;
     }
 
