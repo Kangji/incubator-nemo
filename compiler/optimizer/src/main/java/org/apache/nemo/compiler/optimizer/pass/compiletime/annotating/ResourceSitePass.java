@@ -63,7 +63,7 @@ public final class ResourceSitePass extends AnnotatingPass {
   private static final Logger LOG = LoggerFactory.getLogger(ResourceSitePass.class);
   private static final HashMap<String, Integer> EMPTY_MAP = new HashMap<>();
 
-  private static String bandwidthSpecificationString = "";
+  private static BandwidthSpecification bandwidthSpecification = null;
 
 
   /**
@@ -75,10 +75,10 @@ public final class ResourceSitePass extends AnnotatingPass {
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    if (bandwidthSpecificationString.isEmpty()) {
+    if (bandwidthSpecification == null) {
       dag.topologicalDo(irVertex -> irVertex.setProperty(ResourceSiteProperty.of(EMPTY_MAP)));
     } else {
-      assignNodeShares(dag, BandwidthSpecification.fromJsonString(bandwidthSpecificationString));
+      assignNodeShares(dag, bandwidthSpecification);
     }
     return dag;
   }
@@ -87,7 +87,14 @@ public final class ResourceSitePass extends AnnotatingPass {
    * @param value bandwidth information in serialized JSON string.
    */
   public static void setBandwidthSpecificationString(final String value) {
-    bandwidthSpecificationString = value;
+    bandwidthSpecification = BandwidthSpecification.fromJsonString(value);
+  }
+
+  /**
+   * @return the bandwidth specification.
+   */
+  public static BandwidthSpecification getBandwidthSpecification() {
+    return bandwidthSpecification;
   }
 
   /**
@@ -238,7 +245,7 @@ public final class ResourceSitePass extends AnnotatingPass {
   /**
    * Bandwidth specification.
    */
-  private static final class BandwidthSpecification {
+  public static final class BandwidthSpecification {
     private final List<String> nodeNames = new ArrayList<>();
     private final Map<String, Integer> uplinkBandwidth = new HashMap<>();
     private final Map<String, Integer> downlinkBandwidth = new HashMap<>();

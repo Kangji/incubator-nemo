@@ -43,6 +43,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
 
 /**
  * Pass for applying XGBoost optimizations.
@@ -118,8 +119,22 @@ public final class XGBoostPass extends AnnotatingPass {
             } else if (newEP.getClass().isAssignableFrom(ResourceSiteProperty.class)) {
               for (final Object o : objectList) {
                 final HashMap<String, Integer> val = (HashMap<String, Integer>) newEP.getValue();
+                final ResourceSitePass.BandwidthSpecification bandwidthSpecification =
+                  ResourceSitePass.getBandwidthSpecification();
                 if (o instanceof IRVertex) {
                   final IRVertex v = (IRVertex) o;
+                  final List<HashMap<String, Integer>> oneToOneVal = dag.getIncomingEdgesOf(v).stream()
+                    .filter(e -> CommunicationPatternProperty.Value.ONE_TO_ONE
+                      .equals(e.getPropertyValue(CommunicationPatternProperty.class).orElse(null)))
+                    .map(e -> e.getSrc().getPropertyValue(ResourceSiteProperty.class).orElse(new HashMap<>()))
+                    .collect(Collectors.toList());
+                  if (oneToOneVal.size() == 1) {
+                    newEP = ResourceSiteProperty.of(oneToOneVal.get(0));
+                  } else {
+                    for (final IREdge inEdge : dag.getIncomingEdgesOf(v)) {
+
+                    }
+                  }
                 }
               }
             } else if (newEP.getClass().isAssignableFrom(ResourceAntiAffinityProperty.class)) {
@@ -143,7 +158,8 @@ public final class XGBoostPass extends AnnotatingPass {
               }
             } else if (newEP.getClass().isAssignableFrom(PartitionerProperty.class)) {
               for (final Object o : objectList) {
-                final Pair<PartitionerProperty.Type, Integer> val = (Pair<PartitionerProperty.Type, Integer>) newEP.getValue();
+                final Pair<PartitionerProperty.Type, Integer> val =
+                  (Pair<PartitionerProperty.Type, Integer>) newEP.getValue();
                 if (o instanceof IREdge) {
                   final IREdge e = (IREdge) o;
                   if (val.left() == PartitionerProperty.Type.HASH && !CommunicationPatternProperty.Value.SHUFFLE
