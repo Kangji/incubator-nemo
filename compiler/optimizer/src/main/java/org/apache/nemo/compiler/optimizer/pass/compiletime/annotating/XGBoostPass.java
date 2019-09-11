@@ -103,24 +103,21 @@ public final class XGBoostPass extends AnnotatingPass {
                     .filter(e -> CommunicationPatternProperty.Value.ONE_TO_ONE
                       .equals(e.getPropertyValue(CommunicationPatternProperty.class).orElse(null)))
                     .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(0))
-                    .max().orElse(0);
+                    .max().orElse(0);  // max value from one to one in edges.
                   final Integer shuffleParallelismVal = dag.getIncomingEdgesOf(v).stream()
                     .filter(e -> CommunicationPatternProperty.Value.SHUFFLE
                       .equals(e.getPropertyValue(CommunicationPatternProperty.class).orElse(null)))
                     .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(0))
-                    .max().orElse(0);
+                    .max().orElse(0);  // max value from shuffle in edges.
                   final Integer parallelism = oneToOneParallelismVal > shuffleParallelismVal
-                    ? oneToOneParallelismVal : shuffleParallelismVal;
-                  if (val > parallelism && parallelism > 0) {
+                    ? oneToOneParallelismVal : shuffleParallelismVal;  // We get the larger value.
+                  if (val > parallelism && parallelism > 0) {  // we set the maximum possible value.
                     newEP = ParallelismProperty.of(parallelism);
                   }
                 }
               }
             } else if (newEP.getClass().isAssignableFrom(ResourceSiteProperty.class)) {
               for (final Object o : objectList) {
-                final HashMap<String, Integer> val = (HashMap<String, Integer>) newEP.getValue();
-                final ResourceSitePass.BandwidthSpecification bandwidthSpecification =
-                  ResourceSitePass.getBandwidthSpecification();
                 if (o instanceof IRVertex) {
                   final IRVertex v = (IRVertex) o;
                   final List<HashMap<String, Integer>> oneToOneVal = dag.getIncomingEdgesOf(v).stream()
@@ -129,11 +126,8 @@ public final class XGBoostPass extends AnnotatingPass {
                     .map(e -> e.getSrc().getPropertyValue(ResourceSiteProperty.class).orElse(new HashMap<>()))
                     .collect(Collectors.toList());
                   if (oneToOneVal.size() == 1) {
+                    // we reset the resource site property for one-to-one relations.
                     newEP = ResourceSiteProperty.of(oneToOneVal.get(0));
-                  } else {
-                    for (final IREdge inEdge : dag.getIncomingEdgesOf(v)) {
-
-                    }
                   }
                 }
               }
@@ -142,16 +136,17 @@ public final class XGBoostPass extends AnnotatingPass {
                 final HashSet<Integer> val = (HashSet<Integer>) newEP.getValue();
                 if (o instanceof IRVertex) {
                   final IRVertex v = (IRVertex) o;
-                  final Integer upperLimitOfTaskIndex =
+                  final Integer upperLimitOfTaskIndex =  // we limit the task index to the maximum parallelism value.
                     v.getPropertyValue(ParallelismProperty.class).orElse(Integer.MAX_VALUE);
                   final HashSet<Integer> newVal = new HashSet<>();
 
                   for (final Integer i : val) {
                     if (i < upperLimitOfTaskIndex) {
-                      newVal.add(i);
+                      newVal.add(i);  // it's ok if it doesn't exceed the maximum parallelism value.
                     }
                   }
                   if (newVal.size() < val.size()) {
+                    // if the two values don't match, we exclude those exceeding the max parallelism value.
                     newEP = ResourceAntiAffinityProperty.of(newVal);
                   }
                 }
@@ -165,7 +160,7 @@ public final class XGBoostPass extends AnnotatingPass {
                   if (val.left() == PartitionerProperty.Type.HASH && !CommunicationPatternProperty.Value.SHUFFLE
                     .equals(e.getPropertyValue(CommunicationPatternProperty.class)
                       .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE))) {
-                    newEP = PartitionerProperty.of(PartitionerProperty.Type.INTACT);
+                    newEP = PartitionerProperty.of(PartitionerProperty.Type.INTACT);  // if HASH && not SHUFFLE, INTACT.
                   }
                 }
               }
@@ -175,7 +170,7 @@ public final class XGBoostPass extends AnnotatingPass {
                 if (o instanceof IREdge) {
                   final IREdge e = (IREdge) o;
                   if (val.size() > e.getDst().getPropertyValue(ParallelismProperty.class).orElse(0)) {
-                    newEP = null;
+                    newEP = null;  // ignore if the key range list exceeds the parallelism of the destination.
                   }
                 }
               }

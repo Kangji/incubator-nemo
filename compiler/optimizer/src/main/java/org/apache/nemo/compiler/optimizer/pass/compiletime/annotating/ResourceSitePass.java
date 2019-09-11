@@ -63,7 +63,7 @@ public final class ResourceSitePass extends AnnotatingPass {
   private static final Logger LOG = LoggerFactory.getLogger(ResourceSitePass.class);
   private static final HashMap<String, Integer> EMPTY_MAP = new HashMap<>();
 
-  private static BandwidthSpecification bandwidthSpecification = null;
+  private static BandwidthSpecification bandwidthSpec = null;
 
 
   /**
@@ -75,10 +75,10 @@ public final class ResourceSitePass extends AnnotatingPass {
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    if (bandwidthSpecification == null) {
+    if (bandwidthSpec == null) {
       dag.topologicalDo(irVertex -> irVertex.setProperty(ResourceSiteProperty.of(EMPTY_MAP)));
     } else {
-      assignNodeShares(dag, bandwidthSpecification);
+      assignNodeShares(dag, bandwidthSpec);
     }
     return dag;
   }
@@ -87,14 +87,14 @@ public final class ResourceSitePass extends AnnotatingPass {
    * @param value bandwidth information in serialized JSON string.
    */
   public static void setBandwidthSpecificationString(final String value) {
-    bandwidthSpecification = BandwidthSpecification.fromJsonString(value);
+    bandwidthSpec = BandwidthSpecification.fromJsonString(value);
   }
 
   /**
    * @return the bandwidth specification.
    */
   public static BandwidthSpecification getBandwidthSpecification() {
-    return bandwidthSpecification;
+    return bandwidthSpec;
   }
 
   /**
