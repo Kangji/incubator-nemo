@@ -67,10 +67,9 @@ public interface ExecutorRepresenter {
   int getExecutorMemory();
 
   /**
+   * @param task the task to run.
    * @return the current snapshot of set of Tasks that are running in this executor.
    * Marks the Task as running, and sends scheduling message to the executor.
-   *
-   * @param task the task to run
    */
    void onTaskScheduled(Task task);
 

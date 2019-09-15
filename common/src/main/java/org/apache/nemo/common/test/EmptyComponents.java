@@ -53,23 +53,12 @@ public final class EmptyComponents {
   }
 
   public static IREdge newDummyShuffleEdge(final IRVertex src, final IRVertex dst) {
-<<<<<<< HEAD
-    final IREdge edge = new IREdge(CommunicationPatternProperty.Value.Shuffle, src, dst);
+    final IREdge edge = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, src, dst);
     edge.setPropertyPermanently(KeyExtractorProperty.of(new DummyBeamKeyExtractor()));
     edge.setPropertyPermanently(KeyEncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
     edge.setPropertyPermanently(KeyDecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
     edge.setPropertyPermanently(EncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
     edge.setPropertyPermanently(DecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
-=======
-    final IREdge edge = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, src, dst);
-    edge.setProperty(KeyExtractorProperty.of(new DummyBeamKeyExtractor()));
-    edge.setProperty(KeyEncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
-    edge.setProperty(KeyDecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
-    edge.setProperty(EncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
-    edge.setProperty(DecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
-    edge.setProperty(KeyEncoderProperty.of(new EncoderFactory.DummyEncoderFactory()));
-    edge.setProperty(KeyDecoderProperty.of(new DecoderFactory.DummyDecoderFactory()));
->>>>>>> master
     return edge;
   }
 

@@ -59,7 +59,7 @@ public final class ResourceExplorationPass extends AnnotatingPass {
     final Map<IRVertex, Integer> vertexStageIdMap = new StagePartitioner().apply(dag);
     final Map<Integer, Long> stageIdToMemoryEdgeNumMap = new HashMap<>();
     final List<DataStoreProperty.Value> memoryValues =
-      Arrays.asList(DataStoreProperty.Value.MemoryStore, DataStoreProperty.Value.SerializedMemoryStore);
+      Arrays.asList(DataStoreProperty.Value.MEMORY_STORE, DataStoreProperty.Value.SERIALIZED_MEMORY_STORE);
     final List<Pair<String, List<Integer>>> resourceSpecs =
       OptimizerUtils.parseResourceSpecificationString(resourceSpecificationString);
 
@@ -69,7 +69,7 @@ public final class ResourceExplorationPass extends AnnotatingPass {
       }
       final long memoryEdgeNum = dag.getOutgoingEdgesOf(v).stream()
         .filter(e -> memoryValues.contains(e.getPropertyValue(DataStoreProperty.class)
-          .orElse(DataStoreProperty.Value.LocalFileStore)))
+          .orElse(DataStoreProperty.Value.LOCAL_FILE_STORE)))
         .count();
       stageIdToMemoryEdgeNumMap.compute(stageId, (k, val) -> val == null ? memoryEdgeNum : val + memoryEdgeNum);
     });
