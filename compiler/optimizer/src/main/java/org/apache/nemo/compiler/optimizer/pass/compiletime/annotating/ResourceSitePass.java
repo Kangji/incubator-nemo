@@ -87,7 +87,9 @@ public final class ResourceSitePass extends AnnotatingPass {
    * @param value bandwidth information in serialized JSON string.
    */
   public static void setBandwidthSpecificationString(final String value) {
-    bandwidthSpec = BandwidthSpecification.fromJsonString(value);
+    if (value != null && !value.isEmpty()) {
+      bandwidthSpec = BandwidthSpecification.fromJsonString(value);
+    }
   }
 
   /**
