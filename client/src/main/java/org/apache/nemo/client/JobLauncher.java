@@ -18,14 +18,14 @@
  */
 package org.apache.nemo.client;
 
-import com.fasterxml.jackson.core.TreeNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.compiler.backend.nemo.NemoPlanRewriter;
+import org.apache.nemo.compiler.optimizer.OptimizerUtils;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.driver.NemoDriver;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
@@ -494,19 +494,16 @@ public final class JobLauncher {
                                              final Class<? extends Name<Integer>> maxOffHeapMb)
     throws InjectionException {
     final Injector injector = TANG.newInjector(Configurations.merge(jobConf, executorConf));
-    try {
-      final String contents = injector.getNamedInstance(contentsParameter);
-      final ObjectMapper objectMapper = new ObjectMapper();
-      final TreeNode jsonRootNode = objectMapper.readTree(contents);
-      final TreeNode resourceNode = jsonRootNode.get(0);
-      final int executorMemory = resourceNode.get("memory_mb").traverse().getIntValue();
-      final int offHeapMemory =  (int) (executorMemory * injector.getNamedInstance(offHeapRatio));
-      return TANG.newConfigurationBuilder()
-        .bindNamedParameter(maxOffHeapMb, String.valueOf(offHeapMemory))
-        .build();
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
+    final String contents = injector.getNamedInstance(contentsParameter);
+    final List<Pair<String, List<Integer>>> resourceSpecificationList =
+      OptimizerUtils.parseResourceSpecificationString(contents);
+    final Pair<String, List<Integer>> p = resourceSpecificationList.stream()
+      .findFirst().orElseThrow(() -> new InjectionException("no resource specified"));
+    final int executorMemory = p.right().get(0);
+    final int offHeapMemory =  (int) (executorMemory * injector.getNamedInstance(offHeapRatio));
+    return TANG.newConfigurationBuilder()
+      .bindNamedParameter(maxOffHeapMb, String.valueOf(offHeapMemory))
+      .build();
   }
 
   /**
