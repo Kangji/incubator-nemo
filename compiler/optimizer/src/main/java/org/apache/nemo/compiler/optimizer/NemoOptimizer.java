@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.compiler.optimizer;
 
+import com.google.common.annotations.VisibleForTesting;
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.exception.CompileTimeOptimizationException;
@@ -105,7 +106,7 @@ public final class NemoOptimizer implements Optimizer {
     final IRDAG optimizedDAG;
 
     // Set source parallelism first.
-    final IRDAG sourceParallelismSetIRDAG = setSourceParallelism(dag);
+    final IRDAG sourceParallelismSetIRDAG = setSourceParallelism(dag, this.desiredSourceParallelism);
 
     // Handle caching prior to compile-time optimizations.
     final Map<UUID, IREdge> cacheIdToEdge = new HashMap<>();
@@ -187,7 +188,8 @@ public final class NemoOptimizer implements Optimizer {
    * @param dag the original IR DAG.
    * @return the IR DAG with the source parallelism set.
    */
-  private IRDAG setSourceParallelism(final IRDAG dag) {
+  @VisibleForTesting
+  public static IRDAG setSourceParallelism(final IRDAG dag, final Integer desiredSourceParallelism) {
     dag.getVertices().stream()
       .filter(v -> dag.getIncomingEdgesOf(v).isEmpty() && v instanceof SourceVertex)
       .forEach(v -> {
@@ -197,7 +199,7 @@ public final class NemoOptimizer implements Optimizer {
           // (It can be more/less than the desired value.)
           final SourceVertex sourceVertex = (SourceVertex) v;
           final int sourceParallelism;
-          if (this.desiredSourceParallelism == 0) {
+          if (desiredSourceParallelism == 0) {
             final long estimatedSizeBytes = sourceVertex.getEstimatedSizeBytes();
 
             if (estimatedSizeBytes < 64 * 1024 * 1024) {  // less than 64 MB.
@@ -210,7 +212,7 @@ public final class NemoOptimizer implements Optimizer {
                 (int) (estimatedSizeBytes / 256 * 1024 * 1024)).size();  // partition in 256MB blocks [64, ].
             }
           } else {
-            sourceParallelism = sourceVertex.getReadables(this.desiredSourceParallelism).size();
+            sourceParallelism = sourceVertex.getReadables(desiredSourceParallelism).size();
           }
           sourceVertex.setPropertyPermanently(ParallelismProperty.of(sourceParallelism));
         } catch (Exception e) {
