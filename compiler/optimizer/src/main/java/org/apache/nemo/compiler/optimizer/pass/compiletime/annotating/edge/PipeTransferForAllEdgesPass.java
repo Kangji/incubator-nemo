@@ -16,33 +16,32 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
+package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
-import org.apache.nemo.common.coder.EncoderFactory;
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.edge.executionproperty.EncoderProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
 /**
- * Pass for initiating IREdge Encoder ExecutionProperty with default dummy coder.
+ * Annotate 'Pipe' on all edges.
  */
-@Annotates(EncoderProperty.class)
-public final class DefaultEdgeEncoderPass extends AnnotatingPass {
-
-  private static final EncoderProperty DEFAULT_ENCODER_PROPERTY =
-    EncoderProperty.of(EncoderFactory.DUMMY_ENCODER_FACTORY);
-
+@Annotates(DataStoreProperty.class)
+public final class PipeTransferForAllEdgesPass extends AnnotatingPass {
   /**
    * Default constructor.
    */
-  public DefaultEdgeEncoderPass() {
-    super(DefaultEdgeEncoderPass.class);
+  public PipeTransferForAllEdgesPass() {
+    super(PipeTransferForAllEdgesPass.class);
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(irVertex ->
-      dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
-        irEdge.setPropertyIfAbsent(DEFAULT_ENCODER_PROPERTY)));
+    dag.getVertices().forEach(vertex -> {
+      dag.getIncomingEdgesOf(vertex).stream()
+        .forEach(edge -> edge.setPropertyPermanently(
+          DataStoreProperty.of(DataStoreProperty.Value.PIPE)));
+    });
     return dag;
   }
 }

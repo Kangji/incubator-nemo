@@ -19,7 +19,7 @@
 package org.apache.nemo.compiler.optimizer.policy;
 
 import org.apache.nemo.common.exception.CompileTimeOptimizationException;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.DefaultScheduleGroupPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.DefaultScheduleGroupPass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.TransientResourceCompositePass;
 import org.junit.Test;
 

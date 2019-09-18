@@ -26,6 +26,8 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DecoderProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.EncoderProperty;
 import org.apache.nemo.compiler.CompilerTestUtil;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.DefaultEdgeDecoderPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.DefaultEdgeEncoderPass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

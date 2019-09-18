@@ -18,9 +18,9 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.compiletime.composite;
 
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.TransientResourceDataFlowPass;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.TransientResourceDataStorePass;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.TransientResourcePriorityPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.TransientResourceDataFlowPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.TransientResourceDataStorePass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.TransientResourcePriorityPass;
 
 import java.util.Arrays;
 

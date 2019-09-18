@@ -16,30 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
+package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
 /**
- * Annotate 'Pipe' on all edges.
+ * Edge data store pass to process inter-stage memory store edges.
  */
 @Annotates(DataStoreProperty.class)
-public final class PipeTransferForAllEdgesPass extends AnnotatingPass {
+public final class DefaultDataStorePass extends AnnotatingPass {
   /**
    * Default constructor.
    */
-  public PipeTransferForAllEdgesPass() {
-    super(PipeTransferForAllEdgesPass.class);
+  public DefaultDataStorePass() {
+    super(DefaultDataStorePass.class);
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().forEach(vertex -> {
-      dag.getIncomingEdgesOf(vertex).stream()
-        .forEach(edge -> edge.setPropertyPermanently(
-          DataStoreProperty.of(DataStoreProperty.Value.PIPE)));
-    });
+    dag.getVertices().forEach(vertex ->
+      dag.getIncomingEdgesOf(vertex).forEach(edge ->
+        edge.setPropertyIfAbsent(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
     return dag;
   }
 }

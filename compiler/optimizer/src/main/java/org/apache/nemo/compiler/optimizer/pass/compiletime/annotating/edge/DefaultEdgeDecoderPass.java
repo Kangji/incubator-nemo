@@ -16,36 +16,35 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
+package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
+import org.apache.nemo.common.coder.DecoderFactory;
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.edge.IREdge;
-import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
-
-import java.util.List;
+import org.apache.nemo.common.ir.edge.executionproperty.DecoderProperty;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
 /**
- * A pass to support Disaggregated Resources by tagging edges.
- * This pass handles the DataStore ExecutionProperty.
+ * Pass for initiating IREdge Decoder ExecutionProperty with default dummy coder.
  */
-@Annotates(DataStoreProperty.class)
-@Requires(DataStoreProperty.class)
-public final class DisaggregationEdgeDataStorePass extends AnnotatingPass {
+@Annotates(DecoderProperty.class)
+public final class DefaultEdgeDecoderPass extends AnnotatingPass {
+
+  private static final DecoderProperty DEFAULT_DECODER_PROPERTY =
+    DecoderProperty.of(DecoderFactory.DUMMY_DECODER_FACTORY);
+
   /**
    * Default constructor.
    */
-  public DisaggregationEdgeDataStorePass() {
-    super(DisaggregationEdgeDataStorePass.class);
+  public DefaultEdgeDecoderPass() {
+    super(DefaultEdgeDecoderPass.class);
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().forEach(vertex -> { // Initialize the DataStore of the DAG with GlusterFileStore.
-      final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
-      inEdges.forEach(edge ->
-        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.GLUSTER_FILE_STORE)));
-    });
+    dag.topologicalDo(irVertex ->
+      dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+        irEdge.setPropertyIfAbsent(DEFAULT_DECODER_PROPERTY)));
     return dag;
   }
 }

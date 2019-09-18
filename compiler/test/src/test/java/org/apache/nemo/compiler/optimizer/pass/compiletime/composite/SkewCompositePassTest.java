@@ -29,7 +29,7 @@ import org.apache.nemo.common.ir.vertex.transform.MessageAggregatorTransform;
 import org.apache.nemo.common.ir.vertex.transform.TriggerTransform;
 import org.apache.nemo.compiler.CompilerTestUtil;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.DefaultParallelismPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.DefaultParallelismPass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

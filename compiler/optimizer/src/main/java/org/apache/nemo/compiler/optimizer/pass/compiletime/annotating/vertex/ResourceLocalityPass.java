@@ -16,41 +16,31 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
+package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.edge.executionproperty.CompressionProperty;
-
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceLocalityProperty;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
 /**
- * A pass for applying compression algorithm for data flowing between vertices.
+ * Sets {@link ResourceLocalityProperty}.
  */
-@Annotates(CompressionProperty.class)
-public final class CompressionPass extends AnnotatingPass {
-  private final CompressionProperty.Value compression;
-
-  /**
-   * Default constructor. Uses LZ4 as default.
-   */
-  public CompressionPass() {
-    this(CompressionProperty.Value.LZ4);
-  }
+@Annotates(ResourceLocalityProperty.class)
+public final class ResourceLocalityPass extends AnnotatingPass {
 
   /**
    * Constructor.
-   *
-   * @param compression Compression to apply on edges.
    */
-  public CompressionPass(final CompressionProperty.Value compression) {
-    super(CompressionPass.class);
-    this.compression = compression;
+  public ResourceLocalityPass() {
+    super(ResourceLocalityPass.class);
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge -> {
-      edge.setPropertyIfAbsent(CompressionProperty.of(compression));
-    }));
+    // On every vertex, if ResourceLocalityProperty is not set, put it as true.
+    dag.getVertices().forEach(v ->
+      v.setPropertyIfAbsent(ResourceLocalityProperty.of(true)));
     return dag;
   }
 }

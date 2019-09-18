@@ -18,7 +18,11 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.compiletime.composite;
 
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.*;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.*;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.DefaultParallelismPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.DefaultScheduleGroupPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.ResourceLocalityPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.ResourceSlotPass;
 
 import java.util.Arrays;
 

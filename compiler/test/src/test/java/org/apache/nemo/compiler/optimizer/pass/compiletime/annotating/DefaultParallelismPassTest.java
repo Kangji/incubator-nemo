@@ -22,6 +22,7 @@ import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.CompilerTestUtil;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.DefaultParallelismPass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

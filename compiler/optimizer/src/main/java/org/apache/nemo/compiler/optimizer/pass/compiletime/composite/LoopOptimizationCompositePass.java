@@ -18,7 +18,7 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.compiletime.composite;
 
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.DuplicateEdgeGroupSizePass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.DuplicateEdgeGroupSizePass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping.LoopExtractionPass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping.LoopOptimizations;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping.LoopUnrollingPass;

@@ -16,33 +16,35 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
+package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
-import org.apache.nemo.common.coder.DecoderFactory;
+import org.apache.nemo.common.coder.EncoderFactory;
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.edge.executionproperty.DecoderProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.EncoderProperty;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
 /**
- * Pass for initiating IREdge Decoder ExecutionProperty with default dummy coder.
+ * Pass for initiating IREdge Encoder ExecutionProperty with default dummy coder.
  */
-@Annotates(DecoderProperty.class)
-public final class DefaultEdgeDecoderPass extends AnnotatingPass {
+@Annotates(EncoderProperty.class)
+public final class DefaultEdgeEncoderPass extends AnnotatingPass {
 
-  private static final DecoderProperty DEFAULT_DECODER_PROPERTY =
-    DecoderProperty.of(DecoderFactory.DUMMY_DECODER_FACTORY);
+  private static final EncoderProperty DEFAULT_ENCODER_PROPERTY =
+    EncoderProperty.of(EncoderFactory.DUMMY_ENCODER_FACTORY);
 
   /**
    * Default constructor.
    */
-  public DefaultEdgeDecoderPass() {
-    super(DefaultEdgeDecoderPass.class);
+  public DefaultEdgeEncoderPass() {
+    super(DefaultEdgeEncoderPass.class);
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
     dag.topologicalDo(irVertex ->
       dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
-        irEdge.setPropertyIfAbsent(DEFAULT_DECODER_PROPERTY)));
+        irEdge.setPropertyIfAbsent(DEFAULT_ENCODER_PROPERTY)));
     return dag;
   }
 }

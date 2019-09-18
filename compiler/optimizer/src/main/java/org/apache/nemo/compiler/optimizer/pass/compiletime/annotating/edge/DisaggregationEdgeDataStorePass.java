@@ -16,28 +16,38 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
+package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
+
+import java.util.List;
 
 /**
- * Edge data store pass to process inter-stage memory store edges.
+ * A pass to support Disaggregated Resources by tagging edges.
+ * This pass handles the DataStore ExecutionProperty.
  */
 @Annotates(DataStoreProperty.class)
-public final class DefaultDataStorePass extends AnnotatingPass {
+@Requires(DataStoreProperty.class)
+public final class DisaggregationEdgeDataStorePass extends AnnotatingPass {
   /**
    * Default constructor.
    */
-  public DefaultDataStorePass() {
-    super(DefaultDataStorePass.class);
+  public DisaggregationEdgeDataStorePass() {
+    super(DisaggregationEdgeDataStorePass.class);
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().forEach(vertex ->
-      dag.getIncomingEdgesOf(vertex).forEach(edge ->
-        edge.setPropertyIfAbsent(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
+    dag.getVertices().forEach(vertex -> { // Initialize the DataStore of the DAG with GlusterFileStore.
+      final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
+      inEdges.forEach(edge ->
+        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.GLUSTER_FILE_STORE)));
+    });
     return dag;
   }
 }

@@ -16,29 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
+package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourceLocalityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceLambdaProperty;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
 /**
- * Sets {@link ResourceLocalityProperty}.
+ * Lambda Pass.
+ * Description: A part of lambda executor, assigning LambdaResourceProperty
  */
-@Annotates(ResourceLocalityProperty.class)
-public final class ResourceLocalityPass extends AnnotatingPass {
+@Annotates(ResourceLambdaProperty.class)
+public final class LambdaPass extends AnnotatingPass {
 
-  /**
-   * Constructor.
-   */
-  public ResourceLocalityPass() {
-    super(ResourceLocalityPass.class);
+  public LambdaPass() {
+    super(LambdaPass.class);
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    // On every vertex, if ResourceLocalityProperty is not set, put it as true.
-    dag.getVertices().forEach(v ->
-      v.setPropertyIfAbsent(ResourceLocalityProperty.of(true)));
+    dag.getVertices().forEach(vertex -> {
+      vertex.setPropertyPermanently(ResourceLambdaProperty.of(ResourceLambdaProperty.Value.ON));
+    });
     return dag;
   }
 }
