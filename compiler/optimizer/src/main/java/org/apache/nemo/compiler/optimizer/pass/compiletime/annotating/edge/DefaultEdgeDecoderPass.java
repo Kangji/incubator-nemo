@@ -20,6 +20,7 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.coder.DecoderFactory;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DecoderProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
@@ -28,7 +29,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * Pass for initiating IREdge Decoder ExecutionProperty with default dummy coder.
  */
 @Annotates(DecoderProperty.class)
-public final class DefaultEdgeDecoderPass extends AnnotatingPass {
+public final class DefaultEdgeDecoderPass extends AnnotatingPass<IREdge> {
 
   private static final DecoderProperty DEFAULT_DECODER_PROPERTY =
     DecoderProperty.of(DecoderFactory.DUMMY_DECODER_FACTORY);
@@ -38,13 +39,19 @@ public final class DefaultEdgeDecoderPass extends AnnotatingPass {
    */
   public DefaultEdgeDecoderPass() {
     super(DefaultEdgeDecoderPass.class);
+    this.addToRuleSet(EdgeRule.of(
+      (IREdge edge) -> true,
+      (IREdge edge) -> edge.setPropertyIfAbsent(DEFAULT_DECODER_PROPERTY)));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(irVertex ->
-      dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
-        irEdge.setPropertyIfAbsent(DEFAULT_DECODER_PROPERTY)));
+    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+      this.getRuleSet().forEach(rule -> {
+        if (rule.getCondition().test(irEdge)) {
+          rule.getAction().accept(irEdge);
+        }
+      })));
     return dag;
   }
 }

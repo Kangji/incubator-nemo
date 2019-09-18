@@ -18,10 +18,12 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
+import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.CompileTimePass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -29,10 +31,13 @@ import java.util.Set;
 /**
  * A compile-time pass that annotates the IR DAG with execution properties.
  * It is ensured by the compiler that the shape of the IR DAG itself is not modified by an AnnotatingPass.
+ *
+ * @param <T> type specifying the IRVertex or the IREdge.
  */
-public abstract class AnnotatingPass extends CompileTimePass {
+public abstract class AnnotatingPass<T> extends CompileTimePass {
   private final Set<Class<? extends ExecutionProperty>> executionPropertiesToAnnotate;
   private final Set<Class<? extends ExecutionProperty>> prerequisiteExecutionProperties;
+  private final ArrayList<Rule<T>> ruleSet;
 
   /**
    * Constructor.
@@ -46,6 +51,8 @@ public abstract class AnnotatingPass extends CompileTimePass {
     final Requires requires = cls.getAnnotation(Requires.class);
     this.prerequisiteExecutionProperties = requires == null
       ? new HashSet<>() : new HashSet<>(Arrays.asList(requires.value()));
+
+    this.ruleSet = new ArrayList<>();
   }
 
   /**
@@ -60,5 +67,20 @@ public abstract class AnnotatingPass extends CompileTimePass {
   @Override
   public final Set<Class<? extends ExecutionProperty>> getPrerequisiteExecutionProperties() {
     return prerequisiteExecutionProperties;
+  }
+
+  /**
+   * Add rule to the rule set.
+   * @param rule the rule to add.
+   */
+  public final void addToRuleSet(final Rule<T> rule) {
+    ruleSet.add(rule);
+  }
+
+  /**
+   * @return the rule set.
+   */
+  public final ArrayList<Rule<T>> getRuleSet() {
+    return ruleSet;
   }
 }

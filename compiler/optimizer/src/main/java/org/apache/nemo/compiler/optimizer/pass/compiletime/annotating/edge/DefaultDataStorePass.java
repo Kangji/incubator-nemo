@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
@@ -27,19 +28,25 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * Edge data store pass to process inter-stage memory store edges.
  */
 @Annotates(DataStoreProperty.class)
-public final class DefaultDataStorePass extends AnnotatingPass {
+public final class DefaultDataStorePass extends AnnotatingPass<IREdge> {
   /**
    * Default constructor.
    */
   public DefaultDataStorePass() {
     super(DefaultDataStorePass.class);
+    this.addToRuleSet(EdgeRule.of(
+      (IREdge edge) -> true,
+      (IREdge edge) -> edge.setPropertyIfAbsent(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().forEach(vertex ->
-      dag.getIncomingEdgesOf(vertex).forEach(edge ->
-        edge.setPropertyIfAbsent(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
+    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+      this.getRuleSet().forEach(rule -> {
+        if (rule.getCondition().test(irEdge)) {
+          rule.getAction().accept(irEdge);
+        }
+      })));
     return dag;
   }
 }

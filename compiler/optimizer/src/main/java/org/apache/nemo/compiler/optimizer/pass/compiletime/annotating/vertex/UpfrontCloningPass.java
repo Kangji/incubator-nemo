@@ -16,12 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
+package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
 /**
  * Set the ClonedScheduling property of source vertices, in an upfront manner.

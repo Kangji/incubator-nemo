@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CompressionProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
@@ -28,7 +29,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * A pass for applying compression algorithm for data flowing between vertices.
  */
 @Annotates(CompressionProperty.class)
-public final class CompressionPass extends AnnotatingPass {
+public final class CompressionPass extends AnnotatingPass<IREdge> {
   private final CompressionProperty.Value compression;
 
   /**
@@ -46,13 +47,19 @@ public final class CompressionPass extends AnnotatingPass {
   public CompressionPass(final CompressionProperty.Value compression) {
     super(CompressionPass.class);
     this.compression = compression;
+    this.addToRuleSet(EdgeRule.of(
+      (IREdge edge) -> true,
+      (IREdge edge) -> edge.setPropertyIfAbsent(CompressionProperty.of(compression))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge -> {
-      edge.setPropertyIfAbsent(CompressionProperty.of(compression));
-    }));
+    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge ->
+      this.getRuleSet().forEach(rule -> {
+        if (rule.getCondition().test(edge)) {
+          rule.getAction().accept(edge);
+        }
+      })));
     return dag;
   }
 }

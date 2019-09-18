@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DataPersistenceProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
@@ -30,19 +31,16 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  */
 @Annotates(DataPersistenceProperty.class)
 @Requires(DataStoreProperty.class)
-public final class DefaultDataPersistencePass extends AnnotatingPass {
+public final class DefaultDataPersistencePass extends AnnotatingPass<IREdge> {
 
   /**
    * Default constructor.
    */
   public DefaultDataPersistencePass() {
     super(DefaultDataPersistencePass.class);
-  }
-
-  @Override
-  public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(irVertex ->
-      dag.getIncomingEdgesOf(irVertex).forEach(irEdge -> {
+    this.addToRuleSet(EdgeRule.of(
+      (IREdge irEdge) -> true,
+      (IREdge irEdge) -> {
         final DataStoreProperty.Value dataStoreValue
           = irEdge.getPropertyValue(DataStoreProperty.class).get();
         /*
@@ -54,6 +52,16 @@ public final class DefaultDataPersistencePass extends AnnotatingPass {
         irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.KEEP));
         //}
       }));
+  }
+
+  @Override
+  public IRDAG apply(final IRDAG dag) {
+    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+      this.getRuleSet().forEach(rule -> {
+        if (rule.getCondition().test(irEdge)) {
+          rule.getAction().accept(irEdge);
+        }
+      })));
     return dag;
   }
 }

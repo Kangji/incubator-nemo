@@ -19,7 +19,7 @@
 package org.apache.nemo.examples.beam.policy;
 
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.UpfrontCloningPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.UpfrontCloningPass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.DefaultCompositePass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
