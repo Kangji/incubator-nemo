@@ -66,7 +66,7 @@ public final class PerPercentileAverageITCase {
     }
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void test() throws Exception {
     JobLauncher.main(builder
       .addJobId(PerPercentileAverage.class.getSimpleName())
