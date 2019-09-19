@@ -26,8 +26,6 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
-import java.util.List;
-
 /**
  * A pass for tagging shuffle edges different from the default ones.
  * It sets DataFlowModel ExecutionProperty as "push".

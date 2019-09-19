@@ -25,8 +25,6 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
-import java.util.List;
-
 /**
  * A pass to support Disaggregated Resources by tagging edges.
  * This pass handles the DataStore ExecutionProperty.

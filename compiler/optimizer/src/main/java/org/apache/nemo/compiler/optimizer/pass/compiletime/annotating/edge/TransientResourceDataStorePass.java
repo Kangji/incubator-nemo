@@ -26,9 +26,6 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
-import java.util.List;
-import java.util.Optional;
-
 /**
  * Transient resource pass for tagging edges with DataStore ExecutionProperty.
  */
