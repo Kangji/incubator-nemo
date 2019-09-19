@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
@@ -28,7 +29,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * TODO #200: Maintain Test Passes and Policies Separately
  */
 @Annotates(ClonedSchedulingProperty.class)
-public final class AggressiveSpeculativeCloningPass extends AnnotatingPass {
+public final class AggressiveSpeculativeCloningPass extends AnnotatingPass<IRVertex> {
   /**
    * Default constructor.
    */

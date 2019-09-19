@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DuplicateEdgeGroupProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DuplicateEdgeGroupPropertyValue;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
@@ -31,7 +32,7 @@ import java.util.Optional;
  * A pass for annotate duplicate data for each edge.
  */
 @Annotates(DuplicateEdgeGroupProperty.class)
-public final class DuplicateEdgeGroupSizePass extends AnnotatingPass {
+public final class DuplicateEdgeGroupSizePass extends AnnotatingPass<IREdge> {
 
   /**
    * Default constructor.

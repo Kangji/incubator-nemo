@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
  * conditionally running TransientResourcePass and LargeShufflePass, according to a specific condition in the DAG.
  */
 @Annotates()
-public final class ResourceExplorationPass extends AnnotatingPass {
+public final class ResourceExplorationPass extends AnnotatingPass<Object> {
   private static final Logger LOG = LoggerFactory.getLogger(ResourceExplorationPass.class.getName());
 
   private static String resourceSpecificationString = "";

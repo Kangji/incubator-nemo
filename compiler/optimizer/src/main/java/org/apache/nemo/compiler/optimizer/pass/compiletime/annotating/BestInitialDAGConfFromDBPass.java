@@ -39,7 +39,7 @@ import java.util.Map;
  * Pass for applying the best existing execution properties & DAG from the DB.
  */
 @Annotates()
-public final class BestInitialDAGConfFromDBPass extends AnnotatingPass {
+public final class BestInitialDAGConfFromDBPass extends AnnotatingPass<Object> {
   private static final Logger LOG = LoggerFactory.getLogger(BestInitialDAGConfFromDBPass.class.getName());
 
   public BestInitialDAGConfFromDBPass() {

@@ -58,7 +58,7 @@ import java.util.*;
  */
 @Annotates(ResourceSiteProperty.class)
 @Requires(ParallelismProperty.class)
-public final class ResourceSitePass extends AnnotatingPass {
+public final class ResourceSitePass extends AnnotatingPass<IRVertex> {
 
   // Index of the objective parameter, in the coefficient vector
   private static final int OBJECTIVE_COEFFICIENT_INDEX = 0;

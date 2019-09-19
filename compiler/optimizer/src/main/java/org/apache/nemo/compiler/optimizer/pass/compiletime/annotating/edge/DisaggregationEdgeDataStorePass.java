@@ -33,7 +33,7 @@ import java.util.List;
  */
 @Annotates(DataStoreProperty.class)
 @Requires(DataStoreProperty.class)
-public final class DisaggregationEdgeDataStorePass extends AnnotatingPass {
+public final class DisaggregationEdgeDataStorePass extends AnnotatingPass<IREdge> {
   /**
    * Default constructor.
    */

@@ -45,7 +45,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
  */
 @Annotates({DataFlowProperty.class, DataPersistenceProperty.class, DataStoreProperty.class, ResourceSlotProperty.class})
 @Requires(CommunicationPatternProperty.class)
-public final class LargeShuffleAnnotatingPass extends AnnotatingPass {
+public final class LargeShuffleAnnotatingPass extends AnnotatingPass<Object> {
   /**
    * Default constructor.
    */

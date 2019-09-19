@@ -36,7 +36,7 @@ import java.util.List;
  */
 @Annotates(ParallelismProperty.class)
 @Requires(CommunicationPatternProperty.class)
-public final class DefaultParallelismPass extends AnnotatingPass {
+public final class DefaultParallelismPass extends AnnotatingPass<IRVertex> {
   // we decrease the number of parallelism by this number on each shuffle boundary.
   private final int shuffleDecreaseFactor;
 

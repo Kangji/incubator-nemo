@@ -20,6 +20,7 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.coder.EncoderFactory;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.EncoderProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
@@ -28,7 +29,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * Pass for initiating IREdge Encoder ExecutionProperty with default dummy coder.
  */
 @Annotates(EncoderProperty.class)
-public final class DefaultEdgeEncoderPass extends AnnotatingPass {
+public final class DefaultEdgeEncoderPass extends AnnotatingPass<IREdge> {
 
   private static final EncoderProperty DEFAULT_ENCODER_PROPERTY =
     EncoderProperty.of(EncoderFactory.DUMMY_ENCODER_FACTORY);

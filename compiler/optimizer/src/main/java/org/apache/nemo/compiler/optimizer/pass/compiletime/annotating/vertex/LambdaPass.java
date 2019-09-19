@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceLambdaProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
@@ -28,7 +29,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * Description: A part of lambda executor, assigning LambdaResourceProperty
  */
 @Annotates(ResourceLambdaProperty.class)
-public final class LambdaPass extends AnnotatingPass {
+public final class LambdaPass extends AnnotatingPass<IRVertex> {
 
   public LambdaPass() {
     super(LambdaPass.class);

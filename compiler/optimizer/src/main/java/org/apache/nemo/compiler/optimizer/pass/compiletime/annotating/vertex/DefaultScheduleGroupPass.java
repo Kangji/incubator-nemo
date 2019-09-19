@@ -65,7 +65,7 @@ import java.util.stream.Collectors;
  */
 @Annotates(ScheduleGroupProperty.class)
 @Requires({CommunicationPatternProperty.class, DataFlowProperty.class})
-public final class DefaultScheduleGroupPass extends AnnotatingPass {
+public final class DefaultScheduleGroupPass extends AnnotatingPass<IRVertex> {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultScheduleGroupPass.class.getName());
 
   private final boolean allowBroadcastWithinScheduleGroup;

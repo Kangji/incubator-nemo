@@ -34,7 +34,7 @@ import java.util.List;
  */
 @Annotates(DataFlowProperty.class)
 @Requires(CommunicationPatternProperty.class)
-public final class ShuffleEdgePushPass extends AnnotatingPass {
+public final class ShuffleEdgePushPass extends AnnotatingPass<IREdge> {
   /**
    * Default constructor.
    */

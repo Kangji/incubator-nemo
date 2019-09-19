@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
@@ -35,7 +36,7 @@ import org.slf4j.LoggerFactory;
  */
 @Annotates(PartitionerProperty.class)
 @Requires(CommunicationPatternProperty.class)
-public final class SkewAnnotatingPass extends AnnotatingPass {
+public final class SkewAnnotatingPass extends AnnotatingPass<IREdge> {
   private static final Logger LOG = LoggerFactory.getLogger(SkewAnnotatingPass.class.getName());
 
   /**

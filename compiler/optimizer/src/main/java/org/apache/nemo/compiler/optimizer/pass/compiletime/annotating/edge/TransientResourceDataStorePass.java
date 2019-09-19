@@ -34,7 +34,7 @@ import java.util.Optional;
  */
 @Annotates(DataStoreProperty.class)
 @Requires(ResourceTypeProperty.class)
-public final class TransientResourceDataStorePass extends AnnotatingPass {
+public final class TransientResourceDataStorePass extends AnnotatingPass<IREdge> {
   /**
    * Default constructor.
    */

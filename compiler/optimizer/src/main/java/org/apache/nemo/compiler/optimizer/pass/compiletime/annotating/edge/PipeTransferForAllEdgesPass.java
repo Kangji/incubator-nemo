@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
@@ -27,7 +28,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * Annotate 'Pipe' on all edges.
  */
 @Annotates(DataStoreProperty.class)
-public final class PipeTransferForAllEdgesPass extends AnnotatingPass {
+public final class PipeTransferForAllEdgesPass extends AnnotatingPass<IREdge> {
   /**
    * Default constructor.
    */

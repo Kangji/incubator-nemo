@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceLocalityProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
@@ -27,7 +28,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * Sets {@link ResourceLocalityProperty}.
  */
 @Annotates(ResourceLocalityProperty.class)
-public final class ResourceLocalityPass extends AnnotatingPass {
+public final class ResourceLocalityPass extends AnnotatingPass<IRVertex> {
 
   /**
    * Constructor.

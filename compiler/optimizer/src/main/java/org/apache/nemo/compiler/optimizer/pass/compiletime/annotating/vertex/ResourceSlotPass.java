@@ -19,6 +19,7 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSlotProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
@@ -27,7 +28,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * Sets {@link ResourceSlotProperty}.
  */
 @Annotates(ResourceSlotProperty.class)
-public final class ResourceSlotPass extends AnnotatingPass {
+public final class ResourceSlotPass extends AnnotatingPass<IRVertex> {
 
   /**
    * Constructor.

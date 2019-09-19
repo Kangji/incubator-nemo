@@ -56,7 +56,7 @@ import java.util.stream.Collectors;
  * 4. The newly reconstructed execution properties are injected and the workload runs after the optimization.
  */
 @Annotates()
-public final class XGBoostPass extends AnnotatingPass {
+public final class XGBoostPass extends AnnotatingPass<Object> {
   private static final Logger LOG = LoggerFactory.getLogger(XGBoostPass.class.getName());
 
   private static final BlockingQueue<String> MESSAGE_QUEUE = new LinkedBlockingQueue<>();

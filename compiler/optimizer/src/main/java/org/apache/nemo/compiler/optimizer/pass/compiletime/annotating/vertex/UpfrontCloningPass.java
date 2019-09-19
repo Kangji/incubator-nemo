@@ -20,6 +20,7 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
@@ -30,7 +31,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  */
 @Annotates(ClonedSchedulingProperty.class)
 @Requires(CommunicationPatternProperty.class)
-public final class UpfrontCloningPass extends AnnotatingPass {
+public final class UpfrontCloningPass extends AnnotatingPass<IRVertex> {
   /**
    * Default constructor.
    */

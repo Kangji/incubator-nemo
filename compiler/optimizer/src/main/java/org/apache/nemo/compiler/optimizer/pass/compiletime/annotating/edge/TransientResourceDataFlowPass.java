@@ -38,7 +38,7 @@ import static org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edg
  */
 @Annotates({DataFlowProperty.class, ResourceSlotProperty.class})
 @Requires(ResourceTypeProperty.class)
-public final class TransientResourceDataFlowPass extends AnnotatingPass {
+public final class TransientResourceDataFlowPass extends AnnotatingPass<IREdge> {
   /**
    * Default constructor.
    */

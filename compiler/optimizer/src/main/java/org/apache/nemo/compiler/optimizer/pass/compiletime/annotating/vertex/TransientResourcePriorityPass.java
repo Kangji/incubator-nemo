@@ -21,6 +21,7 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
@@ -33,7 +34,7 @@ import java.util.List;
  */
 @Annotates(ResourceTypeProperty.class)
 @Requires(CommunicationPatternProperty.class)
-public final class TransientResourcePriorityPass extends AnnotatingPass {
+public final class TransientResourcePriorityPass extends AnnotatingPass<IRVertex> {
   /**
    * Default constructor.
    */
