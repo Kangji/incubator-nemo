@@ -39,31 +39,30 @@ public final class DefaultDataPersistencePass extends AnnotatingPass<IREdge> {
   public DefaultDataPersistencePass() {
     super(DefaultDataPersistencePass.class);
     this.addToRuleSet(EdgeRule.of(
-      (IREdge irEdge) -> {
-        final DataStoreProperty.Value dataStoreValue = irEdge.getPropertyValue(DataStoreProperty.class).orElse(null);
+      (IREdge edge, IRDAG dag)  -> {
+        final DataStoreProperty.Value dataStoreValue = edge.getPropertyValue(DataStoreProperty.class).orElse(null);
         return DataStoreProperty.Value.MEMORY_STORE.equals(dataStoreValue)
           || DataStoreProperty.Value.SERIALIZED_MEMORY_STORE.equals(dataStoreValue);
       },
-      (IREdge irEdge) ->
-        irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.DISCARD))));
+      (IREdge edge, IRDAG dag)  ->
+        edge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.DISCARD))));
     this.addToRuleSet(EdgeRule.of(
-      (IREdge irEdge) -> {
-        final DataStoreProperty.Value dataStoreValue = irEdge.getPropertyValue(DataStoreProperty.class).orElse(null);
+      (IREdge edge, IRDAG dag)  -> {
+        final DataStoreProperty.Value dataStoreValue = edge.getPropertyValue(DataStoreProperty.class).orElse(null);
         return !DataStoreProperty.Value.MEMORY_STORE.equals(dataStoreValue)
           && !DataStoreProperty.Value.SERIALIZED_MEMORY_STORE.equals(dataStoreValue);
       },
-      (IREdge irEdge) ->
-        irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.KEEP))));
+      (IREdge edge, IRDAG dag)  ->
+        edge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.KEEP))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
-      this.getRuleSet().forEach(rule -> {
-        if (rule.getCondition().test(irEdge)) {
-          rule.getAction().accept(irEdge);
-        }
-      })));
+    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(edge, dag)) {
+        rule.getAction().accept(edge, dag);
+      }
+    })));
     return dag;
   }
 }

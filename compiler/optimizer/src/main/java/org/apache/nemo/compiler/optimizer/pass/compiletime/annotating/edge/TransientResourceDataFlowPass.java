@@ -45,8 +45,8 @@ public final class TransientResourceDataFlowPass extends AnnotatingPass<IREdge> 
   public TransientResourceDataFlowPass() {
     super(TransientResourceDataFlowPass.class);
     this.addToRuleSet(EdgeRule.of(
-      TransientResourceDataStorePass::fromTransientToReserved,
-      (IREdge edge) -> {
+      (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge),
+      (IREdge edge, IRDAG dag)  -> {
         edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.PUSH));
         recursivelySetResourceSlotProperty(edge.getDst(), dag, false);
       }
@@ -55,15 +55,13 @@ public final class TransientResourceDataFlowPass extends AnnotatingPass<IREdge> 
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
-      this.getRuleSet().forEach(rule -> {
-        if (rule.getCondition().test(irEdge)) {
-          rule.getAction().accept(irEdge);
-        }
-      })));
+    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(edge, dag)) {
+        rule.getAction().accept(edge, dag);
+      }
+    })));
     return dag;
   }
-}
 
   /**
    * Static method to recursively set the resource slot property to the vertices of the same stage.

@@ -48,18 +48,17 @@ public final class CompressionPass extends AnnotatingPass<IREdge> {
     super(CompressionPass.class);
     this.compression = compression;
     this.addToRuleSet(EdgeRule.of(
-      (IREdge edge) -> true,
-      (IREdge edge) -> edge.setPropertyIfAbsent(CompressionProperty.of(compression))));
+      (IREdge edge, IRDAG dag) -> true,
+      (IREdge edge, IRDAG dag) -> edge.setPropertyIfAbsent(CompressionProperty.of(this.compression))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge ->
-      this.getRuleSet().forEach(rule -> {
-        if (rule.getCondition().test(edge)) {
-          rule.getAction().accept(edge);
-        }
-      })));
+    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(edge, dag)) {
+        rule.getAction().accept(edge, dag);
+      }
+    })));
     return dag;
   }
 }

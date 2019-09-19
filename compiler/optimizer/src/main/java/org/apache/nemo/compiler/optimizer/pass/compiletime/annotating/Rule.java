@@ -19,24 +19,26 @@
 
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
+import org.apache.nemo.common.ir.IRDAG;
+
 import java.io.Serializable;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
+import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 
 /**
  * Rule class.
  * @param <T> the IREdge or the IRVertex.
  */
 public abstract class Rule<T> implements Serializable {
-  private final Predicate<T> condition;
-  private final Consumer<T> action;
+  private final BiPredicate<T, IRDAG> condition;
+  private final BiConsumer<T, IRDAG> action;
 
   /**
    * Private constructor for the EdgeRule class.
    * @param condition the condition for the rule.
    * @param action the action of the rule.
    */
-  public Rule(final Predicate<T> condition, final Consumer<T> action) {
+  public Rule(final BiPredicate<T, IRDAG> condition, final BiConsumer<T, IRDAG> action) {
     this.condition = condition;
     this.action = action;
   }
@@ -44,14 +46,14 @@ public abstract class Rule<T> implements Serializable {
   /**
    * @return the condition of the rule.
    */
-  public Predicate<T> getCondition() {
+  public BiPredicate<T, IRDAG> getCondition() {
     return condition;
   }
 
   /**
    * @return the action of the rule.
    */
-  public Consumer<T> getAction() {
+  public BiConsumer<T, IRDAG> getAction() {
     return action;
   }
 }

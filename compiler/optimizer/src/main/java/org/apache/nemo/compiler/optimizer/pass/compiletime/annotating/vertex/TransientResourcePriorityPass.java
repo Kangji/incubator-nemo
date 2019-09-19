@@ -40,22 +40,33 @@ public final class TransientResourcePriorityPass extends AnnotatingPass<IRVertex
    */
   public TransientResourcePriorityPass() {
     super(TransientResourcePriorityPass.class);
+    this.addToRuleSet(VertexRule.of(
+      (IRVertex vertex, IRDAG dag) -> dag.getIncomingEdgesOf(vertex).isEmpty(),
+      (IRVertex vertex, IRDAG dag) ->
+        vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT))));
+    this.addToRuleSet(VertexRule.of(
+      (IRVertex vertex, IRDAG dag) -> {
+        final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
+        return !inEdges.isEmpty() && (hasM2M(inEdges) || allO2OFromReserved(inEdges));
+      },
+      (IRVertex vertex, IRDAG dag) ->
+        vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.RESERVED))));
+    this.addToRuleSet(VertexRule.of(
+      (IRVertex vertex, IRDAG dag) -> {
+        final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
+        return !inEdges.isEmpty() && !hasM2M(inEdges) && !allO2OFromReserved(inEdges);
+      },
+      (IRVertex vertex, IRDAG dag) ->
+        vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(vertex -> {
-      final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
-      if (inEdges.isEmpty()) {
-        vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT));
-      } else {
-        if (hasM2M(inEdges) || allO2OFromReserved(inEdges)) {
-          vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.RESERVED));
-        } else {
-          vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT));
-        }
+    dag.topologicalDo(vertex -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(vertex, dag)) {
+        rule.getAction().accept(vertex, dag);
       }
-    });
+    }));
     return dag;
   }
 

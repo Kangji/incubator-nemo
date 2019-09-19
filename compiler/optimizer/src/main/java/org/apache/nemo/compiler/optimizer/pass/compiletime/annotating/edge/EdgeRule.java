@@ -19,11 +19,12 @@
 
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
+import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Rule;
 
-import java.util.function.Consumer;
-import java.util.function.Predicate;
+import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 
 /**
  * Rule to apply on the edges.
@@ -34,7 +35,7 @@ public final class EdgeRule extends Rule<IREdge> {
    * @param condition the condition for the rule.
    * @param action the action of the rule.
    */
-  private EdgeRule(final Predicate<IREdge> condition, final Consumer<IREdge> action) {
+  private EdgeRule(final BiPredicate<IREdge, IRDAG> condition, final BiConsumer<IREdge, IRDAG> action) {
     super(condition, action);
   }
 
@@ -45,7 +46,7 @@ public final class EdgeRule extends Rule<IREdge> {
    * @param action the action of the rule.
    * @return a new EdgeRule object.
    */
-  public static EdgeRule of(final Predicate<IREdge> condition, final Consumer<IREdge> action) {
+  public static EdgeRule of(final BiPredicate<IREdge, IRDAG> condition, final BiConsumer<IREdge, IRDAG> action) {
     return new EdgeRule(condition, action);
   }
 }

@@ -33,13 +33,19 @@ public final class LambdaPass extends AnnotatingPass<IRVertex> {
 
   public LambdaPass() {
     super(LambdaPass.class);
+    this.addToRuleSet(VertexRule.of(
+      (IRVertex vertex, IRDAG dag) -> true,
+      (IRVertex vertex, IRDAG dag) ->
+        vertex.setPropertyPermanently(ResourceLambdaProperty.of(ResourceLambdaProperty.Value.ON))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().forEach(vertex -> {
-      vertex.setPropertyPermanently(ResourceLambdaProperty.of(ResourceLambdaProperty.Value.ON));
-    });
+    dag.topologicalDo(vertex -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(vertex, dag)) {
+        rule.getAction().accept(vertex, dag);
+      }
+    }));
     return dag;
   }
 }

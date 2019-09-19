@@ -40,18 +40,17 @@ public final class DefaultEdgeDecoderPass extends AnnotatingPass<IREdge> {
   public DefaultEdgeDecoderPass() {
     super(DefaultEdgeDecoderPass.class);
     this.addToRuleSet(EdgeRule.of(
-      (IREdge edge) -> true,
-      (IREdge edge) -> edge.setPropertyIfAbsent(DEFAULT_DECODER_PROPERTY)));
+      (IREdge edge, IRDAG dag)  -> true,
+      (IREdge edge, IRDAG dag)  -> edge.setPropertyIfAbsent(DEFAULT_DECODER_PROPERTY)));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
-      this.getRuleSet().forEach(rule -> {
-        if (rule.getCondition().test(irEdge)) {
-          rule.getAction().accept(irEdge);
-        }
-      })));
+    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(edge, dag)) {
+        rule.getAction().accept(edge, dag);
+      }
+    })));
     return dag;
   }
 }

@@ -19,11 +19,12 @@
 
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex;
 
+import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Rule;
 
-import java.util.function.Consumer;
-import java.util.function.Predicate;
+import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 
 /**
  * Rule to apply on the vertices.
@@ -34,7 +35,7 @@ public final class VertexRule extends Rule<IRVertex> {
    * @param condition the condition for the rule.
    * @param action the action of the rule.
    */
-  private VertexRule(final Predicate<IRVertex> condition, final Consumer<IRVertex> action) {
+  private VertexRule(final BiPredicate<IRVertex, IRDAG> condition, final BiConsumer<IRVertex, IRDAG> action) {
     super(condition, action);
   }
 
@@ -45,7 +46,7 @@ public final class VertexRule extends Rule<IRVertex> {
    * @param action the action of the rule.
    * @return a new VertexRule object.
    */
-  public static VertexRule of(final Predicate<IRVertex> condition, final Consumer<IRVertex> action) {
+  public static VertexRule of(final BiPredicate<IRVertex, IRDAG> condition, final BiConsumer<IRVertex, IRDAG> action) {
     return new VertexRule(condition, action);
   }
 }

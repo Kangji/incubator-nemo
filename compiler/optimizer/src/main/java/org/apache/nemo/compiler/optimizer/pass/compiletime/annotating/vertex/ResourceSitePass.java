@@ -73,15 +73,21 @@ public final class ResourceSitePass extends AnnotatingPass<IRVertex> {
    */
   public ResourceSitePass() {
     super(ResourceSitePass.class);
+    this.addToRuleSet(VertexRule.of(
+      (IRVertex vertex, IRDAG dag) -> getBandwidthSpecification() == null,
+      (IRVertex vertex, IRDAG dag) -> vertex.setProperty(ResourceSiteProperty.of(EMPTY_MAP))));
+    this.addToRuleSet(VertexRule.of(
+      (IRVertex vertex, IRDAG dag) -> getBandwidthSpecification() != null,
+      (IRVertex vertex, IRDAG dag) -> assignNodeShares(vertex, dag, bandwidthSpec)));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    if (bandwidthSpec == null) {
-      dag.topologicalDo(irVertex -> irVertex.setProperty(ResourceSiteProperty.of(EMPTY_MAP)));
-    } else {
-      assignNodeShares(dag, bandwidthSpec);
-    }
+    dag.topologicalDo(vertex -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(vertex, dag)) {
+        rule.getAction().accept(vertex, dag);
+      }
+    }));
     return dag;
   }
 
@@ -117,13 +123,12 @@ public final class ResourceSitePass extends AnnotatingPass<IRVertex> {
   }
 
   /**
+   * @param irVertex               IR Vertex.
    * @param dag                    IR DAG.
    * @param bandwidthSpecification bandwidth specification.
    */
-  private static void assignNodeShares(
-    final IRDAG dag,
-    final BandwidthSpecification bandwidthSpecification) {
-    dag.topologicalDo(irVertex -> {
+  private static void assignNodeShares(final IRVertex irVertex, final IRDAG dag,
+                                       final BandwidthSpecification bandwidthSpecification) {
       final Collection<IREdge> inEdges = dag.getIncomingEdgesOf(irVertex);
       final int parallelism = irVertex.getPropertyValue(ParallelismProperty.class)
         .orElseThrow(() -> new RuntimeException("Parallelism property required"));
@@ -165,8 +170,7 @@ public final class ResourceSitePass extends AnnotatingPass<IRVertex> {
           remainder--;
         }
         irVertex.setProperty(ResourceSiteProperty.of(shares));
-      }
-    });
+    }
   }
 
   /**

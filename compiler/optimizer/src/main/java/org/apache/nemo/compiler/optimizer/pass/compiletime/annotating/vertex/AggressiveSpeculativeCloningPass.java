@@ -30,22 +30,28 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  */
 @Annotates(ClonedSchedulingProperty.class)
 public final class AggressiveSpeculativeCloningPass extends AnnotatingPass<IRVertex> {
+  // Speculative execution policy.
+  private static final double FRACTION_TO_WAIT_FOR = 0.00000001; // Aggressive
+  private static final double MEDIAN_TIME_MULTIPLIER = 1.00000001; // Aggressive
+
   /**
    * Default constructor.
    */
   public AggressiveSpeculativeCloningPass() {
     super(AggressiveSpeculativeCloningPass.class);
+    this.addToRuleSet(VertexRule.of(
+      (IRVertex vertex, IRDAG dag) -> true,  // Apply the policy to ALL vertices
+      (IRVertex vertex, IRDAG dag) -> vertex.setProperty(ClonedSchedulingProperty.of(
+        new ClonedSchedulingProperty.CloneConf(FRACTION_TO_WAIT_FOR, MEDIAN_TIME_MULTIPLIER)))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    // Speculative execution policy.
-    final double fractionToWaitFor = 0.00000001; // Aggressive
-    final double medianTimeMultiplier = 1.00000001; // Aggressive
-
-    // Apply the policy to ALL vertices
-    dag.getVertices().forEach(vertex -> vertex.setProperty(ClonedSchedulingProperty.of(
-      new ClonedSchedulingProperty.CloneConf(fractionToWaitFor, medianTimeMultiplier))));
+    dag.topologicalDo(vertex -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(vertex, dag)) {
+        rule.getAction().accept(vertex, dag);
+      }
+    }));
     return dag;
   }
 }

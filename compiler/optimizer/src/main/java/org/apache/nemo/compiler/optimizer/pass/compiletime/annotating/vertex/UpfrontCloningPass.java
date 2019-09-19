@@ -37,22 +37,23 @@ public final class UpfrontCloningPass extends AnnotatingPass<IRVertex> {
    */
   public UpfrontCloningPass() {
     super(UpfrontCloningPass.class);
+    this.addToRuleSet(VertexRule.of(
+      (IRVertex vertex, IRDAG dag) -> dag.getIncomingEdgesOf(vertex).stream()
+        // TODO #198: Handle Un-cloneable Beam Sink Operators
+        // only shuffle receivers (for now... as particular Beam sink operators fail when cloned)
+        .anyMatch(edge -> CommunicationPatternProperty.Value.SHUFFLE
+          .equals(edge.getPropertyValue(CommunicationPatternProperty.class).orElse(null))),
+      (IRVertex vertex, IRDAG dag) ->  // clone upfront, always
+        vertex.setProperty(ClonedSchedulingProperty.of(new ClonedSchedulingProperty.CloneConf()))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().stream()
-      .filter(vertex -> dag.getIncomingEdgesOf(vertex.getId())
-        .stream()
-        // TODO #198: Handle Un-cloneable Beam Sink Operators
-        // only shuffle receivers (for now... as particular Beam sink operators fail when cloned)
-        .anyMatch(edge ->
-          edge.getPropertyValue(CommunicationPatternProperty.class)
-            .orElseThrow(() -> new IllegalStateException())
-            .equals(CommunicationPatternProperty.Value.SHUFFLE))
-      )
-      .forEach(vertex -> vertex.setProperty(
-        ClonedSchedulingProperty.of(new ClonedSchedulingProperty.CloneConf()))); // clone upfront, always
+    dag.topologicalDo(vertex -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(vertex, dag)) {
+        rule.getAction().accept(vertex, dag);
+      }
+    }));
     return dag;
   }
 }

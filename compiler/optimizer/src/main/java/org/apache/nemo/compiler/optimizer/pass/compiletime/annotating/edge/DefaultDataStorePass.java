@@ -35,18 +35,18 @@ public final class DefaultDataStorePass extends AnnotatingPass<IREdge> {
   public DefaultDataStorePass() {
     super(DefaultDataStorePass.class);
     this.addToRuleSet(EdgeRule.of(
-      (IREdge edge) -> true,
-      (IREdge edge) -> edge.setPropertyIfAbsent(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
+      (IREdge edge, IRDAG dag) -> true,
+      (IREdge edge, IRDAG dag) ->
+        edge.setPropertyIfAbsent(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
-      this.getRuleSet().forEach(rule -> {
-        if (rule.getCondition().test(irEdge)) {
-          rule.getAction().accept(irEdge);
-        }
-      })));
+    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(edge, dag)) {
+        rule.getAction().accept(edge, dag);
+      }
+    })));
     return dag;
   }
 }

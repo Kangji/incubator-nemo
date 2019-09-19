@@ -41,31 +41,23 @@ public final class TransientResourceDataStorePass extends AnnotatingPass<IREdge>
   public TransientResourceDataStorePass() {
     super(TransientResourceDataStorePass.class);
     this.addToRuleSet(EdgeRule.of(
-      (IREdge edge) -> fromTransientToReserved(edge) && !DataStoreProperty.Value.SERIALIZED_MEMORY_STORE
+      (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge) && !DataStoreProperty.Value.SERIALIZED_MEMORY_STORE
         .equals(edge.getPropertyValue(DataStoreProperty.class).orElse(null)),
-      (IREdge edge) -> edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.MEMORY_STORE))));
+      (IREdge edge, IRDAG dag) ->
+        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.MEMORY_STORE))));
     this.addToRuleSet(EdgeRule.of(
-      TransientResourceDataStorePass::fromReservedToTransient,
-      (IREdge edge) -> edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
+      (IREdge edge, IRDAG dag) -> fromReservedToTransient(edge),
+      (IREdge edge, IRDAG dag) ->
+        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().forEach(vertex -> {
-      final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
-      if (!inEdges.isEmpty()) {
-        inEdges.forEach(edge -> {
-          if (fromTransientToReserved(edge)) {
-            if (!Optional.of(DataStoreProperty.Value.SERIALIZED_MEMORY_STORE)
-              .equals(edge.getPropertyValue(DataStoreProperty.class))) {
-              edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.MEMORY_STORE));
-            }
-          } else if (fromReservedToTransient(edge)) {
-            edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE));
-          }
-        });
+    dag.topologicalDo(vertex -> dag.getIncomingEdgesOf(vertex).forEach(edge -> this.getRuleSet().forEach(rule -> {
+      if (rule.getCondition().test(edge, dag)) {
+        rule.getAction().accept(edge, dag);
       }
-    });
+    })));
     return dag;
   }
 
