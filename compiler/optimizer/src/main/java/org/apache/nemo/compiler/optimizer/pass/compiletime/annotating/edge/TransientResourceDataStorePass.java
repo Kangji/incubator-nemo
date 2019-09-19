@@ -40,6 +40,13 @@ public final class TransientResourceDataStorePass extends AnnotatingPass<IREdge>
    */
   public TransientResourceDataStorePass() {
     super(TransientResourceDataStorePass.class);
+    this.addToRuleSet(EdgeRule.of(
+      (IREdge edge) -> fromTransientToReserved(edge) && !DataStoreProperty.Value.SERIALIZED_MEMORY_STORE
+        .equals(edge.getPropertyValue(DataStoreProperty.class).orElse(null)),
+      (IREdge edge) -> edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.MEMORY_STORE))));
+    this.addToRuleSet(EdgeRule.of(
+      TransientResourceDataStorePass::fromReservedToTransient,
+      (IREdge edge) -> edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
   }
 
   @Override

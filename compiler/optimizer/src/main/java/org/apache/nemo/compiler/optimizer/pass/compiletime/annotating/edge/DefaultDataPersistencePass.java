@@ -39,19 +39,21 @@ public final class DefaultDataPersistencePass extends AnnotatingPass<IREdge> {
   public DefaultDataPersistencePass() {
     super(DefaultDataPersistencePass.class);
     this.addToRuleSet(EdgeRule.of(
-      (IREdge irEdge) -> true,
       (IREdge irEdge) -> {
-        final DataStoreProperty.Value dataStoreValue
-          = irEdge.getPropertyValue(DataStoreProperty.class).get();
-        /*
-        if (DataStoreProperty.Value.MemoryStore.equals(dataStoreValue)
-          || DataStoreProperty.Value.SerializedMemoryStore.equals(dataStoreValue)) {
-          irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.Discard));
-        } else {
-        */
-        irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.KEEP));
-        //}
-      }));
+        final DataStoreProperty.Value dataStoreValue = irEdge.getPropertyValue(DataStoreProperty.class).orElse(null);
+        return DataStoreProperty.Value.MEMORY_STORE.equals(dataStoreValue)
+          || DataStoreProperty.Value.SERIALIZED_MEMORY_STORE.equals(dataStoreValue);
+      },
+      (IREdge irEdge) ->
+        irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.DISCARD))));
+    this.addToRuleSet(EdgeRule.of(
+      (IREdge irEdge) -> {
+        final DataStoreProperty.Value dataStoreValue = irEdge.getPropertyValue(DataStoreProperty.class).orElse(null);
+        return !DataStoreProperty.Value.MEMORY_STORE.equals(dataStoreValue)
+          && !DataStoreProperty.Value.SERIALIZED_MEMORY_STORE.equals(dataStoreValue);
+      },
+      (IREdge irEdge) ->
+        irEdge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.KEEP))));
   }
 
   @Override

@@ -34,15 +34,19 @@ public final class PipeTransferForAllEdgesPass extends AnnotatingPass<IREdge> {
    */
   public PipeTransferForAllEdgesPass() {
     super(PipeTransferForAllEdgesPass.class);
+    this.addToRuleSet(EdgeRule.of(
+      (IREdge edge) -> true,
+      (IREdge edge) -> edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.PIPE))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().forEach(vertex -> {
-      dag.getIncomingEdgesOf(vertex).stream()
-        .forEach(edge -> edge.setPropertyPermanently(
-          DataStoreProperty.of(DataStoreProperty.Value.PIPE)));
-    });
+    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+      this.getRuleSet().forEach(rule -> {
+        if (rule.getCondition().test(irEdge)) {
+          rule.getAction().accept(irEdge);
+        }
+      })));
     return dag;
   }
 }

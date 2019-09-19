@@ -39,15 +39,19 @@ public final class DisaggregationEdgeDataStorePass extends AnnotatingPass<IREdge
    */
   public DisaggregationEdgeDataStorePass() {
     super(DisaggregationEdgeDataStorePass.class);
+    this.addToRuleSet(EdgeRule.of(// Initialize the DataStore of the DAG with GlusterFileStore.
+      (IREdge edge) -> true,
+      (IREdge edge) -> edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.GLUSTER_FILE_STORE))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().forEach(vertex -> { // Initialize the DataStore of the DAG with GlusterFileStore.
-      final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
-      inEdges.forEach(edge ->
-        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.GLUSTER_FILE_STORE)));
-    });
+    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+      this.getRuleSet().forEach(rule -> {
+        if (rule.getCondition().test(irEdge)) {
+          rule.getAction().accept(irEdge);
+        }
+      })));
     return dag;
   }
 }

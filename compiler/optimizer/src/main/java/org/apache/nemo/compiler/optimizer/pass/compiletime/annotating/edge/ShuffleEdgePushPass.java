@@ -40,21 +40,20 @@ public final class ShuffleEdgePushPass extends AnnotatingPass<IREdge> {
    */
   public ShuffleEdgePushPass() {
     super(ShuffleEdgePushPass.class);
+    this.addToRuleSet(EdgeRule.of(
+      (IREdge edge) -> CommunicationPatternProperty.Value.SHUFFLE
+        .equals(edge.getPropertyValue(CommunicationPatternProperty.class).orElse(null)),
+      (IREdge edge) -> edge.setProperty(DataFlowProperty.of(DataFlowProperty.Value.PUSH))));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.getVertices().forEach(vertex -> {
-      final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
-      if (!inEdges.isEmpty()) {
-        inEdges.forEach(edge -> {
-          if (edge.getPropertyValue(CommunicationPatternProperty.class).get()
-            .equals(CommunicationPatternProperty.Value.SHUFFLE)) {
-            edge.setProperty(DataFlowProperty.of(DataFlowProperty.Value.PUSH));
-          }
-        });
-      }
-    });
+    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+      this.getRuleSet().forEach(rule -> {
+        if (rule.getCondition().test(irEdge)) {
+          rule.getAction().accept(irEdge);
+        }
+      })));
     return dag;
   }
 }

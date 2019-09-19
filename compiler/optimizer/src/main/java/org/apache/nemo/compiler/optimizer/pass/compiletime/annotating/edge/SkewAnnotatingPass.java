@@ -53,26 +53,28 @@ public final class SkewAnnotatingPass extends AnnotatingPass<IREdge> {
    */
   public SkewAnnotatingPass() {
     super(SkewAnnotatingPass.class);
+    this.addToRuleSet(EdgeRule.of(
+      (IREdge edge) -> CommunicationPatternProperty.Value.SHUFFLE
+        .equals(edge.getPropertyValue(CommunicationPatternProperty.class).orElse(null))
+        && !(edge.getDst() instanceof MessageAggregatorVertex),
+      (IREdge edge) -> {
+        // Set the partitioner property
+        final int dstParallelism = edge.getDst().getPropertyValue(ParallelismProperty.class).get();
+        LOG.info("SET {} to {} * {}", edge.getId(), dstParallelism, HASH_RANGE_MULTIPLIER);
+        edge.setPropertyPermanently(PartitionerProperty.of(
+          PartitionerProperty.Type.HASH, dstParallelism * HASH_RANGE_MULTIPLIER));
+      }
+    ));
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    dag.topologicalDo(v -> {
-      dag.getIncomingEdgesOf(v).forEach(e -> {
-        if (CommunicationPatternProperty.Value.SHUFFLE
-          .equals(e.getPropertyValue(CommunicationPatternProperty.class).get())
-          && !(e.getDst() instanceof MessageAggregatorVertex)) {
-
-
-          // Set the partitioner property
-          final int dstParallelism = e.getDst().getPropertyValue(ParallelismProperty.class).get();
-          LOG.info("SET {} to {} * {}", e.getId(), dstParallelism, HASH_RANGE_MULTIPLIER);
-          e.setPropertyPermanently(PartitionerProperty.of(
-            PartitionerProperty.Type.HASH, dstParallelism * HASH_RANGE_MULTIPLIER));
+    dag.topologicalDo(irVertex -> dag.getIncomingEdgesOf(irVertex).forEach(irEdge ->
+      this.getRuleSet().forEach(rule -> {
+        if (rule.getCondition().test(irEdge)) {
+          rule.getAction().accept(irEdge);
         }
-      });
-    });
+      })));
     return dag;
   }
 }
-
