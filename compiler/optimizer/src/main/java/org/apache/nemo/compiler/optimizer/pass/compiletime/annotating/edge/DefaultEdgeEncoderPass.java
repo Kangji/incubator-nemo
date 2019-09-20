@@ -39,7 +39,7 @@ public final class DefaultEdgeEncoderPass extends AnnotatingPass<IREdge> {
    */
   public DefaultEdgeEncoderPass() {
     super(DefaultEdgeEncoderPass.class);
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("DefaultEdgeEncoder",
       (IREdge edge, IRDAG dag)  -> true,
       (IREdge edge, IRDAG dag)  -> edge.setPropertyIfAbsent(DEFAULT_ENCODER_PROPERTY)));
   }

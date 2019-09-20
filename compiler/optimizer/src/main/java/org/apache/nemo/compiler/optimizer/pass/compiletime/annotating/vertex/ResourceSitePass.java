@@ -73,10 +73,10 @@ public final class ResourceSitePass extends AnnotatingPass<IRVertex> {
    */
   public ResourceSitePass() {
     super(ResourceSitePass.class);
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("ResourceSiteNoBandwidthSpecs",
       (IRVertex vertex, IRDAG dag) -> getBandwidthSpecification() == null,
       (IRVertex vertex, IRDAG dag) -> vertex.setProperty(ResourceSiteProperty.of(EMPTY_MAP))));
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("ResourceSiteWithBandwidthSpecs",
       (IRVertex vertex, IRDAG dag) -> getBandwidthSpecification() != null,
       (IRVertex vertex, IRDAG dag) -> assignNodeShares(vertex, dag, bandwidthSpec)));
   }

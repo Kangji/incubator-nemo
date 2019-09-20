@@ -47,7 +47,7 @@ public final class CompressionPass extends AnnotatingPass<IREdge> {
   public CompressionPass(final CompressionProperty.Value compression) {
     super(CompressionPass.class);
     this.compression = compression;
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("Compression",
       (IREdge edge, IRDAG dag) -> true,
       (IREdge edge, IRDAG dag) -> edge.setPropertyIfAbsent(CompressionProperty.of(this.compression))));
   }

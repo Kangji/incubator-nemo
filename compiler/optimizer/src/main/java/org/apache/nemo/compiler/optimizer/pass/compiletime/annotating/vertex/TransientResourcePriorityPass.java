@@ -40,18 +40,18 @@ public final class TransientResourcePriorityPass extends AnnotatingPass<IRVertex
    */
   public TransientResourcePriorityPass() {
     super(TransientResourcePriorityPass.class);
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("TransientResourceForSource",
       (IRVertex vertex, IRDAG dag) -> dag.getIncomingEdgesOf(vertex).isEmpty(),
       (IRVertex vertex, IRDAG dag) ->
         vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.TRANSIENT))));
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("TransientResourceAllO2OFromReserved",
       (IRVertex vertex, IRDAG dag) -> {
         final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
         return !inEdges.isEmpty() && (hasM2M(inEdges) || allO2OFromReserved(inEdges));
       },
       (IRVertex vertex, IRDAG dag) ->
         vertex.setPropertyPermanently(ResourceTypeProperty.of(ResourceTypeProperty.RESERVED))));
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("TransientResourceNotAllO2OFromReserved",
       (IRVertex vertex, IRDAG dag) -> {
         final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
         return !inEdges.isEmpty() && !hasM2M(inEdges) && !allO2OFromReserved(inEdges);

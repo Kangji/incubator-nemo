@@ -37,7 +37,8 @@ public final class DisaggregationEdgeDataStorePass extends AnnotatingPass<IREdge
    */
   public DisaggregationEdgeDataStorePass() {
     super(DisaggregationEdgeDataStorePass.class);
-    this.addToRuleSet(EdgeRule.of(// Initialize the DataStore of the DAG with GlusterFileStore.
+    this.addToRuleSet(EdgeRule.of("DisaggregationEdgeDataStore",
+      // Initialize the DataStore of the DAG with GlusterFileStore.
       (IREdge edge, IRDAG dag) -> true,
       (IREdge edge, IRDAG dag) ->
         edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.GLUSTER_FILE_STORE))));

@@ -71,14 +71,25 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
   private DAG<IRVertex, IREdge> dagSnapshot; // the DAG that was saved most recently.
   private DAG<IRVertex, IREdge> modifiedDAG; // the DAG that is being updated.
 
-  // To remember original encoders/decoders, and etc
+  /**
+   * To remember original encoders/decoders, and etc.
+   */
   private final Map<RelayVertex, IREdge> streamVertexToOriginalEdge;
 
-  // To remember sampling vertex groups
+  /**
+   * To remember sampling vertex groups.
+   */
   private final Map<SamplingVertex, Set<SamplingVertex>> samplingVertexToGroup;
 
-  // To remember message barrier/aggregator vertex groups
+  /**
+   * To remember message barrier/aggregator vertex groups.
+   */
   private final Map<IRVertex, Set<IRVertex>> messageVertexToGroup;
+
+  /**
+   * To remember the rules applied to the DAG.
+   */
+  private final List<String> namesOfRulesApplied;
 
   /**
    * @param originalUserApplicationDAG the initial DAG.
@@ -89,6 +100,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     this.streamVertexToOriginalEdge = new HashMap<>();
     this.samplingVertexToGroup = new HashMap<>();
     this.messageVertexToGroup = new HashMap<>();
+    this.namesOfRulesApplied = new ArrayList<>();
   }
 
   public IRDAGChecker.CheckerResult checkIntegrity() {

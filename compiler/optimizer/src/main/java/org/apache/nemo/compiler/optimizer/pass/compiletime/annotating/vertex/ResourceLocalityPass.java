@@ -35,7 +35,7 @@ public final class ResourceLocalityPass extends AnnotatingPass<IRVertex> {
    */
   public ResourceLocalityPass() {
     super(ResourceLocalityPass.class);
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("ResourceLocality",
       // On every vertex, if ResourceLocalityProperty is not set, put it as true.
       (IRVertex vertex, IRDAG dag) -> true,
       (IRVertex vertex, IRDAG dag) -> vertex.setPropertyIfAbsent(ResourceLocalityProperty.of(true))));

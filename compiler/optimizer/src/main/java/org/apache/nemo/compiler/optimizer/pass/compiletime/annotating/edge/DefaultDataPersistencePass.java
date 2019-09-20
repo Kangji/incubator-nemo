@@ -38,7 +38,7 @@ public final class DefaultDataPersistencePass extends AnnotatingPass<IREdge> {
    */
   public DefaultDataPersistencePass() {
     super(DefaultDataPersistencePass.class);
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("DefaultDataPersistenceDiscard",
       (IREdge edge, IRDAG dag)  -> {
         final DataStoreProperty.Value dataStoreValue = edge.getPropertyValue(DataStoreProperty.class).orElse(null);
         return DataStoreProperty.Value.MEMORY_STORE.equals(dataStoreValue)
@@ -46,7 +46,7 @@ public final class DefaultDataPersistencePass extends AnnotatingPass<IREdge> {
       },
       (IREdge edge, IRDAG dag)  ->
         edge.setPropertyIfAbsent(DataPersistenceProperty.of(DataPersistenceProperty.Value.DISCARD))));
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("DefaultDataPersistenceKeep",
       (IREdge edge, IRDAG dag)  -> {
         final DataStoreProperty.Value dataStoreValue = edge.getPropertyValue(DataStoreProperty.class).orElse(null);
         return !DataStoreProperty.Value.MEMORY_STORE.equals(dataStoreValue)

@@ -39,7 +39,7 @@ public final class AggressiveSpeculativeCloningPass extends AnnotatingPass<IRVer
    */
   public AggressiveSpeculativeCloningPass() {
     super(AggressiveSpeculativeCloningPass.class);
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("AggressiveSpeculativeCloning",
       (IRVertex vertex, IRDAG dag) -> true,  // Apply the policy to ALL vertices
       (IRVertex vertex, IRDAG dag) -> vertex.setProperty(ClonedSchedulingProperty.of(
         new ClonedSchedulingProperty.CloneConf(FRACTION_TO_WAIT_FOR, MEDIAN_TIME_MULTIPLIER)))));

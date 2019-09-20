@@ -32,21 +32,26 @@ import java.util.function.BiPredicate;
 public final class VertexRule extends Rule<IRVertex> {
   /**
    * Private constructor for the VertexRule class.
+   *
+   * @param name the name of the optimization rule.
    * @param condition the condition for the rule.
    * @param action the action of the rule.
    */
-  private VertexRule(final BiPredicate<IRVertex, IRDAG> condition, final BiConsumer<IRVertex, IRDAG> action) {
-    super(condition, action);
+  private VertexRule(final String name,
+                     final BiPredicate<IRVertex, IRDAG> condition, final BiConsumer<IRVertex, IRDAG> action) {
+    super(name, condition, action);
   }
 
   /**
    * Static initializer of the VertexRule class.
    *
+   * @param name the name of the optimization rule.
    * @param condition the condition of the rule.
    * @param action the action of the rule.
    * @return a new VertexRule object.
    */
-  public static VertexRule of(final BiPredicate<IRVertex, IRDAG> condition, final BiConsumer<IRVertex, IRDAG> action) {
-    return new VertexRule(condition, action);
+  public static VertexRule of(final String name,
+                              final BiPredicate<IRVertex, IRDAG> condition, final BiConsumer<IRVertex, IRDAG> action) {
+    return new VertexRule(name, condition, action);
   }
 }

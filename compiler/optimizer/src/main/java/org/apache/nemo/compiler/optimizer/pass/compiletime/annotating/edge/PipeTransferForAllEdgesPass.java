@@ -34,7 +34,7 @@ public final class PipeTransferForAllEdgesPass extends AnnotatingPass<IREdge> {
    */
   public PipeTransferForAllEdgesPass() {
     super(PipeTransferForAllEdgesPass.class);
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("PipeTransferForAllEdges",
       (IREdge edge, IRDAG dag)  -> true,
       (IREdge edge, IRDAG dag) -> edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.PIPE))));
   }

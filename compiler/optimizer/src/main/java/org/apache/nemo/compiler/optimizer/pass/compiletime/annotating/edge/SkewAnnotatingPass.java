@@ -53,7 +53,7 @@ public final class SkewAnnotatingPass extends AnnotatingPass<IREdge> {
    */
   public SkewAnnotatingPass() {
     super(SkewAnnotatingPass.class);
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("SkewAnnotating",
       (IREdge edge, IRDAG dag) -> CommunicationPatternProperty.Value.SHUFFLE
         .equals(edge.getPropertyValue(CommunicationPatternProperty.class).orElse(null))
         && !(edge.getDst() instanceof MessageAggregatorVertex),

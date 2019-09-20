@@ -42,7 +42,7 @@ public final class TransientResourceDataFlowPass extends AnnotatingPass<IREdge> 
    */
   public TransientResourceDataFlowPass() {
     super(TransientResourceDataFlowPass.class);
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("TransientResourceDataFlow",
       (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge),
       (IREdge edge, IRDAG dag)  -> {
         edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.PUSH));

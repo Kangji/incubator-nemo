@@ -35,7 +35,7 @@ public final class ResourceSlotPass extends AnnotatingPass<IRVertex> {
    */
   public ResourceSlotPass() {
     super(ResourceSlotPass.class);
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("ResourceSlot",
       // On every vertex, if ResourceSlotProperty is not set, put it as true.
       (IRVertex vertex, IRDAG dag) -> true,
       (IRVertex vertex, IRDAG dag) -> vertex.setPropertyIfAbsent(ResourceSlotProperty.of(true))));

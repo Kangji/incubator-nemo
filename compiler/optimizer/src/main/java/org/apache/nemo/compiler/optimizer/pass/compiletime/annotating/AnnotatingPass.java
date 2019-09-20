@@ -22,10 +22,7 @@ import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.CompileTimePass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A compile-time pass that annotates the IR DAG with execution properties.
@@ -81,5 +78,15 @@ public abstract class AnnotatingPass<T> extends CompileTimePass {
    */
   public final ArrayList<Rule<T>> getRuleSet() {
     return ruleSet;
+  }
+
+  /**
+   * Find a rule by its name.
+   *
+   * @param name name of the rule to find.
+   * @return the rule set.
+   */
+  public final Optional<Rule<T>> getRule(final String name) {
+    return this.getRuleSet().stream().filter(r -> r.getName().equalsIgnoreCase(name)).findFirst();
   }
 }

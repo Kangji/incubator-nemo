@@ -34,7 +34,7 @@ public final class DefaultDataStorePass extends AnnotatingPass<IREdge> {
    */
   public DefaultDataStorePass() {
     super(DefaultDataStorePass.class);
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("DefaultDataStore",
       (IREdge edge, IRDAG dag) -> true,
       (IREdge edge, IRDAG dag) ->
         edge.setPropertyIfAbsent(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));

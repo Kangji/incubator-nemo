@@ -38,7 +38,7 @@ public final class ShuffleEdgePushPass extends AnnotatingPass<IREdge> {
    */
   public ShuffleEdgePushPass() {
     super(ShuffleEdgePushPass.class);
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("ShuffleEdgePush",
       (IREdge edge, IRDAG dag)  -> CommunicationPatternProperty.Value.SHUFFLE
         .equals(edge.getPropertyValue(CommunicationPatternProperty.class).orElse(null)),
       (IREdge edge, IRDAG dag)  -> edge.setProperty(DataFlowProperty.of(DataFlowProperty.Value.PUSH))));

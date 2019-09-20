@@ -37,12 +37,12 @@ public final class TransientResourceDataStorePass extends AnnotatingPass<IREdge>
    */
   public TransientResourceDataStorePass() {
     super(TransientResourceDataStorePass.class);
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("TransientResourceDataStoreMemory",
       (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge) && !DataStoreProperty.Value.SERIALIZED_MEMORY_STORE
         .equals(edge.getPropertyValue(DataStoreProperty.class).orElse(null)),
       (IREdge edge, IRDAG dag) ->
         edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.MEMORY_STORE))));
-    this.addToRuleSet(EdgeRule.of(
+    this.addToRuleSet(EdgeRule.of("TransientResourceDataStoreLocal",
       (IREdge edge, IRDAG dag) -> fromReservedToTransient(edge),
       (IREdge edge, IRDAG dag) ->
         edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
@@ -66,9 +66,9 @@ public final class TransientResourceDataStorePass extends AnnotatingPass<IREdge>
    */
   static boolean fromTransientToReserved(final IREdge irEdge) {
     return ResourceTypeProperty.TRANSIENT
-      .equals(irEdge.getSrc().getPropertyValue(ResourceTypeProperty.class).get())
+      .equals(irEdge.getSrc().getPropertyValue(ResourceTypeProperty.class).orElse(null))
       && ResourceTypeProperty.RESERVED
-      .equals(irEdge.getDst().getPropertyValue(ResourceTypeProperty.class).get());
+      .equals(irEdge.getDst().getPropertyValue(ResourceTypeProperty.class).orElse(null));
   }
 
   /**
@@ -79,8 +79,8 @@ public final class TransientResourceDataStorePass extends AnnotatingPass<IREdge>
    */
   static boolean fromReservedToTransient(final IREdge irEdge) {
     return ResourceTypeProperty.RESERVED
-      .equals(irEdge.getSrc().getPropertyValue(ResourceTypeProperty.class).get())
+      .equals(irEdge.getSrc().getPropertyValue(ResourceTypeProperty.class).orElse(null))
       && ResourceTypeProperty.TRANSIENT
-      .equals(irEdge.getDst().getPropertyValue(ResourceTypeProperty.class).get());
+      .equals(irEdge.getDst().getPropertyValue(ResourceTypeProperty.class).orElse(null));
   }
 }

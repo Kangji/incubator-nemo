@@ -32,21 +32,26 @@ import java.util.function.BiPredicate;
 public final class EdgeRule extends Rule<IREdge> {
   /**
    * Private constructor for the EdgeRule class.
+   *
+   * @param name the name of the optimization rule.
    * @param condition the condition for the rule.
    * @param action the action of the rule.
    */
-  private EdgeRule(final BiPredicate<IREdge, IRDAG> condition, final BiConsumer<IREdge, IRDAG> action) {
-    super(condition, action);
+  private EdgeRule(final String name,
+                   final BiPredicate<IREdge, IRDAG> condition, final BiConsumer<IREdge, IRDAG> action) {
+    super(name, condition, action);
   }
 
   /**
    * Static initializer of the EdgeRule class.
    *
+   * @param name the name of the optimization rule.
    * @param condition the condition of the rule.
    * @param action the action of the rule.
    * @return a new EdgeRule object.
    */
-  public static EdgeRule of(final BiPredicate<IREdge, IRDAG> condition, final BiConsumer<IREdge, IRDAG> action) {
-    return new EdgeRule(condition, action);
+  public static EdgeRule of(final String name,
+                            final BiPredicate<IREdge, IRDAG> condition, final BiConsumer<IREdge, IRDAG> action) {
+    return new EdgeRule(name, condition, action);
   }
 }

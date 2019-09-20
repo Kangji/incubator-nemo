@@ -56,7 +56,8 @@ public final class DefaultParallelismPass extends AnnotatingPass<IRVertex> {
   public DefaultParallelismPass(final int shuffleDecreaseFactor) {
     super(DefaultParallelismPass.class);
     this.shuffleDecreaseFactor = shuffleDecreaseFactor;
-    this.addToRuleSet(VertexRule.of(// Source vertices are already allocated with source parallelism at NemoOptimizer.
+    this.addToRuleSet(VertexRule.of("DefaultParallelismForNonSourceVertices",
+      // Source vertices are already allocated with source parallelism at NemoOptimizer.
       (IRVertex vertex, IRDAG dag) -> !dag.getIncomingEdgesOf(vertex).isEmpty(),
       (IRVertex vertex, IRDAG dag) -> {
         // No reason to propagate via Broadcast edges, as the data streams that will use the broadcasted data
@@ -80,13 +81,6 @@ public final class DefaultParallelismPass extends AnnotatingPass<IRVertex> {
         recursivelySynchronizeO2OParallelism(dag, vertex, parallelism);
       }
     ));
-    this.addToRuleSet(VertexRule.of(
-      (IRVertex vertex, IRDAG dag) -> dag.getIncomingEdgesOf(vertex).isEmpty()
-        && !vertex.getPropertyValue(ParallelismProperty.class).isPresent(),
-      (IRVertex vertex, IRDAG dag) -> {
-        throw new CompileTimeOptimizationException("There is a non-source vertex that doesn't have any inEdges "
-          + "(excluding SideInput edges)");
-      }));
   }
 
   @Override

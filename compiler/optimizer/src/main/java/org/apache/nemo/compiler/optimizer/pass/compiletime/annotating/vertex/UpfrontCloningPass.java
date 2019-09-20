@@ -37,7 +37,7 @@ public final class UpfrontCloningPass extends AnnotatingPass<IRVertex> {
    */
   public UpfrontCloningPass() {
     super(UpfrontCloningPass.class);
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("UpfrontCloning",
       (IRVertex vertex, IRDAG dag) -> dag.getIncomingEdgesOf(vertex).stream()
         // TODO #198: Handle Un-cloneable Beam Sink Operators
         // only shuffle receivers (for now... as particular Beam sink operators fail when cloned)

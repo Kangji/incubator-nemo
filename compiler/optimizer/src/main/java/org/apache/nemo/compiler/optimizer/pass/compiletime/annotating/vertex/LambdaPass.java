@@ -33,7 +33,7 @@ public final class LambdaPass extends AnnotatingPass<IRVertex> {
 
   public LambdaPass() {
     super(LambdaPass.class);
-    this.addToRuleSet(VertexRule.of(
+    this.addToRuleSet(VertexRule.of("Lambda",
       (IRVertex vertex, IRDAG dag) -> true,
       (IRVertex vertex, IRDAG dag) ->
         vertex.setPropertyPermanently(ResourceLambdaProperty.of(ResourceLambdaProperty.Value.ON))));
