@@ -173,8 +173,8 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
   /**
    * @return the names of the optimization rules applied to the DAG, divided by whitespaces.
    */
-  public String getNamesOfRulesApplied() {
-    return namesOfRulesApplied.stream().reduce((a, b) -> a + " " + b).orElse("");
+  public List<String> getNamesOfRulesApplied() {
+    return namesOfRulesApplied;
   }
 
   ////////////////////////////////////////////////// Methods for reshaping the DAG topology.
