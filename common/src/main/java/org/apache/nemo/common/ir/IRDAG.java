@@ -160,6 +160,23 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
       .sum();
   }
 
+  /**
+   * Add names of the rules applied on the DAG.
+   *
+   * @param names names of the rules.
+   * @return whether or not the name is appended to the list or not.
+   */
+  public boolean addNamesOfRulesApplied(final List<String> names) {
+    return this.namesOfRulesApplied.addAll(names);
+  }
+
+  /**
+   * @return the names of the optimization rules applied to the DAG, divided by whitespaces.
+   */
+  public String getNamesOfRulesApplied() {
+    return namesOfRulesApplied.stream().reduce((a, b) -> a + " " + b).orElse("");
+  }
+
   ////////////////////////////////////////////////// Methods for reshaping the DAG topology.
 
   /**

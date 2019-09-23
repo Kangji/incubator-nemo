@@ -25,6 +25,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.CompileTimePass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Rule;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping.ReshapingPass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 import org.apache.nemo.compiler.optimizer.pass.runtime.RunTimePass;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of the {@link Policy} interface.
@@ -108,6 +110,11 @@ public final class PolicyImpl implements Policy {
         processedDAG.storeJSON(dagDirectory,
           "ir-" + optimizationCount++ + "-after-" + passToApply.getClass().getSimpleName(),
           "DAG after optimization");
+        if (passToApply instanceof AnnotatingPass) {
+          final AnnotatingPass<?> annotatingPass = (AnnotatingPass<?>) passToApply;
+          processedDAG.addNamesOfRulesApplied(annotatingPass.getRuleSet().stream()
+            .map(Rule::getName).collect(Collectors.toList()));
+        }
       } else {
         LOG.info("Condition unmet for applying {} to the DAG", passToApply.getClass().getSimpleName());
         processedDAG = dag;

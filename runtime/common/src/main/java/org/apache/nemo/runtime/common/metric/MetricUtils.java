@@ -144,11 +144,11 @@ public final class MetricUtils {
             idx.getAndIncrement();
           });
       }
-//    } else if (mode == 1) {  // Learning the 'rules'.
-//      node.put("type", "rule");
-//      irdag.getVertices().forEach(v -> {
-//
-//      });
+      node.set("vertex", verticesNode);
+      node.set("edge", edgesNode);
+    } else if (mode == 1) {  // Learning the 'rules'.
+      node.put("type", "rule");
+      node.put("rules", irdag.getNamesOfRulesApplied());
     } else {  // By Vertex / Edge IDs.
       node.put("type", "id");
       irdag.getVertices().forEach(v ->
@@ -165,10 +165,10 @@ public final class MetricUtils {
             epFormatter(edgeNode, e.getId(), ep, e.getExecutionProperties().isPropertyFinalized(ep));
             edgesNode.add(edgeNode);
           })));
+      node.set("vertex", verticesNode);
+      node.set("edge", edgesNode);
     }
 
-    node.set("vertex", verticesNode);
-    node.set("edge", edgesNode);
     // Update the metric metadata if new execution property key / values have been discovered and updates are required.
     return node.toString();
   }

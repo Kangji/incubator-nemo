@@ -76,7 +76,7 @@ public abstract class AnnotatingPass<T> extends CompileTimePass {
   /**
    * @return the rule set.
    */
-  public final ArrayList<Rule<T>> getRuleSet() {
+  public final List<Rule<T>> getRuleSet() {
     return ruleSet;
   }
 
