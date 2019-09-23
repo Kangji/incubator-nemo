@@ -93,8 +93,7 @@ public final class MetricUtils {
   static String stringifyIRDAGProperties(final IRDAG irdag, final Integer mode) {
     final ObjectMapper mapper = new ObjectMapper();
     final ObjectNode node = mapper.createObjectNode();
-    final ArrayNode verticesNode = mapper.createArrayNode();
-    final ArrayNode edgesNode = mapper.createArrayNode();
+
 
     node.put("inputsize", irdag.getInputSize());
     node.put("jvmmemsize", Runtime.getRuntime().maxMemory());
@@ -104,6 +103,9 @@ public final class MetricUtils {
 
     if (mode == 0) {  // Patterns
       node.put("type", "pattern");
+      final ArrayNode verticesNode = mapper.createArrayNode();
+      final ArrayNode edgesNode = mapper.createArrayNode();
+
       LOG.info("Vertices list: {}", irdag.getTopologicalSort());
       for (final IRVertex v: irdag.getTopologicalSort()) {
         final List<IREdge> incomingEdges = irdag.getIncomingEdgesOf(v);
@@ -148,9 +150,18 @@ public final class MetricUtils {
       node.set("edge", edgesNode);
     } else if (mode == 1) {  // Learning the 'rules'.
       node.put("type", "rule");
-      node.put("rules", irdag.getNamesOfRulesApplied());
+      final ArrayNode rulesNode = mapper.createArrayNode();
+      for (final String ruleName : irdag.getNamesOfRulesApplied()) {
+        final ObjectNode ruleNode = mapper.createObjectNode();
+        ruleNode.put("name", ruleName);
+        rulesNode.add(ruleNode);
+      }
+      node.set("rule", rulesNode);
     } else {  // By Vertex / Edge IDs.
       node.put("type", "id");
+      final ArrayNode verticesNode = mapper.createArrayNode();
+      final ArrayNode edgesNode = mapper.createArrayNode();
+
       irdag.getVertices().forEach(v ->
         v.getExecutionProperties().forEachProperties(ep -> {
           final ObjectNode vertexNode = mapper.createObjectNode();

@@ -45,34 +45,30 @@ configuration_space = [
 
 
 def preprocess_properties(properties, keypairs, values):
+  vertex_properties = properties['vertex']
+  edge_properties = properties['edge']
   tpe = properties['type']
-  if tpe in ['id', 'pattern']:
-    vertex_properties = properties['vertex']
-    edge_properties = properties['edge']
 
-    for vp in vertex_properties:
-      i = f'{vp["ID"]}'
-      key = f'{vp["EPKeyClass"]}/{vp["EPValueClass"]}'
-      value = f'{vp["EPValue"]}'
-      keypairs.append(f'{i},{key},{tpe}')
-      if key not in values:
-        values[key] = {'data': []}
-      values[key]['isdigit'] = value.isdigit()
-      if not value.isdigit():
-        values[key]['data'].append(value)
-    for ep in edge_properties:
-      i = f'{ep["ID"]}'
-      key = f'{ep["EPKeyClass"]}/{ep["EPValueClass"]}'
-      value = f'{ep["EPValue"]}'
-      keypairs.append(f'{i},{key},{tpe}')
-      if key not in values:
-        values[key] = {'data': []}
-      values[key]['isdigit'] = value.isdigit()
-      if not value.isdigit():
-        values[key]['data'].append(value)
-  elif tpe == 'rule':
-    props = properties['rules']
-    key =
+  for vp in vertex_properties:
+    i = f'{vp["ID"]}'
+    key = f'{vp["EPKeyClass"]}/{vp["EPValueClass"]}'
+    value = f'{vp["EPValue"]}'
+    keypairs.append(f'{i},{key},{tpe}')
+    if key not in values:
+      values[key] = {'data': []}
+    values[key]['isdigit'] = value.isdigit()
+    if not value.isdigit():
+      values[key]['data'].append(value)
+  for ep in edge_properties:
+    i = f'{ep["ID"]}'
+    key = f'{ep["EPKeyClass"]}/{ep["EPValueClass"]}'
+    value = f'{ep["EPValue"]}'
+    keypairs.append(f'{i},{key},{tpe}')
+    if key not in values:
+      values[key] = {'data': []}
+    values[key]['isdigit'] = value.isdigit()
+    if not value.isdigit():
+      values[key]['data'].append(value)
   return tpe
 
 
