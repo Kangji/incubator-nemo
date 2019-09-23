@@ -101,10 +101,19 @@ public final class MetricUtils {
       .getOperatingSystemMXBean()).getTotalPhysicalMemorySize());
     node.put("dagsummary", irdag.irDAGSummary());
 
+    final ArrayNode rulesNode = mapper.createArrayNode();
+    for (final String ruleName : irdag.getNamesOfRulesApplied()) {
+      final ObjectNode ruleNode = mapper.createObjectNode();
+      ruleNode.put("name", ruleName);
+      rulesNode.add(ruleNode);
+    }
+    node.set("rules", rulesNode);
+
+    final ArrayNode verticesNode = mapper.createArrayNode();
+    final ArrayNode edgesNode = mapper.createArrayNode();
+
     if (mode == 0) {  // Patterns
       node.put("type", "pattern");
-      final ArrayNode verticesNode = mapper.createArrayNode();
-      final ArrayNode edgesNode = mapper.createArrayNode();
 
       LOG.info("Vertices list: {}", irdag.getTopologicalSort());
       for (final IRVertex v: irdag.getTopologicalSort()) {
@@ -146,21 +155,8 @@ public final class MetricUtils {
             idx.getAndIncrement();
           });
       }
-      node.set("vertex", verticesNode);
-      node.set("edge", edgesNode);
-    } else if (mode == 1) {  // Learning the 'rules'.
-      node.put("type", "rule");
-      final ArrayNode rulesNode = mapper.createArrayNode();
-      for (final String ruleName : irdag.getNamesOfRulesApplied()) {
-        final ObjectNode ruleNode = mapper.createObjectNode();
-        ruleNode.put("name", ruleName);
-        rulesNode.add(ruleNode);
-      }
-      node.set("rule", rulesNode);
     } else {  // By Vertex / Edge IDs.
       node.put("type", "id");
-      final ArrayNode verticesNode = mapper.createArrayNode();
-      final ArrayNode edgesNode = mapper.createArrayNode();
 
       irdag.getVertices().forEach(v ->
         v.getExecutionProperties().forEachProperties(ep -> {
@@ -176,10 +172,10 @@ public final class MetricUtils {
             epFormatter(edgeNode, e.getId(), ep, e.getExecutionProperties().isPropertyFinalized(ep));
             edgesNode.add(edgeNode);
           })));
-      node.set("vertex", verticesNode);
-      node.set("edge", edgesNode);
     }
 
+    node.set("vertex", verticesNode);
+    node.set("edge", edgesNode);
     // Update the metric metadata if new execution property key / values have been discovered and updates are required.
     return node.toString();
   }
