@@ -54,7 +54,7 @@ public final class ClientUtils {
             .setType(ControlMessage.ClientToDriverMessageType.Notification)
             .setMessage(ControlMessage.NotificationMessage.newBuilder()
               .setOptimizationType(ControlMessage.OptimizationType.XGBoost)
-              .setData(ClientUtils.launchXGBoostScript(message.getDataCollected().getData()))
+              .setData(ClientUtils.launchPropertyOptimizationScript(message.getDataCollected().getData()))
               .build())
             .build()))
           .start();
@@ -65,15 +65,34 @@ public final class ClientUtils {
   }
 
   /**
-   * launches the XGBoost Script.
+   * launches the shell script for optimization of execution properties.
    *
    * @param arguments the arguments for the IR DAG to run the script for.
-   * @return the results file converted into string.
+   * @return the results file, converted into string.
    */
-  private static String launchXGBoostScript(final String arguments) {
+  private static String launchPropertyOptimizationScript(final String arguments) {
+    return executeShellScript("/bin/xgboost_property_optimization.sh", arguments);
+  }
+
+  /**
+   * launches the shell script for optimization of choosing the optimization rules to apply.
+   * @param arguments the arguments for the IR DAG to run the script for.
+   * @return the results file, converted into string.
+   */
+  private static String launchRuleOptimizationScript(final String arguments) {
+    return executeShellScript("/bin/xgboost_rule_optimization.sh", arguments);
+  }
+
+  /**
+   * launches the designated shell script.
+   * @param scriptFile the script file, with respect to the project root path.
+   * @param arguments arguments to pass onto the script.
+   * @return the result of the script.
+   */
+  private static String executeShellScript(final String scriptFile, final String arguments) {
     try {
       final String projectRootPath = Util.fetchProjectRootPath();
-      final String scriptPath = projectRootPath + "/bin/xgboost_optimization.sh";
+      final String scriptPath = projectRootPath + scriptFile;
       // It trains the model with the metric data of previous jobs with the same IRDAG signature.
       final String[] argumentsArray = arguments.split(" ");
       final String[] command = new String[argumentsArray.length + 1];

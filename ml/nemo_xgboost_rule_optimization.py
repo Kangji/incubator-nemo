@@ -37,7 +37,7 @@ import matplotlib.pyplot as plt
 try:
   opts, args = getopt.getopt(sys.argv[1:], "hs:d:r:i:", ["dagsummary=", "dagpropertydir=", "resourceinfo=", "inputsize="])
 except getopt.GetoptError:
-  print('nemo_xgboost_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
+  print('nemo_xgboost_property_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
   sys.exit(2)
 dagsummary = None
 dagpropertydir = None
@@ -45,7 +45,7 @@ resourceinfo = None
 inputsize = None
 for opt, arg in opts:
   if opt == '-h':
-    print('nemo_xgboost_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
+    print('nemo_xgboost_property_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
     sys.exit()
   elif opt in ("-s", "--dagsummary"):
     dagsummary = arg
@@ -56,14 +56,56 @@ for opt, arg in opts:
   elif opt in ("-i", "--inputsize"):
     inputsize = arg
 
-modelname = "nemo_bst.model"
-data = Data()
-encoded_rows = data.load_data_from_db(dagsummary, dagpropertydir) if dagpropertydir else data.load_data_from_db(dagsummary)
-# write_to_file('process_test', processed_rows)
+modelname = "nemo_rule_bst.model"
 
-write_rows_to_file('nemo_optimization.out', encoded_rows)
-# write_to_file('decode_test', decode_rows(encoded_rows, id_to_col, value_is_digit, id_to_value))
-ddata = xgb.DMatrix('nemo_optimization.out')
+conn = None
+
+try:
+  host = "nemo-optimization.cabbufr3evny.us-west-2.rds.amazonaws.com"
+  dbname = "nemo_optimization"
+  dbuser = "postgres"
+  dbpwd = "fake_password"
+  conn = pg.connect(host=host, dbname=dbname, user=dbuser, password=dbpwd)
+  print("Connected to the PostgreSQL DB.")
+except:
+  try:
+    sqlite_file = "./optimization_db.sqlite"
+    conn = sq.connect(sqlite_file)
+    print("Connected to the SQLite DB.")
+  except:
+    print("I am unable to connect to the database. Try running the script with `./bin/xgboost_rule_optimization.sh`")
+
+sql = "SELECT * from nemo_data"
+cur = conn.cursor()
+try:
+  cur.execute(sql)
+  print("Loaded data from the DB.")
+except:
+  print("I can't run " + sql)
+
+rows = cur.fetchall()
+
+keypairs = []
+for row in rows:
+  properties = row[6]
+  rules = properties['rules']
+
+  for rule in rules:
+    key = f'{rule["name"]}'
+    keypairs.append(key)
+# print("Pre-processing properties..")
+
+keyLE = preprocessing.LabelEncoder()
+keyLE.fit(keypairs)
+# print("KEYS:", list(self.keyLE.classes_))
+
+encoded_rows = [f'{int(row[1]) // 1000} {":1 ".join(keyLE.transform([rule["name"] for rule in row[6]["rules"]]))}:1 {":0 ".join(keyLE.transform([key for key in keypairs if key not in row[6]["rules"]]))}:0' for row in rows]
+cur.close()
+conn.close()
+print("Pre-processing complete")
+
+write_rows_to_file('nemo_rule_optimization.out', encoded_rows)
+ddata = xgb.DMatrix('nemo_rule_optimization.out')
 
 avg_20_duration = np.mean(ddata.get_label()[:20])
 print("average job duration: ", avg_20_duration)
@@ -72,7 +114,8 @@ allowance = avg_20_duration // 25  # 4%
 row_size = len(encoded_rows)
 print("total_rows: ", row_size)
 
-## TRAIN THE MODEL (REGRESSION)
+
+## TRAIN THE MODEL (LOGISTIC REGRESSION)
 dtrain = ddata.slice([i for i in range(0, row_size) if i % 7 != 6])  # mod is not 6
 print("train_rows: ", dtrain.num_row())
 dtest = ddata.slice([i for i in range(0, row_size) if i % 7 == 6])  # mod is 6
@@ -89,7 +132,7 @@ min_error = error_opt
 
 learning_rates = [0.01, 0.05, 0.1, 0.25, 0.5, 0.8]
 for lr in learning_rates:
-  param = {'max_depth': 6, 'eta': lr, 'verbosity': 0, 'objective': 'reg:linear'}
+  param = {'max_depth': 6, 'eta': lr, 'verbosity': 0, 'objective': 'binary:logistic'}
 
   watchlist = [(dtest, 'eval'), (dtrain, 'train')]
   num_round = row_size // 10
@@ -110,71 +153,20 @@ print('minimum error=%f' % min_error)
 
 ## Let's now use bst_opt
 ## Check out the histogram by uncommenting the lines below
-# fscore = bst_opt.get_fscore()
-# sorted_fscore = sorted(fscore.items(), key=lambda kv: kv[1])
-# for i in range(len(sorted_fscore)):
-#   print("\nSplit Value Histogram:")
-#   feature = sorted_fscore.pop()[0]
-#   print(feature, "=", id_to_col[int(feature[1:])])
-#   hg = bst_opt.get_split_value_histogram(feature)
-#   print(hg)
+fscore = bst_opt.get_fscore()
+sorted_fscore = sorted(fscore.items(), key=lambda kv: kv[1])
+for i in range(len(sorted_fscore)):
+  print("\nSplit Value Histogram:")
+  feature = sorted_fscore.pop()[0]
+  print(feature, "=", keyLE.inverse_transform([int(feature[1:])]))
+  hg = bst_opt.get_split_value_histogram(feature)
+  print(hg)
 
 df = bst_opt.trees_to_dataframe()
 # print("Trees to dataframe")
 # print(df)
 
-trees = {}
-for index, row in df.iterrows():
-  if row['Tree'] not in trees:  # Tree number = index
-    trees[row['Tree']] = Tree(data)
-
-  # translated_feature = data.transform_id_to_key(int(row['Feature'][1:])) if row['Feature'].startswith('f') else row['Feature']
-  # print(translated_feature)
-  trees[row['Tree']].add_node(row['ID'], row['Feature'], row['Split'], row['Yes'], row['No'], row['Missing'],
-                              row['Gain'])
-
-
-# Let's process the data now.
-dag_properties = data.process_property_json(dagpropertydir)
-# print(dag_properties)
-
-# Handle the generated trees
-results = {}
-print("\nGenerated Trees:")
-for t in trees.values():
-  results = dict_union(results, t.importance_dict())
-  print(t)
-
-print("\nImportanceDict")
-print(json.dumps(results, indent=2))
-
-print("\nSummary")
-resultsJson = []
-for k, v in results.items():
-  for kk, vv in v.items():
-    # k is feature, kk is split, and vv is val
-    feature_id = int(k[1:])
-    i, key, tpe = data.transform_id_to_keypair(feature_id)  # ex. (id), org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty/java.lang.Integer, pattern
-    # how = 'greater' if vv > 0 else 'smaller'
-    # result_string = f'{key} should be {vv} ({how}) than {kk}'
-    # print(result_string)
-    classes = key.split('/')
-    key_class = classes[0]  # ex. org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty
-    value_class = classes[1]  # ex. java.lang.Integer
-    value = data.transform_id_to_value(key, data.derive_value_from(feature_id, key, kk, vv))
-    if value:  # Only returned when the EP is valid
-      resultsJson.append({'type': tpe, 'ID': i, 'EPKeyClass': key_class, 'EPValueClass': value_class, 'EPValue': value})
-
-# Question: Manually use this resource information in the optimization?
-# cluster_information = read_resource_info(resourceinfo)
-# print("CLUSTER:\n", cluster_information)
-
-print("RESULT:")
-pprint.pprint(resultsJson)
-
-with open("results.out", "w") as file:
-  file.write(json.dumps(resultsJson, indent=2))
-
 # Visualize tree
-# xgb.plot_tree(bst_opt)
+# xgb.plot_tree(bst_opt, num_trees=0)
 # plt.show()
+

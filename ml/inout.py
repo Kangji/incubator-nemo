@@ -150,7 +150,7 @@ class Data:
     return properties_string.strip()
 
 
-  def format_row(self, duration, inputsize, jvmmemsize, totalmemsize, dagsummary, properties):
+  def format_row(self, duration, inputsize, jvmmemsize, totalmemsize, dagsummary):
     duration_in_sec = int(duration) // 1000
     inputsize_id = self.transform_keypair_to_id("env,inputsize,ignore")
     inputsize_in_10kb = int(inputsize) // 10240  # capable of expressing upto around 20TB with int range
@@ -160,8 +160,7 @@ class Data:
     totalmemsize_in_mb = int(totalmemsize) // 1048576
     dagsummary_id = self.transform_keypair_to_id("env,dagsummary,ignore")
     dagsummary_value_id = self.transform_value_to_id('dagsummary',dagsummary)
-    processed_properties = self.process_json(properties)
-    return f'{duration_in_sec} {inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id} {processed_properties}'
+    return f'{duration_in_sec} {inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id}'
 
 
   # ########################################################
@@ -181,7 +180,7 @@ class Data:
         conn = sq.connect(sqlite_file)
         print("Connected to the SQLite DB.")
       except:
-        print("I am unable to connect to the database. Try running the script with `./bin/xgboost_optimization.sh`")
+        print("I am unable to connect to the database. Try running the script with `./bin/xgboost_property_optimization.sh`")
 
     sql = "SELECT * from nemo_data"
     cur = conn.cursor()
@@ -221,7 +220,7 @@ class Data:
         self.valueLE[k]['le'].fit(v['data'])
         # print("VALUE FOR ", k, ":", list(self.valueLE[k]['le'].classes_))
 
-    processed_rows = [self.format_row(row[1], row[2], row[3], row[4], row[5], row[6]) for row in rows]
+    processed_rows = ['{} {}'.format(self.format_row(row[1], row[2], row[3], row[4], row[5]), self.process_json(row[6])) for row in rows]
     cur.close()
     conn.close()
     print("Pre-processing complete")
