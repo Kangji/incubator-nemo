@@ -20,32 +20,33 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge;
 
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
-import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.BlockFetchFailureProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 
 /**
- * Transient resource pass for tagging edges with DataStore ExecutionProperty.
+ * Optimizes IREdges between transient resources and reserved resources.
  */
-@Annotates(DataStoreProperty.class)
-@Requires(ResourceTypeProperty.class)
-public final class TransientResourceDataStorePass extends AnnotatingPass<IREdge> {
+@Annotates({DataFlowProperty.class, BlockFetchFailureProperty.class})
+@Requires(ResourcePriorityProperty.class)
+public final class TransientResourceDataTransferPass extends AnnotatingPass<IREdge> {
   /**
    * Default constructor.
    */
-  public TransientResourceDataStorePass() {
-    super(TransientResourceDataStorePass.class);
-    this.addToRuleSet(EdgeRule.of("TransientResourceDataStoreMemory",
-      (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge) && !DataStoreProperty.Value.SERIALIZED_MEMORY_STORE
-        .equals(edge.getPropertyValue(DataStoreProperty.class).orElse(null)),
-      (IREdge edge, IRDAG dag) ->
-        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.MEMORY_STORE))));
-    this.addToRuleSet(EdgeRule.of("TransientResourceDataStoreLocal",
-      (IREdge edge, IRDAG dag) -> fromReservedToTransient(edge),
-      (IREdge edge, IRDAG dag) ->
-        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
+  public TransientResourceDataTransferPass() {
+    super(TransientResourceDataTransferPass.class);
+    this.addToRuleSet(EdgeRule.of("TransientToReservedDataTransfer",
+      (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge),
+      (IREdge edge, IRDAG dag) -> {
+        edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.PUSH));
+        edge.setPropertyPermanently(BlockFetchFailureProperty.of(
+          BlockFetchFailureProperty.Value.RETRY_AFTER_TWO_SECONDS_FOREVER));
+      }));
   }
 
   @Override
@@ -64,11 +65,9 @@ public final class TransientResourceDataStorePass extends AnnotatingPass<IREdge>
    * @param irEdge edge to check.
    * @return whether or not the edge satisfies the condition.
    */
-  static boolean fromTransientToReserved(final IREdge irEdge) {
-    return ResourceTypeProperty.TRANSIENT
-      .equals(irEdge.getSrc().getPropertyValue(ResourceTypeProperty.class).orElse(null))
-      && ResourceTypeProperty.RESERVED
-      .equals(irEdge.getDst().getPropertyValue(ResourceTypeProperty.class).orElse(null));
+  private boolean fromTransientToReserved(final IREdge irEdge) {
+    return ResourceTypeProperty.TRANSIENT.equals(getResourcePriority(irEdge.getSrc()))
+      && ResourceTypeProperty.RESERVED.equals(getResourcePriority(irEdge.getDst()));
   }
 
   /**
@@ -77,10 +76,16 @@ public final class TransientResourceDataStorePass extends AnnotatingPass<IREdge>
    * @param irEdge edge to check.
    * @return whether or not the edge satisfies the condition.
    */
-  static boolean fromReservedToTransient(final IREdge irEdge) {
-    return ResourceTypeProperty.RESERVED
-      .equals(irEdge.getSrc().getPropertyValue(ResourceTypeProperty.class).orElse(null))
-      && ResourceTypeProperty.TRANSIENT
-      .equals(irEdge.getDst().getPropertyValue(ResourceTypeProperty.class).orElse(null));
+  private boolean fromReservedToTransient(final IREdge irEdge) {
+    return ResourceTypeProperty.RESERVED.equals(getResourcePriority(irEdge.getSrc()))
+      && ResourceTypeProperty.TRANSIENT.equals(getResourcePriority(irEdge.getDst()));
+  }
+
+  /**
+   * @param irVertex that is assigned with a resource priority.
+   * @return the resource priority string.
+   */
+  private String getResourcePriority(final IRVertex irVertex) {
+    return irVertex.getPropertyValue(ResourceTypeProperty.class).orElseThrow(IllegalStateException::new);
   }
 }

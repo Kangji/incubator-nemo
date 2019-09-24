@@ -18,8 +18,7 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.compiletime.composite;
 
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.TransientResourceDataFlowPass;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.TransientResourceDataStorePass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.TransientResourceDataTransferPass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.TransientResourcePriorityPass;
 
 import java.util.Arrays;
@@ -35,8 +34,7 @@ public final class TransientResourceCompositePass extends CompositePass {
   public TransientResourceCompositePass() {
     super(Arrays.asList(
       new TransientResourcePriorityPass(),
-      new TransientResourceDataStorePass(),
-      new TransientResourceDataFlowPass()
+      new TransientResourceDataTransferPass()
     ));
   }
 }

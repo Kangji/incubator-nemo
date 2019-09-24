@@ -25,8 +25,6 @@ import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.CompilerTestUtil;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.TransientResourceDataStorePass;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.vertex.TransientResourcePriorityPass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,7 +34,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Test {@link TransientResourcePriorityPass} and {@link TransientResourceDataStorePass}.
+ * Test {@link TransientResourcePriorityPass} and {@link TransientResourceDataTransferPass}.
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(JobLauncher.class)
@@ -49,7 +47,7 @@ public class TransientResourceCompositePassTest {
   }
 
   @Test
-  public void testTransientResourcePass() throws Exception {
+  public void testTransientResourcePass() {
     final IRDAG processedDAG = new TransientResourceCompositePass().apply(compiledDAG);
 
     final IRVertex vertexX = processedDAG.getTopologicalSort().get(0);
