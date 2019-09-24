@@ -29,8 +29,6 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
 import org.apache.nemo.runtime.common.plan.StagePartitioner;
 
-import static org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.TransientResourceDataStorePass.fromTransientToReserved;
-
 /**
  * Push from transient resources to reserved resources.
  */
@@ -43,7 +41,7 @@ public final class TransientResourceDataFlowPass extends AnnotatingPass<IREdge> 
   public TransientResourceDataFlowPass() {
     super(TransientResourceDataFlowPass.class);
     this.addToRuleSet(EdgeRule.of("TransientResourceDataFlow",
-      (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge),
+      (IREdge edge, IRDAG dag) -> TransientResourceDataTransferPass.fromTransientToReserved(edge),
       (IREdge edge, IRDAG dag)  -> {
         edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.PUSH));
         recursivelySetResourceSlotProperty(edge.getDst(), dag, false);

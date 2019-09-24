@@ -65,7 +65,7 @@ public final class TransientResourceDataTransferPass extends AnnotatingPass<IREd
    * @param irEdge edge to check.
    * @return whether or not the edge satisfies the condition.
    */
-  private boolean fromTransientToReserved(final IREdge irEdge) {
+  static boolean fromTransientToReserved(final IREdge irEdge) {
     return ResourceTypeProperty.TRANSIENT.equals(getResourcePriority(irEdge.getSrc()))
       && ResourceTypeProperty.RESERVED.equals(getResourcePriority(irEdge.getDst()));
   }
@@ -76,7 +76,7 @@ public final class TransientResourceDataTransferPass extends AnnotatingPass<IREd
    * @param irEdge edge to check.
    * @return whether or not the edge satisfies the condition.
    */
-  private boolean fromReservedToTransient(final IREdge irEdge) {
+  static boolean fromReservedToTransient(final IREdge irEdge) {
     return ResourceTypeProperty.RESERVED.equals(getResourcePriority(irEdge.getSrc()))
       && ResourceTypeProperty.TRANSIENT.equals(getResourcePriority(irEdge.getDst()));
   }
@@ -85,7 +85,7 @@ public final class TransientResourceDataTransferPass extends AnnotatingPass<IREd
    * @param irVertex that is assigned with a resource priority.
    * @return the resource priority string.
    */
-  private String getResourcePriority(final IRVertex irVertex) {
+  private static String getResourcePriority(final IRVertex irVertex) {
     return irVertex.getPropertyValue(ResourceTypeProperty.class).orElseThrow(IllegalStateException::new);
   }
 }
