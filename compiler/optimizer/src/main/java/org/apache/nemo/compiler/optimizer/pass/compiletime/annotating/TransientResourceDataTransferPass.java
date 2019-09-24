@@ -22,7 +22,6 @@ import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.BlockFetchFailureProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
-import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
@@ -31,7 +30,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.edge.EdgeR
 /**
  * Optimizes IREdges between transient resources and reserved resources.
  */
-@Annotates({DataStoreProperty.class, DataFlowProperty.class, BlockFetchFailureProperty.class})
+@Annotates({DataFlowProperty.class, BlockFetchFailureProperty.class})
 @Requires(ResourceTypeProperty.class)
 public final class TransientResourceDataTransferPass extends AnnotatingPass<IREdge> {
   /**
@@ -39,11 +38,6 @@ public final class TransientResourceDataTransferPass extends AnnotatingPass<IREd
    */
   public TransientResourceDataTransferPass() {
     super(TransientResourceDataTransferPass.class);
-    this.addToRuleSet(EdgeRule.of("TransientToReservedAndNotSerializedMemStoreDataTransfer",
-      (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge) && !DataStoreProperty.Value.SERIALIZED_MEMORY_STORE
-        .equals(edge.getPropertyValue(DataStoreProperty.class).orElse(null)),
-      (IREdge edge, IRDAG dag) ->
-        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.MEMORY_STORE))));
     this.addToRuleSet(EdgeRule.of("TransientToReservedDataTransfer",
       (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge),
       (IREdge edge, IRDAG dag) -> {
@@ -51,10 +45,6 @@ public final class TransientResourceDataTransferPass extends AnnotatingPass<IREd
         edge.setPropertyPermanently(BlockFetchFailureProperty.of(
           BlockFetchFailureProperty.Value.RETRY_AFTER_TWO_SECONDS_FOREVER));
       }));
-    this.addToRuleSet(EdgeRule.of("ResertedToTransientDataTransfer",
-      (IREdge edge, IRDAG dag) -> fromReservedToTransient(edge),
-      (IREdge edge, IRDAG dag) ->
-        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE))));
   }
 
   @Override
@@ -89,6 +79,10 @@ public final class TransientResourceDataTransferPass extends AnnotatingPass<IREd
       && ResourceTypeProperty.TRANSIENT.equals(getResourceType(irEdge.getDst()));
   }
 
+  /**
+   * @param irVertex that is assigned with a resource priority.
+   * @return the resource priority string.
+   */
   private String getResourceType(final IRVertex irVertex) {
     return irVertex.getPropertyValue(ResourceTypeProperty.class).orElseThrow(IllegalStateException::new);
   }
