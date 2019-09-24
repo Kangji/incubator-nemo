@@ -23,7 +23,6 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.BlockFetchFailureProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
@@ -33,7 +32,7 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotating
  * Optimizes IREdges between transient resources and reserved resources.
  */
 @Annotates({DataFlowProperty.class, BlockFetchFailureProperty.class})
-@Requires(ResourcePriorityProperty.class)
+@Requires(ResourceTypeProperty.class)
 public final class TransientResourceDataTransferPass extends AnnotatingPass<IREdge> {
   /**
    * Default constructor.
