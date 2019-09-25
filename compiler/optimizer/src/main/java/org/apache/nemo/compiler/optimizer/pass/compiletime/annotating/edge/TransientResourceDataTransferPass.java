@@ -23,10 +23,12 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.BlockFetchFailureProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSlotProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.AnnotatingPass;
+import org.apache.nemo.runtime.common.plan.StagePartitioner;
 
 /**
  * Optimizes IREdges between transient resources and reserved resources.
@@ -43,6 +45,7 @@ public final class TransientResourceDataTransferPass extends AnnotatingPass<IREd
       (IREdge edge, IRDAG dag) -> fromTransientToReserved(edge),
       (IREdge edge, IRDAG dag) -> {
         edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.PUSH));
+        recursivelySetResourceSlotProperty(edge.getDst(), dag, false);
         edge.setPropertyPermanently(BlockFetchFailureProperty.of(
           BlockFetchFailureProperty.Value.RETRY_AFTER_TWO_SECONDS_FOREVER));
       }));
@@ -86,5 +89,20 @@ public final class TransientResourceDataTransferPass extends AnnotatingPass<IREd
    */
   private static String getResourcePriority(final IRVertex irVertex) {
     return irVertex.getPropertyValue(ResourceTypeProperty.class).orElseThrow(IllegalStateException::new);
+  }
+
+  /**
+   * Static method to recursively set the resource slot property to the vertices of the same stage.
+   * @param v the vertex to start from.
+   * @param dag the IRDAG to observe.
+   * @param val the boolean value.
+   */
+  private static void recursivelySetResourceSlotProperty(final IRVertex v, final IRDAG dag, final boolean val) {
+    dag.getOutgoingEdgesOf(v).forEach(e -> {
+      if (StagePartitioner.testMergeability(e, dag)) {
+        recursivelySetResourceSlotProperty(e.getDst(), dag, val);
+      }
+    });
+    v.setPropertyPermanently(ResourceSlotProperty.of(val));
   }
 }
