@@ -95,10 +95,10 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
     final List<Readable<WindowedValue<O>>> readables = new ArrayList<>();
 
     if (source != null) {
-      LOG.info("estimate: {}", source.getEstimatedSizeBytes(null));
       LOG.info("desired: {}", desiredNumOfSplits);
       source.split(this.estimatedSizeBytes / desiredNumOfSplits, null)
         .forEach(boundedSource -> readables.add(new BoundedSourceReadable<>(boundedSource)));
+      LOG.info("estimate: {}", source.getEstimatedSizeBytes(null));
       return readables;
     } else {
       // TODO #333: Remove SourceVertex#clearInternalStates
