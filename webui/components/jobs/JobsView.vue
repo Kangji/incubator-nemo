@@ -762,6 +762,11 @@ export default {
       });
     },
   },
+
+  //HOOKS
+  mounted() {
+    this.addJobFromWebSocketEndpoint('ws://localhost:10101/api/websocket');
+  },
 }
 </script>
 
