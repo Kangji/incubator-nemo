@@ -23,17 +23,18 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.extensions.sql.SqlTransform;
 import org.apache.beam.sdk.extensions.sql.meta.provider.text.TextTable;
 import org.apache.beam.sdk.extensions.sql.meta.provider.text.TextTableProvider;
-import org.apache.beam.sdk.io.parquet.ParquetIO;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.*;
+import org.apache.commons.csv.CSVFormat;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.Serializable;
+import java.util.*;
+
+import static org.apache.beam.sdk.extensions.sql.impl.schema.BeamTableUtils.beamRow2CsvLine;
 
 /**
  * TPC DS application.
@@ -49,8 +50,9 @@ public final class TPCDS {
    * @param args arguments.
    */
   public static void main(final String[] args) {
-    final String inputFilePath = args[0];
-    final String outputFilePath = args[1];
+    final String queries = args[0];
+    final String inputFilePath = args[1];
+    final String outputFilePath = args[2];
 
     final PipelineOptions options = NemoPipelineOptionsFactory.create();
     options.setJobName("TPCDS");
@@ -71,15 +73,18 @@ public final class TPCDS {
       tableTuple = tableTuple.and(new TupleTag<>(e.getKey()), e.getValue());
     }
 
-    final PCollection<Row> res = tableTuple.apply(SqlTransform.query(QUERY3));
-    GenericSourceSink.write(res.apply(MapElements.via(new SimpleFunction<Row, String>() {
-      @Override
-      public String apply(final Row input) {
-        final String c2 = input.getString(0);
-        final Double c3 = input.getDouble(1);
-        return c2 + " is " + c3;
-      }
-    })), outputFilePath);
+    for (String q : filterQueries(queries)) {
+      final PCollection<Row> res = tableTuple.apply(SqlTransform.query(q));
+      GenericSourceSink.write(res.apply(MapElements.via(new SimpleFunction<Row, String>() {
+        @Override
+        public String apply(final Row input) {
+          final String c2 = input.getString(0);
+          final Double c3 = input.getDouble(1);
+          return c2 + " is " + c3;
+        }
+      })), outputFilePath);
+    }
+
     p.run();
   }
 
@@ -105,24 +110,59 @@ public final class TPCDS {
     final Map<String, Schema> schemaMap = setupSchema();
 
     tables.forEach(t -> {
-      final PCollection<Row> table = PBegin.in(p).apply(ParquetIO.read(schemaMap.get(t)).from(inputFilePath + t + "/*"));
+      final Schema tableSchema = schemaMap.get(t);
+      final CSVFormat csvFormat = CSVFormat.DEFAULT.withNullString("");
+      final String filePattern = inputFilePath + "/" + t + "/*.csv";
 
-      // final PCollection<Row> table =
-      //   new TextTable(
-      //     tableSchema.getValue(),
-      //     filePattern,
-      //     new TextTableProvider.CsvToRow(tableSchema.getValue(), csvFormat),
-      //     new TextTableProvider.RowToCsv(csvFormat))
-      //     .buildIOReader(pipeline.begin())
-      //     .setCoder(tableSchema.getValue().getRowCoder())
-      //     .setName(tableSchema.getKey());
+      final PCollection<Row> table =
+        new TextTable(
+          tableSchema,
+          filePattern,
+          new TextTableProvider.CsvToRow(tableSchema, csvFormat),
+          new RowToCsv(csvFormat))
+          .buildIOReader(p.begin())
+          .setRowSchema(tableSchema)
+          .setName(t);
 
       result.put(t, table);
     });
 
-
-
     return result;
+  }
+
+  private static List<String> filterQueries(final String queries) {
+    final List<String> queryNames = Arrays.asList(queries.split(","));
+    final Map<String, String> queryMap = new HashMap<>();
+    queryMap.put("q3", QUERY3);
+    queryMap.put("q7", QUERY7);
+    queryMap.put("q11", QUERY11);
+    queryMap.put("q22", QUERY22);
+    queryMap.put("q38", QUERY38);
+    queryMap.put("q42", QUERY42);
+
+    final List<String> res = new ArrayList<>();
+    queryNames.forEach(n -> res.add(queryMap.get(n.trim().toLowerCase())));
+    return res;
+  }
+
+  /**
+   * Row to Csv class.
+   */
+  static class RowToCsv extends PTransform<PCollection<Row>, PCollection<String>>
+    implements Serializable {
+
+    private CSVFormat csvFormat;
+
+    RowToCsv(final CSVFormat csvFormat) {
+      this.csvFormat = csvFormat;
+    }
+
+    @Override
+    public PCollection<String> expand(final PCollection<Row> input) {
+      return input.apply(
+        "rowToCsv",
+        MapElements.into(TypeDescriptors.strings()).via(row -> beamRow2CsvLine(row, csvFormat)));
+    }
   }
 
   private static Schema storeSalesSchema =
