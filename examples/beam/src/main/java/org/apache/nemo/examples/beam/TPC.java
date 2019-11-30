@@ -31,19 +31,23 @@ import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.*;
 import org.apache.commons.csv.CSVFormat;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static org.apache.beam.sdk.extensions.sql.impl.schema.BeamTableUtils.beamRow2CsvLine;
 
 /**
  * TPC DS application.
  */
-public final class TPCDS {
+public final class TPC {
   /**
    * Private constructor.
    */
-  private TPCDS() {
+  private TPC() {
   }
 
   /**
@@ -55,16 +59,25 @@ public final class TPCDS {
     final String outputFilePath = args[2];
 
     final PipelineOptions options = NemoPipelineOptionsFactory.create();
-    options.setJobName("TPCDS");
+    options.setJobName("TPC");
     final Pipeline p = Pipeline.create(options);
 
-    final List<String> tables = Arrays.asList("date_dim", "store_sales", "item", "inventory",
-      "catalog_sales", "customer", "promotion", "customer_demographics", "web_sales");
+    final List<String> tables;
+    if (inputFilePath.contains("tpcds") || inputFilePath.contains("tpc-ds")) {
+      //TPC-DS
+      System.out.println("TPCDS");
+      tables = Arrays.asList("date_dim", "store_sales", "item", "inventory",
+        "catalog_sales", "customer", "promotion", "customer_demographics", "web_sales");
       // Arrays.asList("catalog_page", "catalog_returns", "customer", "customer_address",
       // "customer_demographics", "date_dim", "household_demographics", "inventory", "item",
       // "promotion", "store", "store_returns", "catalog_sales", "web_sales", "store_sales",
       // "web_returns", "web_site", "reason", "call_center", "warehouse", "ship_mode", "income_band",
       // "time_dim", "web_page");
+    } else {
+      //TPC-H
+      System.out.println("TPCH");
+      tables = Arrays.asList("part", "supplier", "partsupp", "customer", "orders", "lineitem", "nation", "region");
+    }
 
     final Map<String, PCollection<Row>> tableMap = setupTables(p, inputFilePath, tables);
 
@@ -88,18 +101,32 @@ public final class TPCDS {
     p.run();
   }
 
-  private static Map<String, Schema> setupSchema() {
+  private static Map<String, Schema> setupSchema(final String inputFilePath) {
     final Map<String, Schema> result = new HashMap<>();
 
-    result.put("date_dim", dateDimSchema);
-    result.put("store_sales", storeSalesSchema);
-    result.put("item", itemSchema);
-    result.put("inventory", inventorySchema);
-    result.put("catalog_sales", catalogSalesSchema);
-    result.put("customer", getCustomerDsSchema);
-    result.put("promotion", promotionSchema);
-    result.put("customer_demographics", customerDemographicsSchema);
-    result.put("web_sales", webSalesSchema);
+    if (inputFilePath.contains("tpcds") || inputFilePath.contains("tpc-ds")) {
+      //PART OF TPC-DS
+      result.put("date_dim", dateDimSchema);
+      result.put("store_sales", storeSalesSchema);
+      result.put("item", itemSchema);
+      result.put("inventory", inventorySchema);
+      result.put("catalog_sales", catalogSalesSchema);
+      result.put("customer", getCustomerDsSchema);
+      result.put("promotion", promotionSchema);
+      result.put("customer_demographics", customerDemographicsSchema);
+      result.put("web_sales", webSalesSchema);
+
+    } else {
+      //COMPLETE TPC-H
+      result.put("part", PART_SCHEMA);
+      result.put("supplier", SUPPLIER_SCHEMA);
+      result.put("partsupp", PARTSUPP_SCHEMA);
+      result.put("customer", CUSTOMER_SCHEMA);
+      result.put("orders", ORDER_SCHEMA);
+      result.put("lineitem", LINEITEM_SCHEMA);
+      result.put("nation", NATION_SCHEMA);
+      result.put("region", REGION_SCHEMA);
+    }
 
     return result;
   }
@@ -107,7 +134,7 @@ public final class TPCDS {
   private static Map<String, PCollection<Row>> setupTables(final Pipeline p, final String inputFilePath,
                                                            final List<String> tables) {
     final Map<String, PCollection<Row>> result = new HashMap<>();
-    final Map<String, Schema> schemaMap = setupSchema();
+    final Map<String, Schema> schemaMap = setupSchema(inputFilePath);
 
     tables.forEach(t -> {
       final Schema tableSchema = schemaMap.get(t);
@@ -141,8 +168,42 @@ public final class TPCDS {
     queryMap.put("q42", QUERY42);
 
     final List<String> res = new ArrayList<>();
-    queryNames.forEach(n -> res.add(queryMap.get(n.trim().toLowerCase())));
+    queryNames.forEach(n -> {
+      final String query = queryMap.get(n.trim().toLowerCase());
+      if (query != null) {
+        res.add(query);
+      } else {
+        res.add(getQueryString(n));
+      }
+    });
     return res;
+  }
+
+
+  private static String getQueryString(final String queryFilePath) {
+    final List<String> lines = new ArrayList<>();
+    try (final Stream<String> stream  = Files.lines(Paths.get(queryFilePath))) {
+      stream.forEach(lines::add);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    System.out.println(lines);
+
+    final StringBuilder sb = new StringBuilder();
+    lines.forEach(line -> {
+      sb.append(" ");
+      sb.append(line);
+    });
+
+    final String concate = sb.toString();
+    System.out.println(concate);
+    final String cleanOne = concate.replaceAll("\n", " ");
+    System.out.println(cleanOne);
+    final String cleanTwo = cleanOne.replaceAll("\t", " ");
+    System.out.println(cleanTwo);
+
+    return cleanTwo;
   }
 
   /**
@@ -164,6 +225,10 @@ public final class TPCDS {
         MapElements.into(TypeDescriptors.strings()).via(row -> beamRow2CsvLine(row, csvFormat)));
     }
   }
+
+  /**
+   * TPC-DS Schemas.
+   */
 
   private static Schema storeSalesSchema =
     Schema.builder()
@@ -321,73 +386,6 @@ public final class TPCDS {
       .addNullableField("c_last_review_date", Schema.FieldType.STRING) //        .string)
       .build();
 
-  private static final Schema LINEITEM_SCHEMA =
-    Schema.builder()
-      .addInt32Field("l_orderkey")
-      .addInt32Field("l_partkey")
-      .addInt32Field("l_suppkey")
-      .addInt32Field("l_linenumber")
-      .addFloatField("l_quantity")
-      .addFloatField("l_extendedprice")
-      .addFloatField("l_discount")
-      .addFloatField("l_tax")
-      .addStringField("l_returnflag")
-      .addStringField("l_linestatus")
-      .addStringField("l_shipdate")
-      .addStringField("l_commitdate")
-      .addStringField("l_receiptdate")
-      .addStringField("l_shipinstruct")
-      .addStringField("l_shipmode")
-      .addStringField("l_comment")
-      .build();
-
-  private static final Schema PARTSUPP_SCHEMA =
-    Schema.builder()
-      .addInt32Field("ps_partkey") // identifier
-      .addInt32Field("ps_suppkey") // identifier
-      .addInt32Field("ps_availqty") // integer
-      .addFloatField("ps_supplycost") // decimal
-      .addStringField("ps_comment") // variable text, size 199
-      .build();
-
-  private static final Schema REGION_SCHEMA =
-    Schema.builder()
-      .addInt32Field("r_regionkey") // identifier
-      .addStringField("r_name") // fixed text, size 25
-      .addStringField("r_comment") // variable text, size 152
-      .build();
-
-  private static final Schema SUPPLIER_SCHEMA =
-    Schema.builder()
-      .addInt32Field("s_suppkey") // identifier
-      .addStringField("s_name") // fixed text, size 25
-      .addStringField("s_address") // variable text, size 40
-      .addInt32Field("s_nationkey") // identifier
-      .addStringField("s_phone") // fixed text, size 15
-      .addFloatField("s_acctbal") // decimal
-      .addStringField("s_comment") // variable text, size 101
-      .build();
-
-  private static final Schema PART_SCHEMA =
-    Schema.builder()
-      .addInt32Field("p_partkey")
-      .addStringField("p_name")
-      .addStringField("p_mfgr")
-      .addStringField("p_brand")
-      .addStringField("p_type")
-      .addInt32Field("p_size")
-      .addStringField("p_container")
-      .addFloatField("p_retailprice")
-      .addStringField("p_comment")
-      .build();
-
-  private static final Schema NATION_SCHEMA =
-    Schema.builder()
-      .addInt32Field("n_nationkey")
-      .addStringField("n_name")
-      .addInt32Field("n_regionkey")
-      .addStringField("n_comment")
-      .build();
 
   private static Schema promotionSchema =
     Schema.builder()
@@ -646,4 +644,104 @@ public final class TPCDS {
       + "        ,item.i_category_id\n"
       + "        ,item.i_category\n"
       + "limit 100";
+
+
+  /**
+   * TPC-H Schema.
+   */
+
+  public static final Schema PART_SCHEMA =
+    Schema.builder()
+      .addInt64Field("p_partkey")
+      .addStringField("p_name")
+      .addStringField("p_mfgr")
+      .addStringField("p_brand")
+      .addStringField("p_type")
+      .addInt64Field("p_size")
+      .addStringField("p_container")
+      .addFloatField("p_retailprice")
+      .addStringField("p_comment")
+      .build();
+
+  public static final Schema SUPPLIER_SCHEMA =
+    Schema.builder()
+      .addInt64Field("s_suppkey")
+      .addStringField("s_name")
+      .addStringField("s_address")
+      .addInt64Field("s_nationkey")
+      .addStringField("s_phone")
+      .addFloatField("s_acctbal")
+      .addStringField("s_comment")
+      .build();
+
+  public static final Schema PARTSUPP_SCHEMA =
+    Schema.builder()
+      .addInt64Field("ps_partkey")
+      .addInt64Field("ps_suppkey")
+      .addInt64Field("ps_availqty")
+      .addFloatField("ps_supplycost")
+      .addStringField("ps_comment")
+      .build();
+
+  public static final Schema CUSTOMER_SCHEMA =
+    Schema.builder()
+      .addInt64Field("c_custkey")
+      .addStringField("c_name")
+      .addStringField("c_address")
+      .addInt64Field("c_nationkey")
+      .addStringField("c_phone")
+      .addFloatField("c_acctbal")
+      .addStringField("c_mktsegment")
+      .addStringField("c_comment")
+      .build();
+
+  public static final Schema ORDER_SCHEMA =
+    Schema.builder()
+      .addInt64Field("o_orderkey")
+      .addInt64Field("o_custkey")
+      .addStringField("o_orderstatus")
+      .addFloatField("o_totalprice")
+      .addStringField("o_orderdate")
+      .addStringField("o_orderpriority")
+      .addStringField("o_clerk")
+      .addInt64Field("o_shippriority")
+      .addStringField("o_comment")
+      .build();
+
+
+  public static final Schema LINEITEM_SCHEMA =
+    Schema.builder()
+      .addInt64Field("l_orderkey")
+      .addInt64Field("l_partkey")
+      .addInt64Field("l_suppkey")
+      .addInt64Field("l_linenumber")
+      .addFloatField("l_quantity")
+      .addFloatField("l_extendedprice")
+      .addFloatField("l_discount")
+      .addFloatField("l_tax")
+      .addStringField("l_returnflag")
+      .addStringField("l_linestatus")
+      .addStringField("l_shipdate")
+      .addStringField("l_commitdate")
+      .addStringField("l_receiptdate")
+      .addStringField("l_shipinstruct")
+      .addStringField("l_shipmode")
+      .addStringField("l_comment")
+      .build();
+
+  public static final Schema NATION_SCHEMA =
+    Schema.builder()
+      .addInt64Field("n_nationkey")
+      .addStringField("n_name")
+      .addInt64Field("n_regionkey")
+      .addStringField("n_comment")
+      .build();
+
+  public static final Schema REGION_SCHEMA =
+    Schema.builder()
+      .addInt64Field("r_regionkey")
+      .addStringField("r_name")
+      .addStringField("r_comment")
+      .build();
+
 }
