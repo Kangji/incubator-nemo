@@ -25,7 +25,6 @@ import org.apache.beam.sdk.extensions.sql.meta.provider.text.TextTableProvider;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.*;
 import org.apache.commons.csv.CSVFormat;
@@ -33,18 +32,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static org.apache.beam.sdk.extensions.sql.impl.schema.BeamTableUtils.beamRow2CsvLine;
-
 /**
  * TPC DS application.
  */
 public final class TPC {
+  /**
+   * LOGGER.
+   */
   private static final Logger LOG = LoggerFactory.getLogger(TPC.class.getName());
 
   /**
@@ -95,7 +94,7 @@ public final class TPC {
       GenericSourceSink.write(res.apply(MapElements.via(new SimpleFunction<Row, String>() {
         @Override
         public String apply(final Row input) {
-          LOG.info(input.getValues().toString());
+          LOG.info("QUERY {} OUTPUT: {}", q, input.getValues());
           return input.getValues().toString();
         }
       })), outputFilePath);
@@ -104,6 +103,11 @@ public final class TPC {
     p.run();
   }
 
+  /**
+   * Set up a map of schemas for the tables.
+   * @param inputFilePath the input file path of the tables.
+   * @return the map of schemas for the tables.
+   */
   private static Map<String, Schema> setupSchema(final String inputFilePath) {
     final Map<String, Schema> result = new HashMap<>();
 
@@ -134,6 +138,13 @@ public final class TPC {
     return result;
   }
 
+  /**
+   * Set up tables to process.
+   * @param p the pipeline to append the tables.
+   * @param inputFilePath the input file path for the tables.
+   * @param tables the list of tables to load.
+   * @return map of table name to the actual table.
+   */
   private static Map<String, PCollection<Row>> setupTables(final Pipeline p, final String inputFilePath,
                                                            final List<String> tables) {
     final Map<String, PCollection<Row>> result = new HashMap<>();
@@ -155,6 +166,11 @@ public final class TPC {
     return result;
   }
 
+  /**
+   * Filtering out the required queries.
+   * @param queries queries to filter.
+   * @return the filtered queries.
+   */
   private static List<String> filterQueries(final String queries) {
     final List<String> queryNames = Arrays.asList(queries.split(","));
     final Map<String, String> queryMap = new HashMap<>();
@@ -178,6 +194,11 @@ public final class TPC {
   }
 
 
+  /**
+   * Get query string.
+   * @param queryFilePath file path to the query.
+   * @return the query string.
+   */
   private static String getQueryString(final String queryFilePath) {
     final List<String> lines = new ArrayList<>();
     try (Stream<String> stream  = Files.lines(Paths.get(queryFilePath))) {
@@ -186,7 +207,7 @@ public final class TPC {
       throw new RuntimeException(e);
     }
 
-    System.out.println(lines);
+    LOG.info("QUERY LINES: {}", lines);
 
     final StringBuilder sb = new StringBuilder();
     lines.forEach(line -> {
@@ -195,33 +216,13 @@ public final class TPC {
     });
 
     final String concate = sb.toString();
-    System.out.println(concate);
+    LOG.info("QUERY CONCAT: {}", concate);
     final String cleanOne = concate.replaceAll("\n", " ");
-    System.out.println(cleanOne);
+    LOG.info("QUERY CLEAN1: {}", cleanOne);
     final String cleanTwo = cleanOne.replaceAll("\t", " ");
-    System.out.println(cleanTwo);
+    LOG.info("QUERY CLEAN2: {}", cleanTwo);
 
     return cleanTwo;
-  }
-
-  /**
-   * Row to Csv class.
-   */
-  static class RowToCsv extends PTransform<PCollection<Row>, PCollection<String>>
-    implements Serializable {
-
-    private CSVFormat csvFormat;
-
-    RowToCsv(final CSVFormat csvFormat) {
-      this.csvFormat = csvFormat;
-    }
-
-    @Override
-    public PCollection<String> expand(final PCollection<Row> input) {
-      return input.apply(
-        "rowToCsv",
-        MapElements.into(TypeDescriptors.strings()).via(row -> beamRow2CsvLine(row, csvFormat)));
-    }
   }
 
   /**
