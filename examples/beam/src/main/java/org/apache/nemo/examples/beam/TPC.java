@@ -21,7 +21,6 @@ package org.apache.nemo.examples.beam;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.extensions.sql.SqlTransform;
-import org.apache.beam.sdk.extensions.sql.meta.provider.text.TextTable;
 import org.apache.beam.sdk.extensions.sql.meta.provider.text.TextTableProvider;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.schemas.Schema;
@@ -143,13 +142,8 @@ public final class TPC {
       final String filePattern = inputFilePath + "/" + t + "/*.csv";
 
       final PCollection<Row> table =
-        new TextTable(
-          tableSchema,
-          filePattern,
-          new TextTableProvider.CsvToRow(tableSchema, csvFormat),
-          new RowToCsv(csvFormat))
-          .buildIOReader(p.begin())
-          .setRowSchema(tableSchema)
+        GenericSourceSink.read(p, filePattern)
+          .apply("StringToRow", new TextTableProvider.CsvToRow(tableSchema, csvFormat))
           .setName(t);
 
       result.put(t, table);
