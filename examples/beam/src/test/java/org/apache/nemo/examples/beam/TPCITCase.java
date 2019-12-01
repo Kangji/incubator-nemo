@@ -24,7 +24,6 @@ import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.compiler.optimizer.policy.DefaultPolicy;
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -50,7 +49,7 @@ public final class TPCITCase {
       .addResourceJson(executorResourceFileName);
   }
 
-  private static final int TIMEOUT = 1200000;  // 20 min
+  private static final int TIMEOUT = 3600000;  // 40 min
 
   // @After
   // public void tearDown() throws Exception {
@@ -61,51 +60,51 @@ public final class TPCITCase {
   //   }
   // }
 
-  @Test(timeout = TIMEOUT, expected = Test.None.class)
-  public void testQ3() throws Exception {
-    JobLauncher.main(builder
-      .addJobId(TPCITCase.class.getSimpleName() + "_q3")
-      .addUserArgs("q3", inputFilePath, outputFilePath)
-      .build());
-  }
+  // @Test(timeout = TIMEOUT, expected = Test.None.class)
+  // public void testQ3() throws Exception {
+  //   JobLauncher.main(builder
+  //     .addJobId(TPCITCase.class.getSimpleName() + "_q3")
+  //     .addUserArgs("q3", inputFilePath, outputFilePath)
+  //     .build());
+  // }
 
-  @Test(timeout = TIMEOUT, expected = Test.None.class)
-  public void testQ7() throws Exception {
-    JobLauncher.main(builder
-      .addJobId(TPCITCase.class.getSimpleName() + "_q7")
-      .addUserArgs("q7", inputFilePath, outputFilePath)
-      .build());
-  }
+  // @Test(timeout = TIMEOUT, expected = Test.None.class)
+  // public void testQ7() throws Exception {
+  //   JobLauncher.main(builder
+  //     .addJobId(TPCITCase.class.getSimpleName() + "_q7")
+  //     .addUserArgs("q7", inputFilePath, outputFilePath)
+  //     .build());
+  // }
 
-  @Test(timeout = TIMEOUT, expected = Test.None.class)
-  public void testQ11() throws Exception {
-    JobLauncher.main(builder
-      .addJobId(TPCITCase.class.getSimpleName() + "_q11")
-      .addUserArgs("q11", inputFilePath, outputFilePath)
-      .build());
-  }
+  // @Test(timeout = TIMEOUT, expected = Test.None.class)
+  // public void testQ11() throws Exception {
+  //   JobLauncher.main(builder
+  //     .addJobId(TPCITCase.class.getSimpleName() + "_q11")
+  //     .addUserArgs("q11", inputFilePath, outputFilePath)
+  //     .build());
+  // }
 
-  @Test(timeout = TIMEOUT, expected = Test.None.class)
-  public void testQ22() throws Exception {
-    JobLauncher.main(builder
-      .addJobId(TPCITCase.class.getSimpleName() + "_q22")
-      .addUserArgs("q22", inputFilePath, outputFilePath)
-      .build());
-  }
+  // @Test(timeout = TIMEOUT, expected = Test.None.class)
+  // public void testQ22() throws Exception {
+  //   JobLauncher.main(builder
+  //     .addJobId(TPCITCase.class.getSimpleName() + "_q22")
+  //     .addUserArgs("q22", inputFilePath, outputFilePath)
+  //     .build());
+  // }
+  //
+  // @Test(timeout = TIMEOUT, expected = Test.None.class)
+  // public void testQ38() throws Exception {
+  //   JobLauncher.main(builder
+  //     .addJobId(TPCITCase.class.getSimpleName() + "_q38")
+  //     .addUserArgs("q38", inputFilePath, outputFilePath)
+  //     .build());
+  // }
 
-  @Test(timeout = TIMEOUT, expected = Test.None.class)
-  public void testQ38() throws Exception {
-    JobLauncher.main(builder
-      .addJobId(TPCITCase.class.getSimpleName() + "_q38")
-      .addUserArgs("q38", inputFilePath, outputFilePath)
-      .build());
-  }
-
-  @Test(timeout = TIMEOUT, expected = Test.None.class)
-  public void testQ42() throws Exception {
-    JobLauncher.main(builder
-      .addJobId(TPCITCase.class.getSimpleName() + "_q42")
-      .addUserArgs("q42", inputFilePath, outputFilePath)
-      .build());
-  }
+  // @Test(timeout = TIMEOUT, expected = Test.None.class)
+  // public void testQ42() throws Exception {
+  //   JobLauncher.main(builder
+  //     .addJobId(TPCITCase.class.getSimpleName() + "_q42")
+  //     .addUserArgs("q42", inputFilePath, outputFilePath)
+  //     .build());
+  // }
 }
