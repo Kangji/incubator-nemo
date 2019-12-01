@@ -29,6 +29,8 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.*;
 import org.apache.commons.csv.CSVFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -43,6 +45,8 @@ import static org.apache.beam.sdk.extensions.sql.impl.schema.BeamTableUtils.beam
  * TPC DS application.
  */
 public final class TPC {
+  private static final Logger LOG = LoggerFactory.getLogger(TPC.class.getName());
+
   /**
    * Private constructor.
    */
@@ -64,7 +68,7 @@ public final class TPC {
     final List<String> tables;
     if (inputFilePath.contains("tpcds") || inputFilePath.contains("tpc-ds")) {
       //TPC-DS
-      System.out.println("TPCDS");
+      LOG.info("This TPC workload is TPC-DS");
       tables = Arrays.asList("date_dim", "store_sales", "item", "inventory",
         "catalog_sales", "customer", "promotion", "customer_demographics", "web_sales");
       //Other schemas have to be added.
@@ -75,7 +79,7 @@ public final class TPC {
       // "time_dim", "web_page");
     } else {
       //TPC-H
-      System.out.println("TPCH");
+      LOG.info("This TPC workload is TPC-H");
       tables = Arrays.asList("part", "supplier", "partsupp", "customer", "orders", "lineitem", "nation", "region");
     }
 
@@ -91,9 +95,8 @@ public final class TPC {
       GenericSourceSink.write(res.apply(MapElements.via(new SimpleFunction<Row, String>() {
         @Override
         public String apply(final Row input) {
-          final String c2 = input.getString(0);
-          final Double c3 = input.getDouble(1);
-          return c2 + " is " + c3;
+          LOG.info(input.getValues().toString());
+          return input.getValues().toString();
         }
       })), outputFilePath);
     }
