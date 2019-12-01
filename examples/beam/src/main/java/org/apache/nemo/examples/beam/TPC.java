@@ -68,6 +68,7 @@ public final class TPC {
       System.out.println("TPCDS");
       tables = Arrays.asList("date_dim", "store_sales", "item", "inventory",
         "catalog_sales", "customer", "promotion", "customer_demographics", "web_sales");
+      //Other schemas have to be added.
       // Arrays.asList("catalog_page", "catalog_returns", "customer", "customer_address",
       // "customer_demographics", "date_dim", "household_demographics", "inventory", "item",
       // "promotion", "store", "store_returns", "catalog_sales", "web_sales", "store_sales",
@@ -182,7 +183,7 @@ public final class TPC {
 
   private static String getQueryString(final String queryFilePath) {
     final List<String> lines = new ArrayList<>();
-    try (final Stream<String> stream  = Files.lines(Paths.get(queryFilePath))) {
+    try (Stream<String> stream  = Files.lines(Paths.get(queryFilePath))) {
       stream.forEach(lines::add);
     } catch (IOException e) {
       throw new RuntimeException(e);
