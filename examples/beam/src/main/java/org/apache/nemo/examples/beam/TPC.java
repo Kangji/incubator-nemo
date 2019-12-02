@@ -178,6 +178,7 @@ public final class TPC {
     queryMap.put("q3", QUERY3);
     queryMap.put("q7", QUERY7);
     queryMap.put("q11", QUERY11);
+    queryMap.put("q12", QUERY12);
     queryMap.put("q22", QUERY22);
     queryMap.put("q38", QUERY38);
     queryMap.put("q42", QUERY42);
@@ -647,7 +648,8 @@ public final class TPC {
       + "order by qoh, i_product_name, i_brand, i_class, i_category\n"
       + "limit 100";
 
-  public static final String QUERY25 = "";
+  public static final String QUERY25 =
+    "";
 
   public static final String QUERY31 =
     "";
@@ -711,7 +713,97 @@ public final class TPC {
     "";
 
   public static final String QUERY88 =
-    "";
+    "select  *\n"
+      + " from\n"
+      + "  (select count(*) h8_30_to_9\n"
+      + "  from store_sales, household_demographics , time_dim, store\n"
+      + "  where ss_sold_time_sk = time_dim.t_time_sk\n"
+      + "      and ss_hdemo_sk = household_demographics.hd_demo_sk\n"
+      + "      and ss_store_sk = s_store_sk\n"
+      + "      and time_dim.t_hour = 8\n"
+      + "      and time_dim.t_minute >= 30\n"
+      + "      and ((household_demographics.hd_dep_count = 0 and household_demographics.hd_vehicle_count<=0+2) or\n"
+      + "           (household_demographics.hd_dep_count = 2 and household_demographics.hd_vehicle_count<=2+2) or\n"
+      + "           (household_demographics.hd_dep_count = 3 and household_demographics.hd_vehicle_count<=3+2))\n"
+      + "      and store.s_store_name = 'ese') s1,\n"
+      + "  (select count(*) h9_to_9_30\n"
+      + "  from store_sales, household_demographics , time_dim, store\n"
+      + "  where ss_sold_time_sk = time_dim.t_time_sk\n"
+      + "      and ss_hdemo_sk = household_demographics.hd_demo_sk\n"
+      + "      and ss_store_sk = s_store_sk\n"
+      + "      and time_dim.t_hour = 9\n"
+      + "      and time_dim.t_minute < 30\n"
+      + "      and ((household_demographics.hd_dep_count = 0 and household_demographics.hd_vehicle_count<=0+2) or\n"
+      + "           (household_demographics.hd_dep_count = 2 and household_demographics.hd_vehicle_count<=2+2) or\n"
+      + "           (household_demographics.hd_dep_count = 3 and household_demographics.hd_vehicle_count<=3+2))\n"
+      + "      and store.s_store_name = 'ese') s2,\n"
+      + "  (select count(*) h9_30_to_10\n"
+      + "  from store_sales, household_demographics , time_dim, store\n"
+      + "  where ss_sold_time_sk = time_dim.t_time_sk\n"
+      + "      and ss_hdemo_sk = household_demographics.hd_demo_sk\n"
+      + "      and ss_store_sk = s_store_sk\n"
+      + "      and time_dim.t_hour = 9\n"
+      + "      and time_dim.t_minute >= 30\n"
+      + "      and ((household_demographics.hd_dep_count = 0 and household_demographics.hd_vehicle_count<=0+2) or\n"
+      + "           (household_demographics.hd_dep_count = 2 and household_demographics.hd_vehicle_count<=2+2) or\n"
+      + "           (household_demographics.hd_dep_count = 3 and household_demographics.hd_vehicle_count<=3+2))\n"
+      + "      and store.s_store_name = 'ese') s3,\n"
+      + "  (select count(*) h10_to_10_30\n"
+      + "  from store_sales, household_demographics , time_dim, store\n"
+      + "  where ss_sold_time_sk = time_dim.t_time_sk\n"
+      + "      and ss_hdemo_sk = household_demographics.hd_demo_sk\n"
+      + "      and ss_store_sk = s_store_sk\n"
+      + "      and time_dim.t_hour = 10 \n"
+      + "      and time_dim.t_minute < 30\n"
+      + "      and ((household_demographics.hd_dep_count = 0 and household_demographics.hd_vehicle_count<=0+2) or\n"
+      + "           (household_demographics.hd_dep_count = 2 and household_demographics.hd_vehicle_count<=2+2) or\n"
+      + "           (household_demographics.hd_dep_count = 3 and household_demographics.hd_vehicle_count<=3+2))\n"
+      + "      and store.s_store_name = 'ese') s4,\n"
+      + "  (select count(*) h10_30_to_11\n"
+      + "  from store_sales, household_demographics , time_dim, store\n"
+      + "  where ss_sold_time_sk = time_dim.t_time_sk\n"
+      + "      and ss_hdemo_sk = household_demographics.hd_demo_sk\n"
+      + "      and ss_store_sk = s_store_sk\n"
+      + "      and time_dim.t_hour = 10 \n"
+      + "      and time_dim.t_minute >= 30\n"
+      + "      and ((household_demographics.hd_dep_count = 0 and household_demographics.hd_vehicle_count<=0+2) or\n"
+      + "           (household_demographics.hd_dep_count = 2 and household_demographics.hd_vehicle_count<=2+2) or\n"
+      + "           (household_demographics.hd_dep_count = 3 and household_demographics.hd_vehicle_count<=3+2))\n"
+      + "      and store.s_store_name = 'ese') s5,\n"
+      + "  (select count(*) h11_to_11_30\n"
+      + "  from store_sales, household_demographics , time_dim, store\n"
+      + "  where ss_sold_time_sk = time_dim.t_time_sk\n"
+      + "      and ss_hdemo_sk = household_demographics.hd_demo_sk\n"
+      + "      and ss_store_sk = s_store_sk \n"
+      + "      and time_dim.t_hour = 11\n"
+      + "      and time_dim.t_minute < 30\n"
+      + "      and ((household_demographics.hd_dep_count = 0 and household_demographics.hd_vehicle_count<=0+2) or\n"
+      + "           (household_demographics.hd_dep_count = 2 and household_demographics.hd_vehicle_count<=2+2) or\n"
+      + "           (household_demographics.hd_dep_count = 3 and household_demographics.hd_vehicle_count<=3+2))\n"
+      + "      and store.s_store_name = 'ese') s6,\n"
+      + "  (select count(*) h11_30_to_12\n"
+      + "  from store_sales, household_demographics , time_dim, store\n"
+      + "  where ss_sold_time_sk = time_dim.t_time_sk\n"
+      + "      and ss_hdemo_sk = household_demographics.hd_demo_sk\n"
+      + "      and ss_store_sk = s_store_sk\n"
+      + "      and time_dim.t_hour = 11\n"
+      + "      and time_dim.t_minute >= 30\n"
+      + "      and ((household_demographics.hd_dep_count = 0 and household_demographics.hd_vehicle_count<=0+2) or\n"
+      + "           (household_demographics.hd_dep_count = 2 and household_demographics.hd_vehicle_count<=2+2) or\n"
+      + "           (household_demographics.hd_dep_count = 3 and household_demographics.hd_vehicle_count<=3+2))\n"
+      + "      and store.s_store_name = 'ese') s7,\n"
+      + "  (select count(*) h12_to_12_30\n"
+      + "  from store_sales, household_demographics , time_dim, store\n"
+      + "  where ss_sold_time_sk = time_dim.t_time_sk\n"
+      + "      and ss_hdemo_sk = household_demographics.hd_demo_sk\n"
+      + "      and ss_store_sk = s_store_sk\n"
+      + "      and time_dim.t_hour = 12\n"
+      + "      and time_dim.t_minute < 30\n"
+      + "      and ((household_demographics.hd_dep_count = 0 and household_demographics.hd_vehicle_count<=0+2) or\n"
+      + "           (household_demographics.hd_dep_count = 2 and household_demographics.hd_vehicle_count<=2+2) or\n"
+      + "           (household_demographics.hd_dep_count = 3 and household_demographics.hd_vehicle_count<=3+2))\n"
+      + "      and store.s_store_name = 'ese') s8\n"
+      + " ;";
 
   /**
    * TPC-H Schema.
