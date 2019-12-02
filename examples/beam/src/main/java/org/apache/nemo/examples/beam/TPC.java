@@ -68,8 +68,9 @@ public final class TPC {
     if (inputFilePath.contains("tpcds") || inputFilePath.contains("tpc-ds")) {
       //TPC-DS
       LOG.info("This TPC workload is TPC-DS");
-      tables = Arrays.asList("date_dim", "store_sales", "item", "inventory",
-        "catalog_sales", "customer", "promotion", "customer_demographics", "web_sales");
+      tables = Arrays.asList("customer",
+        "customer_demographics", "date_dim", "inventory", "item",
+        "promotion", "catalog_sales", "web_sales", "store_sales");
       //Other schemas have to be added.
       // Arrays.asList("catalog_page", "catalog_returns", "customer", "customer_address",
       // "customer_demographics", "date_dim", "household_demographics", "inventory", "item",
@@ -460,6 +461,9 @@ public final class TPC {
       .addNullableField("ws_net_profit", Schema.FieldType.FLOAT) //            .decimal(7,2)),
       .build();
 
+  public static final String QUERY2 =
+    "";
+
   public static final String QUERY3 =
     "select  dt.d_year \n"
       + "       ,item.i_brand_id brand_id \n"
@@ -479,6 +483,9 @@ public final class TPC {
       + "         ,sum_agg desc\n"
       + "         ,brand_id\n"
       + " limit 100";
+
+  public static final String QUERY4 =
+    "";
 
   public static final String QUERY7 =
     "select  i_item_id, \n"
@@ -582,6 +589,45 @@ public final class TPC {
       + "         ,t_s_secyear.customer_email_address\n"
       + "limit 100";
 
+  public static final String QUERY12 =
+    " select  i_item_id\n"
+      + "       ,i_item_desc\n"
+      + "       ,i_category\n"
+      + "       ,i_class\n"
+      + "       ,i_current_price\n"
+      + "       ,sum(ws_ext_sales_price) as itemrevenue\n"
+      + "       ,sum(ws_ext_sales_price)*100/sum(sum(ws_ext_sales_price)) over\n"
+      + "           (partition by i_class) as revenueratio\n"
+      + " from\n"
+      + "     web_sales\n"
+      + "         ,item\n"
+      + "         ,date_dim\n"
+      + " where\n"
+      + "     ws_item_sk = i_item_sk\n"
+      + "     and i_category in ('Electronics', 'Books', 'Women')\n"
+      + "     and ws_sold_date_sk = d_date_sk\n"
+      + "     and d_date between cast('1998-01-06' as date)\n"
+      + "                 and (cast('1998-01-06' as date) + 30 days)\n"
+      + " group by\n"
+      + "     i_item_id\n"
+      + "         ,i_item_desc\n"
+      + "         ,i_category\n"
+      + "         ,i_class\n"
+      + "         ,i_current_price\n"
+      + " order by\n"
+      + "     i_category\n"
+      + "         ,i_class\n"
+      + "         ,i_item_id\n"
+      + "         ,i_item_desc\n"
+      + "         ,revenueratio\n"
+      + " limit 100;\n";
+
+  public static final String QUERY16 =
+    "";
+
+  public static final String QUERY17 =
+    "";
+
   public static final String QUERY22 =
     "select  i_product_name\n"
       + "             ,i_brand\n"
@@ -600,6 +646,11 @@ public final class TPC {
       + "                       ,i_category)\n"
       + "order by qoh, i_product_name, i_brand, i_class, i_category\n"
       + "limit 100";
+
+  public static final String QUERY25 = "";
+
+  public static final String QUERY31 =
+    "";
 
   public static final String QUERY38 =
     "select  count(*) from (\n"
@@ -644,6 +695,23 @@ public final class TPC {
       + "        ,item.i_category\n"
       + "limit 100";
 
+  public static final String QUERY51 =
+    "";
+
+  public static final String QUERY76 =
+    "";
+
+  public static final String QUERY77 =
+    "";
+
+  public static final String QUERY78 =
+    "";
+
+  public static final String QUERY84 =
+    "";
+
+  public static final String QUERY88 =
+    "";
 
   /**
    * TPC-H Schema.
