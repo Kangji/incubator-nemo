@@ -90,7 +90,7 @@ public final class TPC {
       tableTuple = tableTuple.and(new TupleTag<>(e.getKey()), e.getValue());
     }
 
-    for (String q : filterQueries(queries)) {
+    for (String q : filterQueries(inputFilePath, queries)) {
       final PCollection<Row> res = tableTuple.apply(SqlTransform.query(q));
       GenericSourceSink.write(res.apply(MapElements.via(new SimpleFunction<Row, String>() {
         @Override
@@ -169,25 +169,35 @@ public final class TPC {
 
   /**
    * Filtering out the required queries.
+   * @param inputFilePath input file path to determine TPC-DS and TPC-H workloads.
    * @param queries queries to filter.
    * @return the filtered queries.
    */
-  private static List<String> filterQueries(final String queries) {
+  private static List<String> filterQueries(final String inputFilePath, final String queries) {
     final List<String> queryNames = Arrays.asList(queries.split(","));
     final Map<String, String> queryMap = new HashMap<>();
-    queryMap.put("q2", QUERY2);
-    queryMap.put("q3", QUERY3);
-    queryMap.put("q4", QUERY4);
-    queryMap.put("q7", QUERY7);
-//    queryMap.put("q11", QUERY11);
-//    queryMap.put("q12", QUERY12);
-    queryMap.put("q22", QUERY22);
-//    queryMap.put("q38", QUERY38);
-    queryMap.put("q42", QUERY42);
-    queryMap.put("q51", QUERY51);
-    queryMap.put("q76", QUERY76);
-    queryMap.put("q78", QUERY78);
+    if (inputFilePath.contains("tpcds") || inputFilePath.contains("tpc-ds")) {
+      queryMap.put("q2", QUERY2);
+      queryMap.put("q3", QUERY3);
+      queryMap.put("q4", QUERY4);
+      queryMap.put("q7", QUERY7);
+      //      queryMap.put("q11", QUERY11);
+      //      queryMap.put("q12", QUERY12);
+      queryMap.put("q22", QUERY22);
+      //      queryMap.put("q38", QUERY38);
+      queryMap.put("q42", QUERY42);
+      queryMap.put("q51", QUERY51);
+      queryMap.put("q76", QUERY76);
+      queryMap.put("q78", QUERY78);
 
+    } else {
+      queryMap.put("q1", TPCH_QUERY1);
+      queryMap.put("q3", TPCH_QUERY3);
+      queryMap.put("q4", TPCH_QUERY4);
+      queryMap.put("q5", TPCH_QUERY5);
+      queryMap.put("q6", TPCH_QUERY6);
+
+    }
     final List<String> res = new ArrayList<>();
     queryNames.forEach(n -> {
       final String query = queryMap.get(n.trim().toLowerCase());
@@ -1484,5 +1494,113 @@ public final class TPC {
       .addStringField("r_name")
       .addStringField("r_comment")
       .build();
+
+  public static final String TPCH_QUERY1 =
+    "select\n"
+      + "\tl_returnflag,\n"
+      + "\tl_linestatus,\n"
+      + "\tsum(l_quantity) as sum_qty,\n"
+      + "\tsum(l_extendedprice) as sum_base_price,\n"
+      + "\tsum(l_extendedprice * (1 - l_discount)) as sum_disc_price,\n"
+      + "\tsum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,\n"
+      + "\tavg(l_quantity) as avg_qty,\n"
+      + "\tavg(l_extendedprice) as avg_price,\n"
+      + "\tavg(l_discount) as avg_disc,\n"
+      + "\tcount(*) as count_order\n"
+      + "from\n"
+      + "\tlineitem\n"
+      + "where\n"
+      + "\tl_shipdate <= date '1998-12-01' - interval '90' day (3)\n"
+      + "group by\n"
+      + "\tl_returnflag,\n"
+      + "\tl_linestatus\n"
+      + "order by\n"
+      + "\tl_returnflag,\n"
+      + "\tl_linestatus limit 10";
+
+  public static final String TPCH_QUERY3 =
+    "select\n"
+      + "\tl_orderkey,\n"
+      + "\tsum(l_extendedprice * (1 - l_discount)) as revenue,\n"
+      + "\to_orderdate,\n"
+      + "\to_shippriority\n"
+      + "from\n"
+      + "\tcustomer,\n"
+      + "\torders,\n"
+      + "\tlineitem\n"
+      + "where\n"
+      + "\tc_mktsegment = 'BUILDING'\n"
+      + "\tand c_custkey = o_custkey\n"
+      + "\tand l_orderkey = o_orderkey\n"
+      + "\tand o_orderdate < date '1995-03-15'\n"
+      + "\tand l_shipdate > date '1995-03-15'\n"
+      + "group by\n"
+      + "\tl_orderkey,\n"
+      + "\to_orderdate,\n"
+      + "\to_shippriority\n"
+      + "order by\n"
+      + "\trevenue desc,\n"
+      + "\to_orderdate\n"
+      + "limit 10";
+
+  public static final String TPCH_QUERY4 =
+    "select\n"
+      + "\to_orderpriority,\n"
+      + "\tcount(*) as order_count\n"
+      + "from\n"
+      + "\torders\n"
+      + "where\n"
+      + "\to_orderdate >= date '1993-07-01'\n"
+      + "\tand o_orderdate < date '1993-07-01' + interval '3' month\n"
+      + "\tand exists (\n"
+      + "\t\tselect\n"
+      + "\t\t\t*\n"
+      + "\t\tfrom\n"
+      + "\t\t\tlineitem\n"
+      + "\t\twhere\n"
+      + "\t\t\tl_orderkey = o_orderkey\n"
+      + "\t\t\tand l_commitdate < l_receiptdate\n"
+      + "\t)\n"
+      + "group by\n"
+      + "\to_orderpriority\n"
+      + "order by\n"
+      + "\to_orderpriority limit 10";
+
+  public static final String TPCH_QUERY5 =
+    "select\n"
+      + "\tn_name,\n"
+      + "\tsum(l_extendedprice * (1 - l_discount)) as revenue\n"
+      + "from\n"
+      + "\tcustomer,\n"
+      + "\torders,\n"
+      + "\tlineitem,\n"
+      + "\tsupplier,\n"
+      + "\tnation,\n"
+      + "\tregion\n"
+      + "where\n"
+      + "\tc_custkey = o_custkey\n"
+      + "\tand l_orderkey = o_orderkey\n"
+      + "\tand l_suppkey = s_suppkey\n"
+      + "\tand c_nationkey = s_nationkey\n"
+      + "\tand s_nationkey = n_nationkey\n"
+      + "\tand n_regionkey = r_regionkey\n"
+      + "\tand r_name = 'ASIA'\n"
+      + "\tand o_orderdate >= date '1994-01-01'\n"
+      + "\tand o_orderdate < date '1994-01-01' + interval '1' year\n"
+      + "group by\n"
+      + "\tn_name\n"
+      + "order by\n"
+      + "\trevenue desc limit 10";
+
+  public static final String TPCH_QUERY6 =
+    "select\n"
+      + "\tsum(l_extendedprice * l_discount) as revenue\n"
+      + "from\n"
+      + "\tlineitem\n"
+      + "where\n"
+      + "\tl_shipdate >= date '1994-01-01'\n"
+      + "\tand l_shipdate < date '1994-01-01' + interval '1' year\n"
+      + "\tand l_discount between .06 - 0.01 and .06 + 0.01\n"
+      + "\tand l_quantity < 24 limit 10";
 
 }

@@ -24,6 +24,7 @@ import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.compiler.optimizer.policy.DefaultPolicy;
 import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -60,13 +61,13 @@ public final class TPCITCase {
   //   }
   // }
 
-  // @Test(timeout = TIMEOUT, expected = Test.None.class)
-  // public void testQ3() throws Exception {
-  //   JobLauncher.main(builder
-  //     .addJobId(TPCITCase.class.getSimpleName() + "_q3")
-  //     .addUserArgs("q3", inputFilePath, outputFilePath)
-  //     .build());
-  // }
+   @Test(timeout = TIMEOUT, expected = Test.None.class)
+   public void testQ3() throws Exception {
+     JobLauncher.main(builder
+       .addJobId(TPCITCase.class.getSimpleName() + "_q3")
+       .addUserArgs("q3", inputFilePath, outputFilePath)
+       .build());
+   }
 
   // @Test(timeout = TIMEOUT, expected = Test.None.class)
   // public void testQ7() throws Exception {
@@ -84,14 +85,14 @@ public final class TPCITCase {
   //     .build());
   // }
 
-  // @Test(timeout = TIMEOUT, expected = Test.None.class)
-  // public void testQ22() throws Exception {
-  //   JobLauncher.main(builder
-  //     .addJobId(TPCITCase.class.getSimpleName() + "_q22")
-  //     .addUserArgs("q22", inputFilePath, outputFilePath)
-  //     .build());
-  // }
-  //
+   @Test(timeout = TIMEOUT, expected = Test.None.class)
+   public void testQ22() throws Exception {
+     JobLauncher.main(builder
+       .addJobId(TPCITCase.class.getSimpleName() + "_q22")
+       .addUserArgs("q22", inputFilePath, outputFilePath)
+       .build());
+   }
+
   // @Test(timeout = TIMEOUT, expected = Test.None.class)
   // public void testQ38() throws Exception {
   //   JobLauncher.main(builder
