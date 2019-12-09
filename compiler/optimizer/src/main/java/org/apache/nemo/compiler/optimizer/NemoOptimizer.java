@@ -200,17 +200,7 @@ public final class NemoOptimizer implements Optimizer {
           final SourceVertex sourceVertex = (SourceVertex) v;
           final int sourceParallelism;
           if (desiredSourceParallelism == 0) {
-            final long estimatedSizeBytes = sourceVertex.getEstimatedSizeBytes();
-
-            if (estimatedSizeBytes < 64 * 1024 * 1024) {  // less than 64 MB.
-              sourceParallelism = sourceVertex.getReadables(1).size();  // 1 block.
-            } else if (estimatedSizeBytes < 16 * 1024 * 1024 * 1024L) {  // less than 16 GB.
-              sourceParallelism = sourceVertex.getReadables(
-                (int) (estimatedSizeBytes / 64 * 1024 * 1024)).size();  // partition in 64MB blocks [1, 256].
-            } else {  // greater than 16 GB.
-              sourceParallelism = sourceVertex.getReadables(
-                (int) (estimatedSizeBytes / 256 * 1024 * 1024)).size();  // partition in 256MB blocks [64, ].
-            }
+            sourceParallelism = sourceVertex.getReadables(1).size();  // 1 block.
           } else {
             sourceParallelism = sourceVertex.getReadables(desiredSourceParallelism).size();
           }
