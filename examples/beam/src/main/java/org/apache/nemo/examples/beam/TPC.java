@@ -154,7 +154,12 @@ public final class TPC {
     tables.forEach(t -> {
       final Schema tableSchema = schemaMap.get(t);
       final CSVFormat csvFormat = CSVFormat.DEFAULT.withNullString("");
-      final String filePattern = inputFilePath + "/" + t + "/*.csv";
+      final String filePattern;
+      if (inputFilePath.contains("tpcds") || inputFilePath.contains("tpc-ds")) {
+        filePattern = inputFilePath + "/" + t + "/*.csv";
+      } else {
+        filePattern = inputFilePath + "/" + t + ".tbl";
+      }
 
       final PCollection<Row> table =
         GenericSourceSink.read(p, filePattern)
