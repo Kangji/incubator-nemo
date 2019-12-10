@@ -153,11 +153,13 @@ public final class TPC {
 
     tables.forEach(t -> {
       final Schema tableSchema = schemaMap.get(t);
-      final CSVFormat csvFormat = CSVFormat.DEFAULT.withNullString("");
+      final CSVFormat csvFormat;
       final String filePattern;
       if (inputFilePath.contains("tpcds") || inputFilePath.contains("tpc-ds")) {
+        csvFormat = CSVFormat.DEFAULT.withNullString("");
         filePattern = inputFilePath + "/" + t + "/*.csv";
       } else {
+        csvFormat = CSVFormat.DEFAULT.withDelimiter('|').withNullString("");
         filePattern = inputFilePath + "/" + t + ".tbl";
       }
 
