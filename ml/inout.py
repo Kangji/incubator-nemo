@@ -44,10 +44,13 @@ configuration_space = [
 ]
 
 
-def preprocess_properties(properties, keypairs, values):
+# As a result of the method, keypairs are filled with (id,EPKey,Type) tuples and
+# values are filled with the corresponding values for each key tuple and whether it is a digit or not
+def aggregate_dict_properties_json(properties, keypairs, values, rule_list):
   vertex_properties = properties['vertex']
   edge_properties = properties['edge']
   tpe = properties['type']
+  rules = properties['rules'] if properties['rules'] else []
 
   for vp in vertex_properties:
     i = f'{vp["ID"]}'
@@ -69,6 +72,13 @@ def preprocess_properties(properties, keypairs, values):
     values[key]['isdigit'] = value.isdigit()
     if not value.isdigit():
       values[key]['data'].append(value)
+  for rule in rules:
+    key = f'{rule["name"]}'
+    keypairs.append(key)
+    if key not in values:
+      values[key] = {'data': []}
+    values[key]['isdigit'] = False
+    values[key]['data'].append(True)
   return tpe
 
 
@@ -78,13 +88,16 @@ class Data:
   loaded_properties = {}  # dictionary of key_id:value_ids (int:int)
   finalized_properties = []  # list of key_ids (int) - values can be accessed from loaded_properties
 
-  def process_json(self, properties):
+  def process_json_to_string(self, properties):
     vertex_properties = properties['vertex']
     edge_properties = properties['edge']
     tpe = properties['type']
+    rules = properties['rules'] if properties['rules'] else []
 
-    digit_keypairs = []
-    digit_values = []
+    # Different from the method above, as it has to aggregate each keypair and values not in a dictionary form,
+    # but in a sequential manner in a list.
+    digit_keypairs_to_translate = []
+    digit_values_to_translate = []
     digit_finalized = []
     keypairs_to_translate = []
     values_to_translate = []
@@ -96,8 +109,8 @@ class Data:
       value = f'{vp["EPValue"]}'
       is_finalized = f'{vp["isFinalized"]}'
       if value.isdigit():
-        digit_keypairs.append(f'{i},{key},{tpe}')
-        digit_values.append(value)
+        digit_keypairs_to_translate.append(f'{i},{key},{tpe}')
+        digit_values_to_translate.append(value)
         if is_finalized and is_finalized == 'true':
           digit_finalized.append(True)
         else:
@@ -117,8 +130,8 @@ class Data:
       value = f'{ep["EPValue"]}'
       is_finalized = f'{vp["isFinalized"]}'
       if value.isdigit():
-        digit_keypairs.append(f'{i},{key},{tpe}')
-        digit_values.append(value)
+        digit_keypairs_to_translate.append(f'{i},{key},{tpe}')
+        digit_values_to_translate.append(value)
         if is_finalized and is_finalized == 'true':
           digit_finalized.append(True)
         else:
@@ -131,13 +144,19 @@ class Data:
         else:
           finalized.append(False)
 
-    digit_key_ids = self.transform_keypairs_to_ids(digit_keypairs)
-    digit_value_ids = digit_values
+    for rule in rules:
+      key = f'{rule["name"]}'
+      keypairs_to_translate.append(key)
+      values_to_translate.append((key, True))
+      finalized.append(False)
+
+    translated_digit_key_ids = self.transform_keypairs_to_ids(digit_keypairs_to_translate)
+    translated_digit_value_ids = digit_values_to_translate
     translated_key_ids = self.transform_keypairs_to_ids(keypairs_to_translate)
     translated_value_ids = [self.transform_value_to_id(k, v) for k, v in values_to_translate]
 
     properties_string = ""
-    for ek, ev, ef in zip(digit_key_ids, digit_value_ids, digit_finalized):
+    for ek, ev, ef in zip(translated_digit_key_ids, translated_digit_value_ids, digit_finalized):
       properties_string = properties_string + f' {ek}:{ev}'
       if ef:
         self.finalized_properties.append(int(ek))
@@ -164,7 +183,7 @@ class Data:
 
 
   # ########################################################
-  def load_data_from_db(self, dagsummary, dagpropertydir=None):
+  def load_data_from_db(self, dagpropertydir=None):
     conn = None
 
     try:
@@ -192,20 +211,19 @@ class Data:
 
     rows = cur.fetchall()
 
-    keypairs = ["env,inputsize,ignore", "env,jvmmemsize,ignore", "env,totalmemsize,ignore"]  # 0 is the id for the row-wide variables
+    keypairs = ["env,inputsize,ignore", "env,jvmmemsize,ignore", "env,totalmemsize,ignore", "env,dagsummary,ignore"]  # 0 is the id for the row-wide variables
     values = {}
-    if dagsummary:
-      key = 'dagsummary'
-      keypairs.append('env,{},ignore'.format(key))
-      if key not in values:
-        values[key] = {'data': []}
-      values[key]['isdigit'] = False
-      for row in rows:
-        values[key]['data'].append(row[5])
+    key = 'dagsummary'
+    if key not in values:
+      values[key] = {'data': []}
+    values[key]['isdigit'] = False
     for row in rows:
-      preprocess_properties(row[6], keypairs, values)
+      values[key]['data'].append(row[5])
+
+    for row in rows:
+      aggregate_dict_properties_json(row[6], keypairs, values)
     if dagpropertydir:
-      preprocess_properties(self.load_property_json(dagpropertydir), keypairs, values)
+      aggregate_dict_properties_json(self.load_property_json(dagpropertydir), keypairs, values)
     # print("Pre-processing properties..")
 
     self.keyLE = preprocessing.LabelEncoder()
@@ -220,7 +238,7 @@ class Data:
         self.valueLE[k]['le'].fit(v['data'])
         # print("VALUE FOR ", k, ":", list(self.valueLE[k]['le'].classes_))
 
-    processed_rows = ['{} {}'.format(self.format_row(row[1], row[2], row[3], row[4], row[5]), self.process_json(row[6])) for row in rows]
+    processed_rows = ['{} {}'.format(self.format_row(row[1], row[2], row[3], row[4], row[5]), self.process_json_to_string(row[6])) for row in rows]
     cur.close()
     conn.close()
     print("Pre-processing complete")
@@ -312,9 +330,9 @@ class Data:
       return False
 
 
-  def process_property_json(self, dagdirectory):
+  def process_individual_property_json(self, dagdirectory):
     property_json = self.load_property_json(dagdirectory)
-    processed_json_string = self.process_json(property_json)
+    processed_json_string = self.process_json_to_string(property_json)
 
     inputsize_id = self.transform_keypair_to_id("env,inputsize,ignore")
     inputsize_in_10kb = int(property_json['inputsize']) // 10240  # capable of expressing upto around 20TB with int range

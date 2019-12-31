@@ -18,8 +18,7 @@
 # under the License.
 #
 
-import getopt
-import sys
+import getopt, sys, json
 from pathlib import Path
 import pprint
 
@@ -58,7 +57,7 @@ for opt, arg in opts:
 
 modelname = "nemo_bst.model"
 data = Data()
-encoded_rows = data.load_data_from_db(dagsummary, dagpropertydir) if dagpropertydir else data.load_data_from_db(dagsummary)
+encoded_rows = data.load_data_from_db(dagpropertydir) if dagpropertydir else data.load_data_from_db()
 # write_to_file('process_test', processed_rows)
 
 write_rows_to_file('nemo_optimization.out', encoded_rows)
@@ -120,17 +119,18 @@ for i in range(len(sorted_fscore)):
   print(hg)
 
 df = bst_opt.trees_to_dataframe()
-# print("Trees to dataframe")
-# print(df)
+print("Trees to dataframe")
+print(df)
 
 # Visualize tree
 # xgb.plot_tree(bst_opt, num_trees=0)
 # plt.show()
 
+# Build the tree ourselves
 trees = {}
 for index, row in df.iterrows():
   if row['Tree'] not in trees:  # Tree number = index
-    trees[row['Tree']] = Tree(data)
+    trees[row['Tree']] = Tree(data)  # Simply has a reference to the data
 
   # translated_feature = data.transform_id_to_key(int(row['Feature'][1:])) if row['Feature'].startswith('f') else row['Feature']
   # print(translated_feature)
@@ -139,7 +139,7 @@ for index, row in df.iterrows():
 
 
 # Let's process the data now.
-dag_properties = data.process_property_json(dagpropertydir)
+dag_properties = data.process_individual_property_json(dagpropertydir)
 # print(dag_properties)
 
 # Handle the generated trees

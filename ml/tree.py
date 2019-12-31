@@ -190,9 +190,9 @@ class Node:
   def importance_dict(self):
     if self.is_leaf():
       return {}
-    elif not self.left.is_reachable() or self.is_always_left():
+    elif not self.left.is_reachable() or self.is_always_right():
       return self.right.importance_dict()
-    elif not self.right.is_reachable() or self.is_always_right():
+    elif not self.right.is_reachable() or self.is_always_left():
       return self.left.importance_dict()
     elif self.is_always_missing():
       return self.missing.importance_dict()
