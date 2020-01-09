@@ -368,22 +368,45 @@ class Data:
 
 
 # ########################################################
-def read_resource_info(resource_info_path):
+def read_resource_info(resource_info):
+  # resource_info can either be a path to a json/xml file or the json string itself
   data = []
-  if resource_info_path.endswith("json"):
-    with open(resource_info_path) as data_file:
-      data.append(json.load(data_file))
-  elif resource_info_path.endswith("xml"):
-    root = ET.parse(resource_info_path).getroot()
+  if resource_info.endswith("json"):
+    with open(resource_info) as data_file:
+      data = data + json.load(data_file)
+  elif resource_info.endswith("xml"):
+    root = ET.parse(resource_info).getroot()
     for cluster in root:
-      nodes = []
       for node in cluster:
         attr = {}
         for a in node:
           attr[a.tag] = int(a.text) if a.text.isdigit() else a.text
-        nodes.append(attr)
-      data.append(nodes)
+        data.append(attr)
+  else:
+    data = data + json.loads(resource_info)
   return data
+
+
+# resource_data is the result of the method above, read_resource_info
+def extract_total_executor_num(resource_data):
+  total_executor_num = 0
+  for node in resource_data:
+    total_executor_num = total_executor_num + node['num'] if 'num' in node else 1
+  return total_executor_num
+
+
+def extract_total_cores(resource_data):
+  total_cores = 0
+  for node in resource_data:
+    total_cores = total_cores + int(node['capacity'] * (node['num'] if 'num' in node else 1))
+  return total_cores
+
+
+def extract_avg_memory_mb_per_executor(resource_data):
+  total_memory = 0
+  for node in resource_data:
+    total_memory = total_memory + int(node['memory_mb'] * (node['num'] if 'num' in node else 1))
+  return total_memory // extract_total_executor_num(resource_data)
 
 
 def write_rows_to_file(filename, rows):

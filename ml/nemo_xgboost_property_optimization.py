@@ -41,7 +41,6 @@ except getopt.GetoptError:
 dagsummary = None
 dagpropertydir = None
 resourceinfo = None
-inputsize = None
 for opt, arg in opts:
   if opt == '-h':
     print('nemo_xgboost_property_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
@@ -52,8 +51,6 @@ for opt, arg in opts:
     dagpropertydir = arg
   elif opt in ("-r", "--resourceinfo"):
     resourceinfo = arg
-  elif opt in ("-i", "--inputsize"):
-    inputsize = arg
 
 modelname = "nemo_bst.model"
 data = Data()
