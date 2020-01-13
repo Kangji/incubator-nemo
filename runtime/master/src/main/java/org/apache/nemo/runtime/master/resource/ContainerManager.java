@@ -23,6 +23,7 @@ import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.message.FailedMessageSender;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.MessageSender;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.reef.annotations.audience.DriverSide;
 import org.apache.reef.driver.context.ActiveContext;
 import org.apache.reef.driver.evaluator.AllocatedEvaluator;
@@ -97,8 +98,7 @@ public final class ContainerManager {
   /**
    * Requests containers/evaluators with the given specifications.
    *
-   * @param numToRequest          number of containers to request
-   * @param resourceSpecification containing the specifications of
+   * @param resourceSpecification containing the specifications of the containers.
    */
   public void requestContainer(final int numToRequest, final ResourceSpecification resourceSpecification) {
     if (isTerminated) {

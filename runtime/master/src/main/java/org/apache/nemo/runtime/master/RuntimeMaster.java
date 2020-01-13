@@ -40,7 +40,7 @@ import org.apache.nemo.runtime.master.metric.MetricMessageHandler;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.resource.ContainerManager;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
-import org.apache.nemo.runtime.master.resource.ResourceSpecification;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.runtime.master.scheduler.BatchScheduler;
 import org.apache.nemo.runtime.master.scheduler.Scheduler;
 import org.apache.nemo.runtime.master.servlet.*;
@@ -300,19 +300,12 @@ public final class RuntimeMaster {
   public void requestContainer(final String resourceSpecificationString) {
     final Future<?> containerRequestEventResult = runtimeMasterThread.submit(() -> {
       try {
-        final List<Pair<String, List<Integer>>> resourceSpecificationList =
+        final List<Pair<Integer, ResourceSpecification>> resourceSpecificationList =
           OptimizerUtils.parseResourceSpecificationString(resourceSpecificationString);
 
-        for (final Pair<String, List<Integer>> resourceSpecification: resourceSpecificationList) {
-          final String type = resourceSpecification.left();
-          final int memory = resourceSpecification.right().get(0);
-          final int capacity = resourceSpecification.right().get(1);
-          final int executorNum = resourceSpecification.right().get(2);
-          final int poisonSec = resourceSpecification.right().get(3);
-
-          resourceRequestCount.getAndAdd(executorNum);
-          containerManager.requestContainer(executorNum,
-            new ResourceSpecification(type, capacity, memory, poisonSec));
+        for (final Pair<Integer, ResourceSpecification> resourceSpecification: resourceSpecificationList) {
+          resourceRequestCount.getAndAdd(resourceSpecification.left());
+          containerManager.requestContainer(resourceSpecification.left(), resourceSpecification.right());
         }
 
         metricCountDownLatch = new CountDownLatch(resourceRequestCount.get());

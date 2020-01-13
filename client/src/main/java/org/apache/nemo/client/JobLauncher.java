@@ -31,6 +31,7 @@ import org.apache.nemo.driver.NemoDriver;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.MessageParameters;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.runtime.common.plan.PlanRewriter;
 import org.apache.nemo.runtime.master.scheduler.Scheduler;
 import org.apache.reef.client.DriverConfiguration;
@@ -495,11 +496,11 @@ public final class JobLauncher {
     throws InjectionException {
     final Injector injector = TANG.newInjector(Configurations.merge(jobConf, executorConf));
     final String contents = injector.getNamedInstance(contentsParameter);
-    final List<Pair<String, List<Integer>>> resourceSpecificationList =
+    final List<Pair<Integer, ResourceSpecification>> resourceSpecificationList =
       OptimizerUtils.parseResourceSpecificationString(contents);
-    final Pair<String, List<Integer>> p = resourceSpecificationList.stream()
+    final Pair<Integer, ResourceSpecification> p = resourceSpecificationList.stream()
       .findFirst().orElseThrow(() -> new InjectionException("no resource specified"));
-    final int executorMemory = p.right().get(0);
+    final int executorMemory = p.right().getMemory();
     final int offHeapMemory =  (int) (executorMemory * injector.getNamedInstance(offHeapRatio));
     return TANG.newConfigurationBuilder()
       .bindNamedParameter(maxOffHeapMb, String.valueOf(offHeapMemory))

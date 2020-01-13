@@ -26,6 +26,7 @@ import org.apache.nemo.common.exception.JsonParseException;
 import org.apache.nemo.common.exception.UnsupportedMethodException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.runtime.common.metric.MetricUtils;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -106,23 +107,23 @@ public final class OptimizerUtils {
    * @return the parsed list of resource specifications. Each element consists of a pair of 'resource type' and a list
    * containing 'memory', 'capacity', 'number of executors', and 'seconds of poisoning', in the order specified.
    */
-  public static List<Pair<String, List<Integer>>> parseResourceSpecificationString(
+  public static List<Pair<Integer, ResourceSpecification>> parseResourceSpecificationString(
     final String resourceSpecificationString) {
-    final List<Pair<String, List<Integer>>> resourceSpecifications = new ArrayList<>();
+    final List<Pair<Integer, ResourceSpecification>> resourceSpecifications = new ArrayList<>();
     try {
       if (resourceSpecificationString.trim().startsWith("[")) {
         final TreeNode jsonRootNode = new ObjectMapper().readTree(resourceSpecificationString);
 
         for (int i = 0; i < jsonRootNode.size(); i++) {
           final TreeNode resourceNode = jsonRootNode.get(i);
-          final String type = resourceNode.get("type").traverse().nextTextValue();
-          final int memory = resourceNode.get("memory_mb").traverse().getIntValue();
-          final int capacity = resourceNode.get("capacity").traverse().getIntValue();
           final int executorNum = resourceNode.path("num").traverse().nextIntValue(1);
+          final String type = resourceNode.get("type").traverse().nextTextValue();
+          final int capacity = resourceNode.get("capacity").traverse().getIntValue();
+          final int memory = resourceNode.get("memory_mb").traverse().getIntValue();
           final int poisonSec = resourceNode.path("poison_sec").traverse().nextIntValue(-1);
 
-          final List<Integer> specs = Arrays.asList(memory, capacity, executorNum, poisonSec);
-          resourceSpecifications.add(Pair.of(type, specs));
+          resourceSpecifications.add(
+            Pair.of(executorNum, new ResourceSpecification(type, capacity, memory, poisonSec)));
         }
       } else if (resourceSpecificationString.trim().startsWith("<")) {
         final InputSource is = new InputSource(new StringReader(resourceSpecificationString));
@@ -138,16 +139,17 @@ public final class OptimizerUtils {
             final Node node = nodes.item(j);
             if (node.getNodeType() == Node.ELEMENT_NODE) {
               final Element n = ((Element) node);
-              final String type = n.getElementsByTagName("type").item(0).getTextContent();
-              final int memory = Integer.parseInt(n.getElementsByTagName("memory_mb").item(0).getTextContent());
-              final int capacity = Integer.parseInt(n.getElementsByTagName("capacity").item(0).getTextContent());
               final int executorNum = n.getElementsByTagName("num").item(0) == null ? 1  // default
                 : Integer.parseInt(n.getElementsByTagName("num").item(0).getTextContent());
+              final String type = n.getElementsByTagName("type").item(0).getTextContent();
+              final int capacity = Integer.parseInt(n.getElementsByTagName("capacity").item(0).getTextContent());
+              final int memory = Integer.parseInt(n.getElementsByTagName("memory_mb").item(0).getTextContent());
               final int poisonSec = n.getElementsByTagName("poison_sec").item(0) == null ? -1  // default
                 : Integer.parseInt(n.getElementsByTagName("poison_sec").item(0).getTextContent());
 
               final List<Integer> specs = Arrays.asList(memory, capacity, executorNum, poisonSec);
-              resourceSpecifications.add(Pair.of(type, specs));
+              resourceSpecifications.add(
+                Pair.of(executorNum, new ResourceSpecification(type, capacity, memory, poisonSec)));
             }
           }
         }

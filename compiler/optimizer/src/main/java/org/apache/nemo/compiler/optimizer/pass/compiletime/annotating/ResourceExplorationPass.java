@@ -23,10 +23,10 @@ import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.CompileTimeOptimizationException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourceTypeProperty;
-import org.apache.nemo.compiler.optimizer.OptimizerUtils;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.LargeShuffleCompositePass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.TransientResourceCompositePass;
 import org.apache.nemo.runtime.common.plan.StagePartitioner;
@@ -44,8 +44,6 @@ import java.util.stream.Collectors;
 public final class ResourceExplorationPass extends AnnotatingPass<Object> {
   private static final Logger LOG = LoggerFactory.getLogger(ResourceExplorationPass.class.getName());
 
-  private static String resourceSpecificationString = "";
-
   /**
    * Default constructor.
    */
@@ -60,8 +58,7 @@ public final class ResourceExplorationPass extends AnnotatingPass<Object> {
     final Map<Integer, Long> stageIdToMemoryEdgeNumMap = new HashMap<>();
     final List<DataStoreProperty.Value> memoryValues =
       Arrays.asList(DataStoreProperty.Value.MEMORY_STORE, DataStoreProperty.Value.SERIALIZED_MEMORY_STORE);
-    final List<Pair<String, List<Integer>>> resourceSpecs =
-      OptimizerUtils.parseResourceSpecificationString(resourceSpecificationString);
+    final List<Pair<Integer, ResourceSpecification>> resourceSpecs = dag.getExecutorInfo();
 
     vertexStageIdMap.forEach((v, stageId) -> {
       if (v.getPropertyValue(ResourcePriorityProperty.class).isPresent()) {
@@ -75,7 +72,7 @@ public final class ResourceExplorationPass extends AnnotatingPass<Object> {
     });
 
     final List<Integer> memorySpecs = resourceSpecs.stream()
-      .map(spec -> spec.right().get(0)).collect(Collectors.toList());
+      .map(spec -> spec.right().getMemory()).collect(Collectors.toList());
 
     final Integer maxMemory = memorySpecs.stream().mapToInt(i -> i).max().orElseThrow(() ->
       new CompileTimeOptimizationException("no executor supplied"));
@@ -105,7 +102,8 @@ public final class ResourceExplorationPass extends AnnotatingPass<Object> {
 
     // Try randomly running TransientResourcePass when there are transient resources specified in the json.
     final List<String> typeSpecs = resourceSpecs.stream()
-      .map(Pair::left)
+      .map(Pair::right)
+      .map(ResourceSpecification::getContainerType)
       .collect(Collectors.toList());
 
     if (typeSpecs.stream().anyMatch(s -> s.equalsIgnoreCase(ResourceTypeProperty.TRANSIENT))
@@ -114,14 +112,5 @@ public final class ResourceExplorationPass extends AnnotatingPass<Object> {
     }
 
     return resultingDAG;
-  }
-
-  /**
-   * Method to provide the resource specification information to the compile time pass prior to running
-   * optimization passes.
-   * @param resrcSpecificationString the string containing the resource specification information.
-   */
-  public static void updateResourceSpecificationString(final String resrcSpecificationString) {
-    resourceSpecificationString = resrcSpecificationString;
   }
 }

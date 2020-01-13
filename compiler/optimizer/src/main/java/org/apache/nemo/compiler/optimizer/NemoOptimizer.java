@@ -31,7 +31,6 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.ResourceExplorationPass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
 import org.apache.nemo.compiler.optimizer.policy.XGBoostPolicy;
@@ -153,6 +152,7 @@ public final class NemoOptimizer implements Optimizer {
    * @param policy the optimization policy to optimize the DAG with.
    */
   private void beforeCompileTimeOptimization(final IRDAG dag, final Policy policy) {
+    dag.recordExecutorInfo(OptimizerUtils.parseResourceSpecificationString(this.executorInfoContents));
     if (policy instanceof XGBoostPolicy) {
       if (this.dagDirectory != null || this.dagDirectory != "") {
         final String properties = MetricUtils.stringifyIRDAGProperties(dag);
@@ -173,12 +173,6 @@ public final class NemoOptimizer implements Optimizer {
             + "-d " + new File(this.dagDirectory).getAbsolutePath() + " -r " + this.executorInfoPath)
           .build())
         .build());
-
-      try {
-        ResourceExplorationPass.updateResourceSpecificationString(this.executorInfoContents);
-      } catch (Exception e) {
-        throw new CompileTimeOptimizationException(e);
-      }
     }
   }
 

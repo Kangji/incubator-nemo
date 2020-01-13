@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.exception.MetricException;
@@ -31,6 +32,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
@@ -100,6 +102,17 @@ public final class MetricUtils {
     node.put("totalmemsize", ((com.sun.management.OperatingSystemMXBean) ManagementFactory
       .getOperatingSystemMXBean()).getTotalPhysicalMemorySize());
     node.put("dagsummary", irdag.irDAGSummary());
+    final ArrayNode executorSpecsNode = mapper.createArrayNode();
+    for (final Pair<Integer, ResourceSpecification> executorSpec : irdag.getExecutorInfo()) {
+      final ObjectNode executorSpecNode = mapper.createObjectNode();
+      executorSpecNode.put("num", executorSpec.left());
+      executorSpecNode.put("type", executorSpec.right().getContainerType());
+      executorSpecNode.put("memory_mb", executorSpec.right().getMemory());
+      executorSpecNode.put("capacity", executorSpec.right().getCapacity());
+      executorSpecNode.put("poison_sec", executorSpec.right().getPoisonSec());
+      executorSpecsNode.add(executorSpecNode);
+    }
+    node.set("executor_info", executorSpecsNode);
 
     final ArrayNode rulesNode = mapper.createArrayNode();
     for (final String ruleName : irdag.getNamesOfRulesApplied()) {

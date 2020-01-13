@@ -20,6 +20,7 @@ package org.apache.nemo.common.ir;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Sets;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.PairKeyExtractor;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.coder.BytesDecoderFactory;
@@ -32,6 +33,7 @@ import org.apache.nemo.common.exception.IllegalEdgeOperationException;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.LoopVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
@@ -92,6 +94,11 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
   private final List<String> namesOfRulesApplied;
 
   /**
+   * To remember the specifications of the executors used to run the IR DAG with.
+   */
+  private final List<Pair<Integer, ResourceSpecification>> executorInfo;
+
+  /**
    * @param originalUserApplicationDAG the initial DAG.
    */
   public IRDAG(final DAG<IRVertex, IREdge> originalUserApplicationDAG) {
@@ -101,6 +108,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     this.samplingVertexToGroup = new HashMap<>();
     this.messageVertexToGroup = new HashMap<>();
     this.namesOfRulesApplied = new ArrayList<>();
+    this.executorInfo = new ArrayList<>();
   }
 
   public IRDAGChecker.CheckerResult checkIntegrity() {
@@ -175,6 +183,22 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
    */
   public List<String> getNamesOfRulesApplied() {
     return namesOfRulesApplied;
+  }
+
+  /**
+   * Setter for the executor specifications information.
+   * @param parsedExecutorInfo executor information parsed for processing.
+   */
+  public void recordExecutorInfo(final List<Pair<Integer, ResourceSpecification>> parsedExecutorInfo) {
+    executorInfo.addAll(parsedExecutorInfo);
+  }
+
+  /**
+   * Getter for the executor specifications information.
+   * @return the executor specifications information.
+   */
+  public List<Pair<Integer, ResourceSpecification>> getExecutorInfo() {
+    return executorInfo;
   }
 
   ////////////////////////////////////////////////// Methods for reshaping the DAG topology.
