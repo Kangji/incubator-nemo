@@ -187,7 +187,7 @@ class Data:
     conn = None
 
     try:
-      host = "nemo-optimization.cabbufr3evny.us-west-2.rds.amazonaws.com"
+      host = "35.194.96.120"
       dbname = "nemo_optimization"
       dbuser = "postgres"
       dbpwd = "fake_password"

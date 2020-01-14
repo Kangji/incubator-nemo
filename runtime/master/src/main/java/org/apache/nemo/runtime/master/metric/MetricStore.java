@@ -276,7 +276,7 @@ public final class MetricStore {
     final String[] syntax = {"SERIAL PRIMARY KEY"};
 
     try (Connection c = DriverManager.getConnection(address, dbId, dbPasswd)) {
-      LOG.info("Opened database successfully at {}", MetricUtils.POSTGRESQL_DB_NAME);
+      LOG.info("Opened database successfully at {}", address);
       saveOptimizationMetrics(jobId, c, syntax);
     } catch (SQLException e) {
       LOG.error("Error while saving optimization metrics to PostgreSQL: {}", e);

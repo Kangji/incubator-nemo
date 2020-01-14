@@ -31,7 +31,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.sql.*;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -46,10 +48,24 @@ public final class BestInitialDAGConfFromDBPass extends AnnotatingPass<Object> {
     super(BestInitialDAGConfFromDBPass.class);
   }
 
+  /**
+   * Method to derive db credentials. This method is not for real authentication. Please change the method accordingly.
+   * @return db credentials.
+   */
+  private static String getCreds() {
+    try {
+      final String str = "ZmFrZV9wYXNzd29yZA==";
+      byte[] decodedBytes = Base64.getDecoder().decode(str.getBytes("UTF-8"));
+      return new String(decodedBytes);
+    } catch (UnsupportedEncodingException e) {
+      throw new MetricException(e);
+    }
+  }
+
   @Override
   public IRDAG apply(final IRDAG dag) {
     try (Connection c = DriverManager.getConnection(MetricUtils.POSTGRESQL_DB_NAME,
-      "postgres", "fake_password")) {
+      "postgres", getCreds())) {
       try (Statement statement = c.createStatement()) {
         statement.setQueryTimeout(30);  // set timeout to 30sec.
 

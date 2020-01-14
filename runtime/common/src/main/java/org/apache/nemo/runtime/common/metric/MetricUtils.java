@@ -67,7 +67,7 @@ public final class MetricUtils {
   public static final String SQLITE_DB_NAME =
     "jdbc:sqlite:" + Util.fetchProjectRootPath() + "/optimization_db.sqlite3";
   public static final String POSTGRESQL_DB_NAME =
-    "jdbc:postgresql://nemo-optimization.cabbufr3evny.us-west-2.rds.amazonaws.com:5432/nemo_optimization";
+    "jdbc:postgresql://35.194.96.120:5432/nemo_optimization";
 
   /**
    * Private constructor.
