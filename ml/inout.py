@@ -46,7 +46,7 @@ configuration_space = [
 
 # As a result of the method, keypairs are filled with (id,EPKey,Type) tuples and
 # values are filled with the corresponding values for each key tuple and whether it is a digit or not
-def aggregate_dict_properties_json(properties, keypairs, values, rule_list):
+def aggregate_dict_properties_json(properties, keypairs, values):
     vertex_properties = properties['vertex']
     edge_properties = properties['edge']
     tpe = properties['type']
