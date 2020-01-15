@@ -57,27 +57,27 @@ def aggregate_dict_properties_json(properties, keypairs, values, rule_list):
         key = f'{vp["EPKeyClass"]}/{vp["EPValueClass"]}'
         value = f'{vp["EPValue"]}'
         keypairs.append(f'{i},{key},{tpe}')
+        if key not in values:
+            values[key] = {'data': []}
         values[key]['isdigit'] = value.isdigit()
         if not value.isdigit():
-            if key not in values:
-                values[key] = {'data': []}
             values[key]['data'].append(value)
     for ep in edge_properties:
         i = f'{ep["ID"]}'
         key = f'{ep["EPKeyClass"]}/{ep["EPValueClass"]}'
         value = f'{ep["EPValue"]}'
         keypairs.append(f'{i},{key},{tpe}')
+        if key not in values:
+            values[key] = {'data': []}
         values[key]['isdigit'] = value.isdigit()
         if not value.isdigit():
-            if key not in values:
-                values[key] = {'data': []}
             values[key]['data'].append(value)
     for rule in rules:
         key = f'{rule["name"]}'
         keypairs.append(key)
-        values[key]['isdigit'] = False
         if key not in values:
             values[key] = {'data': []}
+        values[key]['isdigit'] = False
         values[key]['data'].append(True)
     return tpe
 
@@ -221,9 +221,9 @@ class Data:
         keypairs = keypairs + ["env,total_executor_num,ignore", "env,total_cores,ignore", "env,avg_memory_mb_per_executor,ignore"]
         values = {}
         key = 'dagsummary'
-        values[key]['isdigit'] = False
         if key not in values:
             values[key] = {'data': []}
+        values[key]['isdigit'] = False
         for row in rows:
             values[key]['data'].append(row[5])
 
