@@ -18,9 +18,9 @@
 # under the License.
 
 echo "You should already have python3 installed"
-echo "Usage: ./bin/xgboost_property_optimization.sh -d <dag_perperty_dir> -r <resource_info_path>"
+echo "Usage: ./bin/xgboost_train.sh"
 pushd ml
 touch results.out
 pip3 install -r requirements.txt
-python3 nemo_xgboost_property_optimization.py "$@"
+python3 train.py
 popd
