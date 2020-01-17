@@ -138,6 +138,10 @@ public final class Task implements Serializable {
     return irVertexIdToReadable;
   }
 
+  public TaskMetric getTaskMetric() {
+    return taskMetric;
+  }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder();

@@ -24,20 +24,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
  * Metric class for {@link org.apache.nemo.runtime.common.plan.Task}.
+ *
+ * set methods are used in
  */
 public class TaskMetric implements StateMetric<TaskState.State> {
+  private final int DEFAULT_VALUE = -1;
+
   private String id;
   private List<StateTransitionEvent<TaskState.State>> stateTransitionEvents = new ArrayList<>();
-  private long serializedReadBytes = -1;
-  private long encodedReadBytes = -1;
-  private long writtenBytes = -1;
-  private long boundedSourceReadTime = -1;
-  private long taskDeserializationTime = -1;
-  private int scheduleAttempt = -1;
+  private long serializedReadBytes = DEFAULT_VALUE;
+  private long encodedReadBytes = DEFAULT_VALUE;
+  private long writtenBytes = DEFAULT_VALUE;
+  private long boundedSourceReadTime = DEFAULT_VALUE;
+  private long taskDeserializationTime = DEFAULT_VALUE;
+  private int scheduleAttempt = DEFAULT_VALUE;
   private String containerId = "";
 
   private static final Logger LOG = LoggerFactory.getLogger(TaskMetric.class.getName());
@@ -50,7 +55,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     return serializedReadBytes;
   }
 
-  private void setSerializedReadBytes(final long serializedReadBytes) {
+  public void setSerializedReadBytes(final long serializedReadBytes) {
     this.serializedReadBytes = serializedReadBytes;
   }
 
@@ -58,7 +63,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     return encodedReadBytes;
   }
 
-  private void setEncodedReadBytes(final long encodedReadBytes) {
+  public void setEncodedReadBytes(final long encodedReadBytes) {
     this.encodedReadBytes = encodedReadBytes;
   }
 
@@ -66,7 +71,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     return boundedSourceReadTime;
   }
 
-  private void setBoundedSourceReadTime(final long boundedSourceReadTime) {
+  public void setBoundedSourceReadTime(final long boundedSourceReadTime) {
     this.boundedSourceReadTime = boundedSourceReadTime;
   }
 
@@ -74,7 +79,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     return taskDeserializationTime;
   }
 
-  private void setTaskDeserializationTime(final long taskDeserializationTime) {
+  public void setTaskDeserializationTime(final long taskDeserializationTime) {
     this.taskDeserializationTime = taskDeserializationTime;
   }
 
@@ -82,7 +87,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     return writtenBytes;
   }
 
-  private void setWrittenBytes(final long writtenBytes) {
+  public void setWrittenBytes(final long writtenBytes) {
     this.writtenBytes = writtenBytes;
   }
 
@@ -90,7 +95,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     return scheduleAttempt;
   }
 
-  private void setScheduleAttempt(final int scheduleAttempt) {
+  public void setScheduleAttempt(final int scheduleAttempt) {
     this.scheduleAttempt = scheduleAttempt;
   }
 
@@ -98,7 +103,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     return containerId;
   }
 
-  private void setContainerId(final String containerId) {
+  public void setContainerId(final String containerId) {
     this.containerId = containerId;
   }
 
@@ -121,40 +126,94 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     stateTransitionEvents.add(event);
   }
 
+  public enum TaskMetricField {
+    SERIALIZED_READ_BYTES,
+    ENCODED_READ_BYTES,
+    WRITTEN_BYTES,
+    BOUNDED_SOURCE_READ_TIME,
+    TASK_DESERIALIZATION_TIME,
+
+    /* newly added from here */
+    TASK_DURATION_TIME,
+    TASK_CPU_TIME,
+    TASK_SERIALIZATION_TIME,
+    TASK_PEAK_EXECUTION_MEMORY,
+    TASK_INPUT_BYTES,
+    TASK_OUTPUT_BYTES, //maybe same concept as written bytes
+    TASK_SHUFFLE_READ_BYTES,
+    TASK_SHUFFLE_READ_TIME,
+    TASK_SHUFFLE_WRITE_BYTES,
+    TASK_SHUFFLE_WRITE_TIME,
+  }
+
+  public HashMap<TaskMetricField, Long> stackMetrics(){
+    HashMap<TaskMetricField, Long> metrics = new HashMap<>();
+
+    return metrics;
+  }
+
   @Override
+  // this is for the metricStore in apache.nemo.runtime.master
   public final boolean processMetricMessage(final String metricField, final byte[] metricValue) {
     LOG.debug("metric {} is just arrived!", metricField);
+
     switch (metricField) {
-      case "serializedReadBytes":
-        setSerializedReadBytes(SerializationUtils.deserialize(metricValue));
+      case "containerId":
+        setContainerId(SerializationUtils.deserialize(metricValue));
         break;
-      case "encodedReadBytes":
-        setEncodedReadBytes(SerializationUtils.deserialize(metricValue));
-        break;
-      case "boundedSourceReadTime":
-        setBoundedSourceReadTime(SerializationUtils.deserialize(metricValue));
-        break;
-      case "writtenBytes":
-        setWrittenBytes(SerializationUtils.deserialize(metricValue));
-        break;
-      case "taskDeserializationTime":
-        setTaskDeserializationTime(SerializationUtils.deserialize(metricValue));
+      case "scheduleAttempt":
+        setScheduleAttempt(SerializationUtils.deserialize(metricValue));
         break;
       case "stateTransitionEvent":
         final StateTransitionEvent<TaskState.State> newStateTransitionEvent =
           SerializationUtils.deserialize(metricValue);
         addEvent(newStateTransitionEvent);
         break;
-      case "scheduleAttempt":
-        setScheduleAttempt(SerializationUtils.deserialize(metricValue));
-        break;
-      case "containerId":
-        setContainerId(SerializationUtils.deserialize(metricValue));
-        break;
+      case "metricList":
+        if (processMetricMessageList(metricValue)) {
+          break;
+        }
       default:
         LOG.warn("metricField {} is not supported.", metricField);
         return false;
     }
     return true;
+  }
+
+  public final boolean processMetricMessageList(final byte[] metricValue) {
+    HashMap<TaskMetricField, Long> metricList = SerializationUtils.deserialize(metricValue);
+    for(TaskMetricField metricField : metricList.keySet()){
+      switch (metricField) {
+        case SERIALIZED_READ_BYTES:
+          setSerializedReadBytes(metricList.get(metricField));
+          break;
+        case ENCODED_READ_BYTES:
+          setEncodedReadBytes(metricList.get(metricField));
+          break;
+        case BOUNDED_SOURCE_READ_TIME:
+          setBoundedSourceReadTime(metricList.get(metricField));
+          break;
+        case WRITTEN_BYTES:
+          setWrittenBytes(metricList.get(metricField));
+          break;
+        case TASK_DESERIALIZATION_TIME:
+          setTaskDeserializationTime(metricList.get(metricField));
+          break;
+        case TASK_DURATION_TIME:
+        case TASK_CPU_TIME:
+        case TASK_SERIALIZATION_TIME:
+        case TASK_PEAK_EXECUTION_MEMORY:
+        case TASK_INPUT_BYTES:
+        case TASK_OUTPUT_BYTES:
+        case TASK_SHUFFLE_READ_BYTES:
+        case TASK_SHUFFLE_READ_TIME:
+        case TASK_SHUFFLE_WRITE_BYTES:
+        case TASK_SHUFFLE_WRITE_TIME:
+        default:
+          LOG.warn("metricField {} is not supported.", metricField);
+          return false;
+      }
+    }
+    return false;
   }
 }

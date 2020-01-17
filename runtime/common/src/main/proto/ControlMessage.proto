@@ -230,6 +230,12 @@ message Metric {
     required bytes metricValue = 4;
 }
 
+//message MetricList {
+//    required string metricType = 1;
+//    required string metricId = 2;
+//    required bytes metricList = 3;
+//}
+
 message RequestBroadcastVariableMessage {
   required string executorId = 1;
   required bytes broadcastId = 2;

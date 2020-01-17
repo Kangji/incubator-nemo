@@ -40,6 +40,7 @@ import org.apache.nemo.runtime.common.message.MessageContext;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.MessageListener;
 import org.apache.nemo.runtime.common.message.PersistentConnectionToMasterMap;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.RuntimeEdge;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.executor.data.BroadcastManagerWorker;
@@ -53,6 +54,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -126,8 +128,12 @@ public final class Executor {
       final long deserializationStartTime = System.currentTimeMillis();
       final DAG<IRVertex, RuntimeEdge<IRVertex>> irDag =
         SerializationUtils.deserialize(task.getSerializedIRDag());
-      metricMessageSender.send("TaskMetric", task.getTaskId(), "taskDeserializationTime",
-        SerializationUtils.serialize(System.currentTimeMillis() - deserializationStartTime));
+
+      task.getTaskMetric().setTaskDeserializationTime(System.currentTimeMillis() - deserializationStartTime);
+
+//      metricMessageSender.send("TaskMetric", task.getTaskId(), "taskDeserializationTime",
+//        SerializationUtils.serialize(System.currentTimeMillis() - deserializationStartTime));
+
       final TaskStateManager taskStateManager =
         new TaskStateManager(task, executorId, persistentConnectionToMasterMap, metricMessageSender);
 
@@ -163,6 +169,10 @@ public final class Executor {
             .build())
           .build());
       throw e;
+    } finally {
+      //send hashmap of metrics in here
+      HashMap<TaskMetric.TaskMetricField, Long> taskMetrics = task.getTaskMetric().stackMetrics();
+      metricMessageSender.send("TaskMetric", task.getTaskId(), SerializationUtils.serialize(taskMetrics));
     }
   }
 

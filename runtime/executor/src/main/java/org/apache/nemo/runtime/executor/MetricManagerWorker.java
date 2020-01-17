@@ -101,8 +101,8 @@ public final class MetricManagerWorker implements MetricMessageSender {
   }
 
   @Override
-  public void send(String metricType, String metricId, byte[] metricList) {
-    metricMessageQueue.add();
+  public void send(final String metricType, final String metricId, final byte[] metricList) {
+   send(metricType, metricId, "metricList", metricList);
   }
 
   @Override

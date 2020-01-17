@@ -38,15 +38,6 @@ public interface MetricMessageHandler {
                                String metricField, byte[] metricValue);
 
   /**
-   * Handle the received metric message in concatenated form
-   *
-   * @param metricType  a given type for the metric (ex. TaskMetric).
-   * @param metricId    id of the metric.
-   * @param metricList  serialized hashmap of (metricField, metricValue) pair.
-   */
-  void onMetricMessageReceived(String metricType, String metricId, byte[] metricList);
-
-  /**
    * Cleans up and terminates this handler.
    */
   void terminate();

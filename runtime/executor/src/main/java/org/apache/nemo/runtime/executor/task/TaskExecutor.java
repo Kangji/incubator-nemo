@@ -66,6 +66,7 @@ public final class TaskExecutor {
   // Essential information
   private boolean isExecuted;
   private final String taskId;
+  private final Task task;
   private final TaskStateManager taskStateManager;
   private final List<DataFetcher> dataFetchers;
   private final BroadcastManagerWorker broadcastManagerWorker;
@@ -103,6 +104,7 @@ public final class TaskExecutor {
     // Essential information
     this.isExecuted = false;
     this.taskId = task.getTaskId();
+    this.task = task;
     this.taskStateManager = taskStateManager;
     this.broadcastManagerWorker = broadcastManagerWorker;
 
@@ -339,12 +341,18 @@ public final class TaskExecutor {
       return;
     }
 
+    task.getTaskMetric().setBoundedSourceReadTime(boundedSourceReadTime);
+    task.getTaskMetric().setSerializedReadBytes(serializedReadBytes);
+    task.getTaskMetric().setEncodedReadBytes(encodedReadBytes);
+
+    /*
     metricMessageSender.send("TaskMetric", taskId,
       "boundedSourceReadTime", SerializationUtils.serialize(boundedSourceReadTime));
     metricMessageSender.send("TaskMetric", taskId,
       "serializedReadBytes", SerializationUtils.serialize(serializedReadBytes));
     metricMessageSender.send("TaskMetric", taskId,
       "encodedReadBytes", SerializationUtils.serialize(encodedReadBytes));
+    */
 
     // Phase 2: Finalize task-internal states and elements
     for (final VertexHarness vertexHarness : sortedHarnesses) {
@@ -696,7 +704,10 @@ public final class TaskExecutor {
     }
 
     // TODO #236: Decouple metric collection and sending logic
+    task.getTaskMetric().setWrittenBytes(totalWrittenBytes);
+    /*
     metricMessageSender.send("TaskMetric", taskId,
       "writtenBytes", SerializationUtils.serialize(totalWrittenBytes));
+    */
   }
 }
