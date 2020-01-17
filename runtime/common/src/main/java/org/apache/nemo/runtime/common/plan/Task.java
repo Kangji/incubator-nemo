@@ -22,6 +22,7 @@ import org.apache.nemo.common.ir.Readable;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
 
 import java.io.Serializable;
 import java.util.List;
@@ -39,6 +40,7 @@ public final class Task implements Serializable {
   private final ExecutionPropertyMap<VertexExecutionProperty> executionProperties;
   private final byte[] serializedIRDag;
   private final Map<String, Readable> irVertexIdToReadable;
+  private final TaskMetric taskMetric;
 
   /**
    * Constructor.
@@ -65,6 +67,7 @@ public final class Task implements Serializable {
     this.taskIncomingEdges = taskIncomingEdges;
     this.taskOutgoingEdges = taskOutgoingEdges;
     this.irVertexIdToReadable = irVertexIdToReadable;
+    this.taskMetric = new TaskMetric(taskId);
   }
 
   /**

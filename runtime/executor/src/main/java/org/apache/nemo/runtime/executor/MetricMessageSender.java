@@ -29,12 +29,21 @@ public interface MetricMessageSender extends AutoCloseable {
   /**
    * Send metric to master.
    *
-   * @param metricType  type of the metric
-   * @param metricId    id of the metric
-   * @param metricField field of the metric
-   * @param metricValue value of the metric which is serialized
+   * @param metricType  type of the metric.
+   * @param metricId    id of the metric.
+   * @param metricField field of the metric.
+   * @param metricValue value of the metric which is serialized.
    */
   void send(String metricType, String metricId, String metricField, byte[] metricValue);
+
+  /**
+   * Send metric to master.
+   *
+   * @param metricType  type of the metric.
+   * @param metricId    id of the metric.
+   * @param metricList  serialized hashmap of (metricField, metricValue) pair.
+   */
+  void send(String metricType, String metricId, byte[] metricList);
 
   /**
    * Flush all metric inside of the queue.

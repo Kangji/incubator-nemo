@@ -76,6 +76,11 @@ public final class MetricManagerMaster implements MetricMessageHandler {
   }
 
   @Override
+  public void onMetricMessageReceived(String metricType, String metricId, byte[] metricList) {
+
+  }
+
+  @Override
   public synchronized void terminate() {
     isTerminated = true;
   }

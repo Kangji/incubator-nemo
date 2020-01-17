@@ -101,6 +101,11 @@ public final class MetricManagerWorker implements MetricMessageSender {
   }
 
   @Override
+  public void send(String metricType, String metricId, byte[] metricList) {
+    metricMessageQueue.add();
+  }
+
+  @Override
   public void close() {
     scheduledExecutorService.shutdownNow();
     flushMetricMessageQueueToMaster();
