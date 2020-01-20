@@ -18,11 +18,10 @@
 # under the License.
 #
 
-import json, os.path, pathlib, pickle
+import json, os.path, pickle
 import psycopg2 as pg
 import sqlite3 as sq
-import numpy as np
-from sklearn import preprocessing
+from tqdm import tqdm
 import xml.etree.ElementTree as ET
 
 
@@ -91,6 +90,11 @@ class Data:
     loaded_properties = {}  # dictionary of key_id:value_ids (int:int)
     finalized_properties = []  # list of key_ids (int) - values can be accessed from loaded_properties
 
+    host = "35.194.96.120"
+    dbname = "nemo_optimization"
+    dbuser = "postgres"
+    dbpwd = "fake_password"
+
     def process_json(self, id, key, tpe, value, is_finalized):
         res = ''
         keypair = f'{id},{key},{tpe}'
@@ -136,22 +140,22 @@ class Data:
         duration_in_sec = int(duration) // 1000
         properties_string.append(str(duration_in_sec))
         inputsize_in_10kb = int(inputsize) // 10240  # capable of expressing upto around 20TB with int range
-        properties_string.append(self.process_json('env', 'inputsize', 'ignore', inputsize_in_10kb, 'true'))
+        properties_string.append(self.process_json('env', 'inputsize', 'ignore', str(inputsize_in_10kb), 'true'))
         jvmmemsize_in_mb = int(jvmmemsize) // 1048576
-        properties_string.append(self.process_json('env', 'jvmmemsize', 'ignore', jvmmemsize_in_mb, 'true'))
+        properties_string.append(self.process_json('env', 'jvmmemsize', 'ignore', str(jvmmemsize_in_mb), 'true'))
         totalmemsize_in_mb = int(totalmemsize) // 1048576
-        properties_string.append(self.process_json('env', 'totalmemsize', 'ignore', totalmemsize_in_mb, 'true'))
+        properties_string.append(self.process_json('env', 'totalmemsize', 'ignore', str(totalmemsize_in_mb), 'true'))
         properties_string.append(self.process_json('env', 'dagsummary', 'ignore', dagsummary, 'true'))
 
         if resource_data:
             total_executor_num = extract_total_executor_num(resource_data)
-            properties_string.append(self.process_json('env', 'total_executor_num', 'ignore', total_executor_num, 'true'))
+            properties_string.append(self.process_json('env', 'total_executor_num', 'ignore', str(total_executor_num), 'true'))
 
             total_cores = extract_total_cores(resource_data)
-            properties_string.append(self.process_json('env', 'total_cores', 'ignore', total_cores, 'true'))
+            properties_string.append(self.process_json('env', 'total_cores', 'ignore', str(total_cores), 'true'))
 
             avg_memory_mb_per_executor = extract_avg_memory_mb_per_executor(resource_data)
-            properties_string.append(self.process_json('env', 'avg_memory_mb_per_executor', 'ignore', avg_memory_mb_per_executor, 'true'))
+            properties_string.append(self.process_json('env', 'avg_memory_mb_per_executor', 'ignore', str(avg_memory_mb_per_executor), 'true'))
 
         for p in vertex_properties + edge_properties:
             i = f'{p["ID"]}'
@@ -167,15 +171,38 @@ class Data:
         return ' '.join(properties_string).strip()
 
     # ########################################################
+    def count_rows_from_db(self):
+        conn = pg.connect(host=self.host, dbname=self.dbname, user=self.dbuser, password=self.dbpwd)
+        print("Connected to the PostgreSQL DB.")
+        sql = "SELECT count(*) from nemo_data"
+        cur = conn.cursor()
+        try:
+            cur.execute(sql)
+            print("Loaded data from the DB.")
+        except:
+            print("I can't run " + sql)
+
+        return cur.fetchone()[0]
+
+    def load_data_from_file(self, keyfile_name, valuefile_name):
+        print("Loading pre-processed properties..")
+        with open(keyfile_name, 'rb') as fp:
+            self.idx_to_keypair = pickle.load(fp)
+            self.keypair_to_idx = dict([reversed(i) for i in self.idx_to_keypair.items()])
+            print(f'loaded {len(self.idx_to_keypair)} key pairs from {keyfile_name}')
+        with open(valuefile_name, 'rb') as fp:
+            self.idx_to_value_by_key = pickle.load(fp)
+            for k, i_t_v in self.idx_to_value_by_key.items():
+                self.value_to_idx_by_key[k] = dict([reversed(i) for i in i_t_v.items()])
+                if 'isdigit' in self.idx_to_value_by_key[k]:
+                    self.value_to_idx_by_key[k]['isdigit'] = self.idx_to_value_by_key[k]['isdigit']
+            print(f'loaded values for {len(self.idx_to_value_by_key)} key pairs from {valuefile_name}')
+
     def load_data_from_db(self, destionation_file='nemo_optimization', dagpropertydir=None):
         conn = None
 
         try:
-            host = "35.194.96.120"
-            dbname = "nemo_optimization"
-            dbuser = "postgres"
-            dbpwd = "fake_password"
-            conn = pg.connect(host=host, dbname=dbname, user=dbuser, password=dbpwd)
+            conn = pg.connect(host=self.host, dbname=self.dbname, user=self.dbuser, password=self.dbpwd)
             print("Connected to the PostgreSQL DB.")
         except:
             try:
@@ -199,15 +226,7 @@ class Data:
         file_name = '{}.{}.out'.format(destionation_file, row_size)
 
         if os.path.isfile(keyfile_name) and os.path.isfile(valuefile_name):
-            print("Loading pre-processed properties..")
-            with open(keyfile_name, 'rb') as fp:
-                self.idx_to_keypair = pickle.load(fp)
-                self.keypair_to_idx = dict([reversed(i) for i in self.idx_to_keypair.items()])
-            with open(valuefile_name, 'rb') as fp:
-                self.idx_to_value_by_key = pickle.load(fp)
-                for k, i_t_v in self.idx_to_value_by_key.items():
-                    self.value_to_idx_by_key[k]['isdigit'] = self.idx_to_value_by_key[k]['isdigit']
-                    self.value_to_idx_by_key[k] = dict([reversed(i) for i in i_t_v.items()])
+            self.load_data_from_file(keyfile_name, valuefile_name)
 
         # add the info for the current one
         if dagpropertydir:
@@ -224,25 +243,20 @@ class Data:
                 key = f'{rule["name"]}'
                 self.process_json('rule', key, 'ignore', 'true', 'false')
 
-        with open(keyfile_name, 'wb') as fp:
-            pickle.dump(self.idx_to_keypair, fp)
-        with open(valuefile_name, 'wb') as fp:
-            pickle.dump(self.idx_to_value_by_key, fp)
-
-        print("Checking for the existing preprocessed file")
-        num_lines = sum(1 for line in open(file_name)) if os.path.isfile(file_name) else 0
-        print(f'Skipping {num_lines} lines, as it is already processed')
-        cur.scroll(num_lines)
-
         print("Pre-processing properties..")
-        for i, row in enumerate(cur):
-            if i % 10 == 0:
-                print(f'writing row {i} out of {row_size}')
-            with open(file_name, 'w') as f:
+        with open(file_name, 'w') as f:
+            for row in tqdm(cur, total=row_size):
                 f.write('{}\n'.format(self.format_row(row[1], row[2], row[3], row[4], row[5], row[6])))
 
         cur.close()
         conn.close()
+
+        with open(keyfile_name, 'wb') as fp:
+          pickle.dump(self.idx_to_keypair, fp, protocol=pickle.HIGHEST_PROTOCOL)
+          print(f'dumped {len(self.idx_to_keypair)} keys to pickle to {keyfile_name}')
+        with open(valuefile_name, 'wb') as fp:
+          pickle.dump(self.idx_to_value_by_key, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
         print("Pre-processing complete")
 
         return row_size
@@ -252,7 +266,6 @@ class Data:
 
     def transform_keypairs_to_ids(self, keypairs):
         return [self.keypair_to_idx[keypair] for keypair in keypairs]
-        # return self.keyLE.transform(keypairs)
 
     def transform_id_to_keypair(self, i):
         return self.idx_to_keypair[i].split(',')

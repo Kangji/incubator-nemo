@@ -15,9 +15,9 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
-import random
 from pathlib import Path
 
+import numpy as np
 import xgboost as xgb
 
 from inout import *
@@ -25,12 +25,23 @@ from inout import *
 
 def train(data, dagpropertydir=None):
     modelname = "nemo_bst.model"
-    row_size = data.load_data_from_db('nemo_optimization', dagpropertydir) if dagpropertydir else data.load_data_from_db('nemo_optimization.out')
-    ddata = xgb.DMatrix('nemo_optimization.{}.out'.format(row_size))
+
+    row_size = data.count_rows_from_db()
+    print(f'row_size = {row_size}')
+
+    filename = 'nemo_optimization.{}.out'.format(row_size)
+    keyfile_name = 'key.{}.pickle'.format(row_size)
+    valuefile_name = 'value.{}.pickle'.format(row_size)
+    if Path(filename).is_file() and Path(keyfile_name).is_file() and Path(valuefile_name).is_file():
+        data.load_data_from_file(keyfile_name, valuefile_name)
+    else:
+        row_size = data.load_data_from_db('nemo_optimization', dagpropertydir) if dagpropertydir else data.load_data_from_db('nemo_optimization')
+        print(f'row_size = {row_size}')
+    ddata = xgb.DMatrix(filename)
 
     print("total_rows: ", row_size)
 
-    sample_avg_duration = np.mean(random.sample(ddata.get_label(), max(20, row_size // 20)))  # max of 20 or 5% of the data
+    sample_avg_duration = np.mean(np.random.choice(ddata.get_label(), max(20, row_size // 20)))  # max of 20 or 5% of the data
     print("average job duration: ", sample_avg_duration)
     allowance = sample_avg_duration // 25  # 4%
 
@@ -55,12 +66,12 @@ def train(data, dagpropertydir=None):
 
         watchlist = [(dtest, 'eval'), (dtrain, 'train')]
         num_round = row_size // 10
-        bst = xgb.train(param, dtrain, num_round, watchlist, early_stopping_rounds=5)
+        bst = xgb.train(param, dtrain, num_round, watchlist, early_stopping_rounds=max(row_size // 100, 5))
 
         preds = bst.predict(dtest)
         error = (sum(1 for i in range(len(preds)) if abs(preds[i] - labels[i]) > allowance) / float(len(preds))) if len(
           preds) > 0 else 1.0
-        print('error=%f' % error)
+        print(f'error for learning rate {lr} is {error}')
 
         # Better booster
         if error <= error_opt:
