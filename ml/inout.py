@@ -18,9 +18,10 @@
 # under the License.
 #
 
-import json
+import json, os.path, pathlib, pickle
 import psycopg2 as pg
 import sqlite3 as sq
+import numpy as np
 from sklearn import preprocessing
 import xml.etree.ElementTree as ET
 
@@ -74,124 +75,99 @@ def aggregate_dict_properties_json(properties, keypairs, values):
             values[key]['data'].append(value)
     for rule in rules:
         key = f'{rule["name"]}'
-        keypairs.append(key)
+        keypairs.append(f'rule,{key},ignore')
         if key not in values:
             values[key] = {'data': []}
         values[key]['isdigit'] = False
-        values[key]['data'].append(True)
+        values[key]['data'].append(True)  # true if it exists
     return tpe
 
 
 class Data:
-    keyLE = None
-    valueLE = {}
+    idx_to_keypair = {}
+    keypair_to_idx = {}
+    idx_to_value_by_key = {}
+    value_to_idx_by_key = {}
     loaded_properties = {}  # dictionary of key_id:value_ids (int:int)
     finalized_properties = []  # list of key_ids (int) - values can be accessed from loaded_properties
 
-    def process_json_to_string(self, properties):
+    def process_json(self, id, key, tpe, value, is_finalized):
+        res = ''
+        keypair = f'{id},{key},{tpe}'
+
+        if keypair in self.keypair_to_idx:
+            key_idx = self.keypair_to_idx[keypair]
+        else:
+            key_idx = len(self.idx_to_keypair)
+            self.idx_to_keypair[key_idx] = keypair
+            self.keypair_to_idx[keypair] = key_idx
+
+        if key not in self.idx_to_value_by_key and key not in self.value_to_idx_by_key:
+            self.idx_to_value_by_key[key] = {}
+            self.value_to_idx_by_key[key] = {}
+
+        isdigit = value.isdigit()
+        self.idx_to_value_by_key[key]['isdigit'] = isdigit
+        self.value_to_idx_by_key[key]['isdigit'] = isdigit
+        if isdigit:
+            res = f'{key_idx}:{value}'
+        elif value in self.value_to_idx_by_key[key]:
+            res = f'{key_idx}:{self.value_to_idx_by_key[key][value]}'
+        else:
+            value_idx = len(self.idx_to_value_by_key[key])
+            self.idx_to_value_by_key[key][value_idx] = value
+            self.value_to_idx_by_key[key][value] = value_idx
+            res = f'{key_idx}:{value_idx}'
+
+        if is_finalized and is_finalized == 'true':
+            self.finalized_properties.append(key_idx)
+
+        return res
+
+    def format_row(self, duration, inputsize, jvmmemsize, totalmemsize, dagsummary, properties):
         vertex_properties = properties['vertex']
         edge_properties = properties['edge']
         tpe = properties['type']
         rules = properties['rules'] if properties['rules'] else []
         resource_data = properties['executor_info']
 
-        # Different from the method above, as it has to aggregate each keypair and values not in a dictionary form,
-        # but in a sequential manner in a list.
-        digit_keypairs_to_translate = []
-        digit_values_to_translate = []
-        digit_finalized = []
-        keypairs_to_translate = []
-        values_to_translate = []
-        finalized = []
+        properties_string = []
 
-        for vp in vertex_properties:
-            i = f'{vp["ID"]}'
-            key = f'{vp["EPKeyClass"]}/{vp["EPValueClass"]}'
-            value = f'{vp["EPValue"]}'
-            is_finalized = f'{vp["isFinalized"]}'
-            if value.isdigit():
-                digit_keypairs_to_translate.append(f'{i},{key},{tpe}')
-                digit_values_to_translate.append(value)
-                if is_finalized and is_finalized == 'true':
-                    digit_finalized.append(True)
-                else:
-                    digit_finalized.append(False)
-            else:
-                keypairs_to_translate.append(f'{i},{key},{tpe}')
-                values_to_translate.append((key, value))
-                if is_finalized and is_finalized == 'true':
-                    finalized.append(True)
-                else:
-                    finalized.append(False)
+        duration_in_sec = int(duration) // 1000
+        properties_string.append(str(duration_in_sec))
+        inputsize_in_10kb = int(inputsize) // 10240  # capable of expressing upto around 20TB with int range
+        properties_string.append(self.process_json('env', 'inputsize', 'ignore', inputsize_in_10kb, 'true'))
+        jvmmemsize_in_mb = int(jvmmemsize) // 1048576
+        properties_string.append(self.process_json('env', 'jvmmemsize', 'ignore', jvmmemsize_in_mb, 'true'))
+        totalmemsize_in_mb = int(totalmemsize) // 1048576
+        properties_string.append(self.process_json('env', 'totalmemsize', 'ignore', totalmemsize_in_mb, 'true'))
+        properties_string.append(self.process_json('env', 'dagsummary', 'ignore', dagsummary, 'true'))
 
-        for ep in edge_properties:
-            i = f'{ep["ID"]}'
-            key = f'{ep["EPKeyClass"]}/{ep["EPValueClass"]}'
-            value = f'{ep["EPValue"]}'
-            is_finalized = f'{vp["isFinalized"]}'
-            if value.isdigit():
-                digit_keypairs_to_translate.append(f'{i},{key},{tpe}')
-                digit_values_to_translate.append(value)
-                if is_finalized and is_finalized == 'true':
-                    digit_finalized.append(True)
-                else:
-                    digit_finalized.append(False)
-            else:
-                keypairs_to_translate.append(f'{i},{key},{tpe}')
-                values_to_translate.append((key, value))
-                if is_finalized and is_finalized == 'true':
-                    finalized.append(True)
-                else:
-                    finalized.append(False)
+        if resource_data:
+            total_executor_num = extract_total_executor_num(resource_data)
+            properties_string.append(self.process_json('env', 'total_executor_num', 'ignore', total_executor_num, 'true'))
+
+            total_cores = extract_total_cores(resource_data)
+            properties_string.append(self.process_json('env', 'total_cores', 'ignore', total_cores, 'true'))
+
+            avg_memory_mb_per_executor = extract_avg_memory_mb_per_executor(resource_data)
+            properties_string.append(self.process_json('env', 'avg_memory_mb_per_executor', 'ignore', avg_memory_mb_per_executor, 'true'))
+
+        for p in vertex_properties + edge_properties:
+            i = f'{p["ID"]}'
+            key = f'{p["EPKeyClass"]}/{p["EPValueClass"]}'
+            value = f'{p["EPValue"]}'
+            is_finalized = f'{p["isFinalized"]}'
+            properties_string.append(self.process_json(i, key, tpe, value, is_finalized))
 
         for rule in rules:
             key = f'{rule["name"]}'
-            keypairs_to_translate.append(key)
-            values_to_translate.append((key, True))
-            finalized.append(False)
+            properties_string.append(self.process_json('rule', key, 'ignore', 'true', 'false'))
 
-        translated_digit_key_ids = self.transform_keypairs_to_ids(digit_keypairs_to_translate)
-        translated_digit_value_ids = digit_values_to_translate
-        translated_key_ids = self.transform_keypairs_to_ids(keypairs_to_translate)
-        translated_value_ids = [self.transform_value_to_id(k, v) for k, v in values_to_translate]
-
-        properties_string = ''
-
-        if resource_data:
-            total_executor_num_id = self.transform_keypair_to_id("env,total_executor_num,ignore")
-            total_executor_num = extract_total_executor_num(resource_data)
-            total_cores_id = self.transform_keypair_to_id("env,total_cores,ignore")
-            total_cores = extract_total_cores(resource_data)
-            avg_memory_mb_per_executor_id = self.transform_keypair_to_id("env,avg_memory_mb_per_executor,ignore")
-            avg_memory_mb_per_executor = extract_avg_memory_mb_per_executor(resource_data)
-            properties_string = properties_string + f' {total_executor_num_id}:{total_executor_num} {total_cores_id}:{total_cores} {avg_memory_mb_per_executor_id}:{avg_memory_mb_per_executor}'
-
-        for ek, ev, ef in zip(translated_digit_key_ids, translated_digit_value_ids, digit_finalized):
-            properties_string = properties_string + f' {ek}:{ev}'
-            if ef:
-                self.finalized_properties.append(int(ek))
-
-        for ek, ev, ef in zip(translated_key_ids, translated_value_ids, finalized):
-            properties_string = properties_string + f' {ek}:{ev}'
-            if ef:
-                self.finalized_properties.append(int(ek))
-
-        return properties_string.strip()
-
-    def format_row(self, duration, inputsize, jvmmemsize, totalmemsize, dagsummary):
-        duration_in_sec = int(duration) // 1000
-        inputsize_id = self.transform_keypair_to_id("env,inputsize,ignore")
-        inputsize_in_10kb = int(inputsize) // 10240  # capable of expressing upto around 20TB with int range
-        jvmmemsize_id = self.transform_keypair_to_id("env,jvmmemsize,ignore")
-        jvmmemsize_in_mb = int(jvmmemsize) // 1048576
-        totalmemsize_id = self.transform_keypair_to_id("env,totalmemsize,ignore")
-        totalmemsize_in_mb = int(totalmemsize) // 1048576
-        dagsummary_id = self.transform_keypair_to_id("env,dagsummary,ignore")
-        dagsummary_value_id = self.transform_value_to_id('dagsummary',dagsummary)
-        return f'{duration_in_sec} {inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id}'
+        return ' '.join(properties_string).strip()
 
     # ########################################################
-    def load_data_from_db(self, destionation_file='nemo_optimization.out', dagpropertydir=None):
+    def load_data_from_db(self, destionation_file='nemo_optimization', dagpropertydir=None):
         conn = None
 
         try:
@@ -209,42 +185,7 @@ class Data:
             except:
                 print("I am unable to connect to the database. Try running the script with `./bin/xgboost_property_optimization.sh`")
 
-        sql = "SELECT * from nemo_data"
-        cur = conn.cursor()
-        try:
-            cur.execute(sql)
-            print("Loaded data from the DB.")
-        except:
-            print("I can't run " + sql)
-
-        # 0 is the id for the row-wide variables
-        keypairs = ["env,inputsize,ignore", "env,jvmmemsize,ignore", "env,totalmemsize,ignore", "env,dagsummary,ignore"]
-        keypairs = keypairs + ["env,total_executor_num,ignore", "env,total_cores,ignore", "env,avg_memory_mb_per_executor,ignore"]
-        values = {}
-        key = 'dagsummary'
-        if key not in values:
-            values[key] = {'data': []}
-        values[key]['isdigit'] = False
-        for row in cur:
-            values[key]['data'].append(row[5])
-            aggregate_dict_properties_json(row[6], keypairs, values)
-
-        if dagpropertydir:
-            aggregate_dict_properties_json(self.load_property_json(dagpropertydir), keypairs, values)
-        # print("Pre-processing properties..")
-
-        self.keyLE = preprocessing.LabelEncoder()
-        self.keyLE.fit(keypairs)
-        # print("KEYS:", list(self.keyLE.classes_))
-
-        for k, v in values.items():
-            self.valueLE[k] = {}
-            self.valueLE[k]['isdigit'] = v['isdigit']
-            if not v['isdigit']:
-                self.valueLE[k]['le'] = preprocessing.LabelEncoder()
-                self.valueLE[k]['le'].fit(v['data'])
-                # print("VALUE FOR ", k, ":", list(self.valueLE[k]['le'].classes_))
-
+        sql = "SELECT id, duration, inputsize, jvmmemsize, memsize, dagsummary, properties from nemo_data"
         cur = conn.cursor()
         try:
             cur.execute(sql)
@@ -253,12 +194,53 @@ class Data:
             print("I can't run " + sql)
 
         row_size = cur.rowcount
-        f = open(destionation_file, 'w')
+        keyfile_name = 'key.{}.pickle'.format(row_size)
+        valuefile_name = 'value.{}.pickle'.format(row_size)
+        file_name = '{}.{}.out'.format(destionation_file, row_size)
 
-        for row in cur:
-            f.write('{} {}\n'.format(self.format_row(row[1], row[2], row[3], row[4], row[5]), self.process_json_to_string(row[6])))
+        if os.path.isfile(keyfile_name) and os.path.isfile(valuefile_name):
+            print("Loading pre-processed properties..")
+            with open(keyfile_name, 'rb') as fp:
+                self.idx_to_keypair = pickle.load(fp)
+                self.keypair_to_idx = dict([reversed(i) for i in self.idx_to_keypair.items()])
+            with open(valuefile_name, 'rb') as fp:
+                self.idx_to_value_by_key = pickle.load(fp)
+                for k, i_t_v in self.idx_to_value_by_key.items():
+                    self.value_to_idx_by_key[k]['isdigit'] = self.idx_to_value_by_key[k]['isdigit']
+                    self.value_to_idx_by_key[k] = dict([reversed(i) for i in i_t_v.items()])
 
-        f.close()
+        # add the info for the current one
+        if dagpropertydir:
+            properties = self.load_property_json(dagpropertydir)
+            tpe = properties['type']
+            rules = properties['rules'] if properties['rules'] else []
+            for p in properties['vertex'] + properties['edge']:
+                i = f'{p["ID"]}'
+                key = f'{p["EPKeyClass"]}/{p["EPValueClass"]}'
+                value = f'{p["EPValue"]}'
+                is_finalized = f'{p["isFinalized"]}'
+                self.process_json(i, key, tpe, value, is_finalized)
+            for rule in rules:
+                key = f'{rule["name"]}'
+                self.process_json('rule', key, 'ignore', 'true', 'false')
+
+        with open(keyfile_name, 'wb') as fp:
+            pickle.dump(self.idx_to_keypair, fp)
+        with open(valuefile_name, 'wb') as fp:
+            pickle.dump(self.idx_to_value_by_key, fp)
+
+        print("Checking for the existing preprocessed file")
+        num_lines = sum(1 for line in open(file_name)) if os.path.isfile(file_name) else 0
+        print(f'Skipping {num_lines} lines, as it is already processed')
+        cur.scroll(num_lines)
+
+        print("Pre-processing properties..")
+        for i, row in enumerate(cur):
+            if i % 10 == 0:
+                print(f'writing row {i} out of {row_size}')
+            with open(file_name, 'w') as f:
+                f.write('{}\n'.format(self.format_row(row[1], row[2], row[3], row[4], row[5], row[6])))
+
         cur.close()
         conn.close()
         print("Pre-processing complete")
@@ -266,28 +248,29 @@ class Data:
         return row_size
 
     def transform_keypair_to_id(self, keypair):
-        return self.transform_keypairs_to_ids([keypair])[0]
+        return self.keypair_to_idx[keypair]
 
     def transform_keypairs_to_ids(self, keypairs):
-        return self.keyLE.transform(keypairs)
+        return [self.keypair_to_idx[keypair] for keypair in keypairs]
+        # return self.keyLE.transform(keypairs)
 
     def transform_id_to_keypair(self, i):
-        return self.transform_ids_to_keypairs([i])[0]
+        return self.idx_to_keypair[i].split(',')
 
     def transform_ids_to_keypairs(self, ids):
-        return [i.split(',') for i in self.keyLE.inverse_transform(ids)]
+        return [self.idx_to_keypair[idx].split(',') for idx in ids]
 
     def transform_value_to_id(self, epkey, value):
-        return value if self.valueLE[epkey]['isdigit'] else self.valueLE[epkey]['le'].transform([value])[0]
+        return value if self.value_to_idx_by_key[epkey]['isdigit'] else self.value_to_idx_by_key[epkey][value]
 
     def transform_id_to_value(self, epkey, i):
-        return i if self.valueLE[epkey]['isdigit'] else self.valueLE[epkey]['le'].inverse_transform([i])[0]
+        return i if self.idx_to_value_by_key[epkey]['isdigit'] else self.idx_to_value_by_key[epkey][i]
 
     def value_of_key_isdigit(self, epkey):
-        return self.valueLE[epkey]['isdigit']
+        return self.idx_to_value_by_key[epkey]['isdigit']
 
     def get_value_candidates(self, epkey):
-        return None if self.value_of_key_isdigit(epkey) else self.valueLE[epkey]['le'].classes_
+        return None if self.value_of_key_isdigit(epkey) else [i for i in self.value_to_idx_by_key[epkey] if i != 'isdigit']
 
     def derive_value_from(self, keyid, epkey, split, tweak):
         if not self.is_in_configuration_space(keyid):  # ex. ParallelismProperty or finalized property

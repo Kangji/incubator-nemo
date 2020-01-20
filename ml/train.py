@@ -18,7 +18,6 @@
 import random
 from pathlib import Path
 
-import numpy as np
 import xgboost as xgb
 
 from inout import *
@@ -26,8 +25,8 @@ from inout import *
 
 def train(data, dagpropertydir=None):
     modelname = "nemo_bst.model"
-    row_size = data.load_data_from_db('nemo_optimization.out', dagpropertydir) if dagpropertydir else data.load_data_from_db('nemo_optimization.out')
-    ddata = xgb.DMatrix('nemo_optimization.out')
+    row_size = data.load_data_from_db('nemo_optimization', dagpropertydir) if dagpropertydir else data.load_data_from_db('nemo_optimization.out')
+    ddata = xgb.DMatrix('nemo_optimization.{}.out'.format(row_size))
 
     print("total_rows: ", row_size)
 

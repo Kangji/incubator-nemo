@@ -7,3 +7,4 @@ pygraphviz==1.5
 sklearn==0.0
 xgboost==0.90
 pandas==0.25.1
+tqdm=4.41.1
