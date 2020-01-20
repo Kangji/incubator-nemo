@@ -38,6 +38,7 @@ import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.PersistentConnectionToMasterMap;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.RuntimeEdge;
 import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.common.plan.Task;
@@ -340,11 +341,12 @@ public final class TaskExecutor {
     }
 
     metricMessageSender.send("TaskMetric", taskId,
-      "boundedSourceReadTime", SerializationUtils.serialize(boundedSourceReadTime));
+      TaskMetric.TaskMetrics.TASK_BOUNDED_SOURCE_READ_TIME.toString(),
+      SerializationUtils.serialize(boundedSourceReadTime));
     metricMessageSender.send("TaskMetric", taskId,
-      "serializedReadBytes", SerializationUtils.serialize(serializedReadBytes));
+      TaskMetric.TaskMetrics.TASK_SERIALIZED_READ_BYTES.toString(), SerializationUtils.serialize(serializedReadBytes));
     metricMessageSender.send("TaskMetric", taskId,
-      "encodedReadBytes", SerializationUtils.serialize(encodedReadBytes));
+      TaskMetric.TaskMetrics.TASK_ENCODED_READ_BYTES.toString(), SerializationUtils.serialize(encodedReadBytes));
 
     // Phase 2: Finalize task-internal states and elements
     for (final VertexHarness vertexHarness : sortedHarnesses) {
@@ -677,8 +679,8 @@ public final class TaskExecutor {
     // finalize OutputWriters for main children
     vertexHarness.getWritersToMainChildrenTasks().forEach(outputWriter -> {
       outputWriter.close();
-      final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
-      writtenBytes.ifPresent(writtenBytesList::add);
+      final Optional<Long> outputWrittenBytes = outputWriter.getWrittenBytes();
+      outputWrittenBytes.ifPresent(writtenBytesList::add);
     });
 
     // finalize OutputWriters for additional tagged children
@@ -690,13 +692,13 @@ public final class TaskExecutor {
       });
     });
 
-    long totalWrittenBytes = 0;
-    for (final Long writtenBytes : writtenBytesList) {
-      totalWrittenBytes += writtenBytes;
+    long totalOutputWrittenBytes = 0;
+    for (final Long outputWrittenBytes : writtenBytesList) {
+      totalOutputWrittenBytes += outputWrittenBytes;
     }
 
     // TODO #236: Decouple metric collection and sending logic
     metricMessageSender.send("TaskMetric", taskId,
-      "writtenBytes", SerializationUtils.serialize(totalWrittenBytes));
+      TaskMetric.TaskMetrics.TASK_OUTPUT_BYTES.toString(), SerializationUtils.serialize(totalOutputWrittenBytes));
   }
 }

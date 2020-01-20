@@ -26,6 +26,7 @@ import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.PersistentConnectionToMasterMap;
 import org.apache.nemo.runtime.common.metric.StateTransitionEvent;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.reef.annotations.audience.EvaluatorSide;
@@ -61,9 +62,9 @@ public final class TaskStateManager {
     this.metricMessageSender = metricMessageSender;
 
     metricMessageSender.send(METRIC, taskId,
-      "containerId", SerializationUtils.serialize(executorId));
+      TaskMetric.TaskMetrics.TASK_CONTAINER_ID.toString(), SerializationUtils.serialize(executorId));
     metricMessageSender.send(METRIC, taskId,
-      "scheduleAttempt", SerializationUtils.serialize(attemptIdx));
+      TaskMetric.TaskMetrics.TASK_SCHEDULE_ATTEMPT.toString(), SerializationUtils.serialize(attemptIdx));
   }
 
   /**
@@ -77,9 +78,8 @@ public final class TaskStateManager {
                                               final Optional<String> vertexPutOnHold,
                                               final Optional<TaskState.RecoverableTaskFailureCause> cause) {
     metricMessageSender.send("TaskMetric", taskId,
-      "stateTransitionEvent", SerializationUtils.serialize(new StateTransitionEvent<>(
-        System.currentTimeMillis(), null, newState
-      )));
+      TaskMetric.TaskMetrics.TASK_STATE_TRANSITION_EVENT.toString(),
+      SerializationUtils.serialize(new StateTransitionEvent<>(System.currentTimeMillis(), null, newState)));
 
     switch (newState) {
       case EXECUTING:
