@@ -155,14 +155,17 @@ class Data:
         translated_key_ids = self.transform_keypairs_to_ids(keypairs_to_translate)
         translated_value_ids = [self.transform_value_to_id(k, v) for k, v in values_to_translate]
 
-        total_executor_num_id = self.transform_keypair_to_id("env,total_executor_num,ignore")
-        total_executor_num = extract_total_executor_num(resource_data)
-        total_cores_id = self.transform_keypair_to_id("env,total_cores,ignore")
-        total_cores = extract_total_cores(resource_data)
-        avg_memory_mb_per_executor_id = self.transform_keypair_to_id("env,avg_memory_mb_per_executor,ignore")
-        avg_memory_mb_per_executor = extract_avg_memory_mb_per_executor(resource_data)
+        properties_string = ''
 
-        properties_string = f' {total_executor_num_id}:{total_executor_num} {total_cores_id}:{total_cores} {avg_memory_mb_per_executor_id}:{avg_memory_mb_per_executor}'
+        if resource_data:
+            total_executor_num_id = self.transform_keypair_to_id("env,total_executor_num,ignore")
+            total_executor_num = extract_total_executor_num(resource_data)
+            total_cores_id = self.transform_keypair_to_id("env,total_cores,ignore")
+            total_cores = extract_total_cores(resource_data)
+            avg_memory_mb_per_executor_id = self.transform_keypair_to_id("env,avg_memory_mb_per_executor,ignore")
+            avg_memory_mb_per_executor = extract_avg_memory_mb_per_executor(resource_data)
+            properties_string = properties_string + f' {total_executor_num_id}:{total_executor_num} {total_cores_id}:{total_cores} {avg_memory_mb_per_executor_id}:{avg_memory_mb_per_executor}'
+
         for ek, ev, ef in zip(translated_digit_key_ids, translated_digit_value_ids, digit_finalized):
             properties_string = properties_string + f' {ek}:{ev}'
             if ef:
@@ -188,7 +191,7 @@ class Data:
         return f'{duration_in_sec} {inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id}'
 
     # ########################################################
-    def load_data_from_db(self, dagpropertydir=None):
+    def load_data_from_db(self, destionation_file='nemo_optimization.out', dagpropertydir=None):
         conn = None
 
         try:
@@ -214,8 +217,6 @@ class Data:
         except:
             print("I can't run " + sql)
 
-        rows = cur.fetchall()
-
         # 0 is the id for the row-wide variables
         keypairs = ["env,inputsize,ignore", "env,jvmmemsize,ignore", "env,totalmemsize,ignore", "env,dagsummary,ignore"]
         keypairs = keypairs + ["env,total_executor_num,ignore", "env,total_cores,ignore", "env,avg_memory_mb_per_executor,ignore"]
@@ -224,11 +225,10 @@ class Data:
         if key not in values:
             values[key] = {'data': []}
         values[key]['isdigit'] = False
-        for row in rows:
+        for row in cur:
             values[key]['data'].append(row[5])
-
-        for row in rows:
             aggregate_dict_properties_json(row[6], keypairs, values)
+
         if dagpropertydir:
             aggregate_dict_properties_json(self.load_property_json(dagpropertydir), keypairs, values)
         # print("Pre-processing properties..")
@@ -245,12 +245,25 @@ class Data:
                 self.valueLE[k]['le'].fit(v['data'])
                 # print("VALUE FOR ", k, ":", list(self.valueLE[k]['le'].classes_))
 
-        processed_rows = ['{} {}'.format(self.format_row(row[1], row[2], row[3], row[4], row[5]), self.process_json_to_string(row[6])) for row in rows]
+        cur = conn.cursor()
+        try:
+            cur.execute(sql)
+            print("Loaded data from the DB.")
+        except:
+            print("I can't run " + sql)
+
+        row_size = cur.rowcount
+        f = open(destionation_file, 'w')
+
+        for row in cur:
+            f.write('{} {}\n'.format(self.format_row(row[1], row[2], row[3], row[4], row[5]), self.process_json_to_string(row[6])))
+
+        f.close()
         cur.close()
         conn.close()
         print("Pre-processing complete")
 
-        return processed_rows
+        return row_size
 
     def transform_keypair_to_id(self, keypair):
         return self.transform_keypairs_to_ids([keypair])[0]
@@ -401,10 +414,3 @@ def extract_avg_memory_mb_per_executor(resource_data):
     for node in resource_data:
         total_memory = total_memory + int(node['memory_mb'] * (node['num'] if 'num' in node else 1))
     return total_memory // extract_total_executor_num(resource_data)
-
-
-def write_rows_to_file(filename, rows):
-    f = open(filename, 'w')
-    for row in rows:
-        f.write(row + "\n")
-    f.close()

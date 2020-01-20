@@ -26,14 +26,9 @@ from inout import *
 
 def train(data, dagpropertydir=None):
     modelname = "nemo_bst.model"
-    encoded_rows = data.load_data_from_db(dagpropertydir) if dagpropertydir else data.load_data_from_db()
-    # write_to_file('process_test', processed_rows)
-
-    write_rows_to_file('nemo_optimization.out', encoded_rows)
-    # write_to_file('decode_test', decode_rows(encoded_rows, id_to_col, value_is_digit, id_to_value))
+    row_size = data.load_data_from_db('nemo_optimization.out', dagpropertydir) if dagpropertydir else data.load_data_from_db('nemo_optimization.out')
     ddata = xgb.DMatrix('nemo_optimization.out')
 
-    row_size = len(encoded_rows)
     print("total_rows: ", row_size)
 
     sample_avg_duration = np.mean(random.sample(ddata.get_label(), max(20, row_size // 20)))  # max of 20 or 5% of the data
