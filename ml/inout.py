@@ -198,7 +198,7 @@ class Data:
                     self.value_to_idx_by_key[k]['isdigit'] = self.idx_to_value_by_key[k]['isdigit']
             print(f'loaded values for {len(self.idx_to_value_by_key)} key pairs from {valuefile_name}')
 
-    def load_data_from_db(self, destionation_file='nemo_optimization', dagpropertydir=None):
+    def load_data_from_db(self, destionation_file='nemo_optimization'):
         conn = None
 
         try:
@@ -228,21 +228,6 @@ class Data:
         if os.path.isfile(keyfile_name) and os.path.isfile(valuefile_name):
             self.load_data_from_file(keyfile_name, valuefile_name)
 
-        # add the info for the current one
-        if dagpropertydir:
-            properties = self.load_property_json(dagpropertydir)
-            tpe = properties['type']
-            rules = properties['rules'] if properties['rules'] else []
-            for p in properties['vertex'] + properties['edge']:
-                i = f'{p["ID"]}'
-                key = f'{p["EPKeyClass"]}/{p["EPValueClass"]}'
-                value = f'{p["EPValue"]}'
-                is_finalized = f'{p["isFinalized"]}'
-                self.process_json(i, key, tpe, value, is_finalized)
-            for rule in rules:
-                key = f'{rule["name"]}'
-                self.process_json('rule', key, 'ignore', 'true', 'false')
-
         print("Pre-processing properties..")
         with open(file_name, 'w') as f:
             for row in tqdm(cur, total=row_size):
@@ -262,16 +247,16 @@ class Data:
         return row_size
 
     def transform_keypair_to_id(self, keypair):
-        return self.keypair_to_idx[keypair]
+        return self.keypair_to_idx[keypair] if keypair in self.keypair_to_idx else 'unknown'
 
     def transform_keypairs_to_ids(self, keypairs):
-        return [self.keypair_to_idx[keypair] for keypair in keypairs]
+        return [self.transform_keypair_to_id(keypair) for keypair in keypairs]
 
     def transform_id_to_keypair(self, i):
-        return self.idx_to_keypair[i].split(',')
+        return self.idx_to_keypair[i].split(',') if i in self.idx_to_keypair else 'unknown'
 
     def transform_ids_to_keypairs(self, ids):
-        return [self.idx_to_keypair[idx].split(',') for idx in ids]
+        return [self.transform_id_to_keypair(idx) for idx in ids]
 
     def transform_value_to_id(self, epkey, value):
         return value if self.value_to_idx_by_key[epkey]['isdigit'] else self.value_to_idx_by_key[epkey][value]
@@ -334,29 +319,35 @@ class Data:
             return False
 
     def process_individual_property_json(self, dagdirectory):
-        property_json = self.load_property_json(dagdirectory)
-        processed_json_string = self.process_json_to_string(property_json)
+        processed = []
+        properties = self.load_property_json(dagdirectory)
 
-        inputsize_id = self.transform_keypair_to_id("env,inputsize,ignore")
-        inputsize_in_10kb = int(property_json['inputsize']) // 10240  # capable of expressing upto around 20TB with int range
-        jvmmemsize_id = self.transform_keypair_to_id("env,jvmmemsize,ignore")
-        jvmmemsize_in_mb = int(property_json['jvmmemsize']) // 1048576
-        totalmemsize_id = self.transform_keypair_to_id("env,totalmemsize,ignore")
-        totalmemsize_in_mb = int(property_json['totalmemsize']) // 1048576
-        dagsummary_id = self.transform_keypair_to_id("env,dagsummary,ignore")
-        dagsummary_value_id = self.transform_value_to_id('dagsummary',property_json['dagsummary'])
+        tpe = properties['type']
+        rules = properties['rules'] if properties['rules'] else []
+        for p in properties['vertex'] + properties['edge']:
+            i = f'{p["ID"]}'
+            key = f'{p["EPKeyClass"]}/{p["EPValueClass"]}'
+            value = f'{p["EPValue"]}'
+            is_finalized = f'{p["isFinalized"]}'
+            processed.append(self.process_json(i, key, tpe, value, is_finalized))
+        for rule in rules:
+            key = f'{rule["name"]}'
+            processed.append(self.process_json('rule', key, 'ignore', 'true', 'false'))
 
-        processed_env = f'{inputsize_id}:{inputsize_in_10kb} {jvmmemsize_id}:{jvmmemsize_in_mb} {totalmemsize_id}:{totalmemsize_in_mb} {dagsummary_id}:{dagsummary_value_id}'
-        for e in processed_env.split():
-            e = e.split(':')
-            self.finalized_properties.append(int(e[0]))
+        inputsize_in_10kb = int(properties['inputsize']) // 10240  # capable of expressing upto around 20TB with int range
+        processed.append(self.process_json('env', 'inputsize', 'ignore', str(inputsize_in_10kb), 'true'))
+        jvmmemsize_in_mb = int(properties['jvmmemsize']) // 1048576
+        processed.append(self.process_json('env', 'jvmmemsize', 'ignore', str(jvmmemsize_in_mb), 'true'))
+        totalmemsize_in_mb = int(properties['totalmemsize']) // 1048576
+        processed.append(self.process_json('env', 'totalmemsize', 'ignore', str(totalmemsize_in_mb), 'true'))
+        dagsummary = properties['dagsummary']
+        processed.append(self.process_json('env', 'dagsummary', 'ignore', dagsummary, 'true'))
 
-        processed = f'{processed_env} {processed_json_string}'
-        for e in processed.split():
+        for e in processed:
             e = e.split(':')
             self.loaded_properties[int(e[0])] = int(e[1])
 
-        return processed
+        return ' '.join(processed)
 
     def load_property_json(self, dagdirectory):
         jsonfile = 'ir-initial-properties.json'

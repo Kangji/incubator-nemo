@@ -19,11 +19,13 @@ from pathlib import Path
 
 import numpy as np
 import xgboost as xgb
+import matplotlib.pyplot as plt
 
 from inout import *
+from tree import *
 
 
-def train(data, dagpropertydir=None):
+def train(data):
     modelname = "nemo_bst.model"
 
     row_size = data.count_rows_from_db()
@@ -35,15 +37,16 @@ def train(data, dagpropertydir=None):
     if Path(filename).is_file() and Path(keyfile_name).is_file() and Path(valuefile_name).is_file():
         data.load_data_from_file(keyfile_name, valuefile_name)
     else:
-        row_size = data.load_data_from_db('nemo_optimization', dagpropertydir) if dagpropertydir else data.load_data_from_db('nemo_optimization')
+        row_size = data.load_data_from_db('nemo_optimization')
         print(f'row_size = {row_size}')
     ddata = xgb.DMatrix(filename)
 
     print("total_rows: ", row_size)
 
     sample_avg_duration = np.mean(np.random.choice(ddata.get_label(), max(20, row_size // 20)))  # max of 20 or 5% of the data
-    print("average job duration: ", sample_avg_duration)
-    allowance = sample_avg_duration // 25  # 4%
+    print(f"average job duration: {sample_avg_duration}")
+    allowance = sample_avg_duration // 20  # 5%
+    print(f"allowance: {allowance} seconds")
 
     # TRAIN THE MODEL (REGRESSION)
     dtrain = ddata.slice([i for i in range(0, row_size) if i % 7 != 6])  # mod is not 6
@@ -62,11 +65,11 @@ def train(data, dagpropertydir=None):
 
     learning_rates = [0.01, 0.05, 0.1, 0.25, 0.5, 0.8]
     for lr in learning_rates:
-        param = {'max_depth': 6, 'eta': lr, 'verbosity': 0, 'objective': 'reg:squarederror'}
+        param = {'max_depth': 10, 'eta': lr, 'verbosity': 0, 'objective': 'reg:squarederror'}
 
         watchlist = [(dtest, 'eval'), (dtrain, 'train')]
-        num_round = row_size // 10
-        bst = xgb.train(param, dtrain, num_round, watchlist, early_stopping_rounds=max(row_size // 100, 5))
+        num_round = row_size // 2
+        bst = xgb.train(param, dtrain, num_round, watchlist, early_stopping_rounds=max(num_round // 10, 5))
 
         preds = bst.predict(dtest)
         error = (sum(1 for i in range(len(preds)) if abs(preds[i] - labels[i]) > allowance) / float(len(preds))) if len(
@@ -87,7 +90,7 @@ def train(data, dagpropertydir=None):
     for i in range(len(sorted_fscore)):
         print("\nSplit Value Histogram:")
         feature = sorted_fscore.pop()[0]
-        print(feature, "=", data.transform_ids_to_keypairs([int(feature[1:])]))
+        print(feature, "=", data.transform_id_to_keypair(int(feature[1:])))
         hg = bst_opt.get_split_value_histogram(feature)
         print(hg)
 
@@ -96,10 +99,32 @@ def train(data, dagpropertydir=None):
     print(df)
 
     # Visualize tree
-    # xgb.plot_tree(bst_opt, num_trees=0)
-    # plt.show()
+    xgb.plot_tree(bst_opt, num_trees=0)
+    plt.show()
 
-    return bst_opt
+    # Let's now use bst_opt
+    # Build the tree ourselves
+    trees = {}
+    for index, row in df.iterrows():
+      if row['Tree'] not in trees:  # Tree number = index
+        trees[row['Tree']] = Tree(data)  # Simply has a reference to the data
+
+      # translated_feature = data.transform_id_to_key(int(row['Feature'][1:])) if row['Feature'].startswith('f') else row['Feature']
+      # print(translated_feature)
+      trees[row['Tree']].add_node(row['ID'], row['Feature'], row['Split'], row['Yes'], row['No'], row['Missing'],
+                                  row['Gain'])
+
+    # Handle the generated trees
+    results = {}
+    print("\nGenerated Trees:")
+    for t in trees.values():
+        results = dict_union(results, t.importance_dict())
+        print(t)
+
+    print("\nImportanceDict")
+    print(json.dumps(results, indent=2))
+
+    return trees
 
 
 if __name__ == "__main__":

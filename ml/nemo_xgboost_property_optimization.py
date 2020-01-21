@@ -22,9 +22,6 @@ import getopt, sys
 import pprint
 
 from train import *
-from tree import *
-
-import matplotlib.pyplot as plt
 
 # ########################################################
 # MAIN FUNCTION
@@ -32,7 +29,7 @@ import matplotlib.pyplot as plt
 try:
     opts, args = getopt.getopt(sys.argv[1:], "hs:r:i:", ["dagpropertydir=", "resourceinfo="])
 except getopt.GetoptError:
-    print('nemo_xgboost_property_optimization.py <dagpropertydir> -r <resourceinfo>')
+    print('nemo_xgboost_property_optimization.py -d <dagpropertydir> -r <resourceinfo>')
     sys.exit(2)
 dagpropertydir = None
 resourceinfo = None
@@ -46,36 +43,21 @@ for opt, arg in opts:
         resourceinfo = arg
 
 data = Data()
-df = train(data, dagpropertydir).trees_to_dataframe()
-
-# Let's now use bst_opt
-# Build the tree ourselves
-trees = {}
-for index, row in df.iterrows():
-    if row['Tree'] not in trees:  # Tree number = index
-        trees[row['Tree']] = Tree(data)  # Simply has a reference to the data
-
-    # translated_feature = data.transform_id_to_key(int(row['Feature'][1:])) if row['Feature'].startswith('f') else row['Feature']
-    # print(translated_feature)
-    trees[row['Tree']].add_node(row['ID'], row['Feature'], row['Split'], row['Yes'], row['No'], row['Missing'],
-                                row['Gain'])
-
+trees = train(data)
 
 # Let's process the data now.
-dag_properties = data.process_individual_property_json(dagpropertydir)
-resource_data = read_resource_info(resourceinfo)
-# print(dag_properties)
-# print(resource_data)
+if dagpropertydir:
+    dag_properties = data.process_individual_property_json(dagpropertydir)
+    print(dag_properties)
+if resourceinfo:
+    resource_data = read_resource_info(resourceinfo)
+    print(resource_data)
 
-# Handle the generated trees
 results = {}
 print("\nGenerated Trees:")
 for t in trees.values():
-    results = dict_union(results, t.importance_dict())
-    print(t)
-
-print("\nImportanceDict")
-print(json.dumps(results, indent=2))
+  results = dict_union(results, t.importance_dict())
+  print(t)
 
 print("\nSummary")
 resultsJson = []
