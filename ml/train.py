@@ -37,7 +37,7 @@ def train(data):
     if Path(filename).is_file() and Path(keyfile_name).is_file() and Path(valuefile_name).is_file():
         data.load_data_from_file(keyfile_name, valuefile_name)
     else:
-        row_size = data.load_data_from_db('nemo_optimization')
+        row_size = data.load_data_from_db(filename)
         print(f'row_size = {row_size}')
     ddata = xgb.DMatrix(filename)
 
@@ -68,7 +68,7 @@ def train(data):
         param = {'max_depth': 10, 'eta': lr, 'verbosity': 0, 'objective': 'reg:squarederror'}
 
         watchlist = [(dtest, 'eval'), (dtrain, 'train')]
-        num_round = row_size // 2
+        num_round = max(row_size // 2, 10)
         bst = xgb.train(param, dtrain, num_round, watchlist, early_stopping_rounds=max(num_round // 10, 5))
 
         preds = bst.predict(dtest)
@@ -99,30 +99,20 @@ def train(data):
     print(df)
 
     # Visualize tree
-    xgb.plot_tree(bst_opt, num_trees=0)
-    plt.show()
+    # xgb.plot_tree(bst_opt, num_trees=0)
+    # plt.show()
 
     # Let's now use bst_opt
     # Build the tree ourselves
     trees = {}
     for index, row in df.iterrows():
-      if row['Tree'] not in trees:  # Tree number = index
-        trees[row['Tree']] = Tree(data)  # Simply has a reference to the data
+        if row['Tree'] not in trees:  # Tree number = index
+            trees[row['Tree']] = Tree(data)  # Simply has a reference to the data
 
-      # translated_feature = data.transform_id_to_key(int(row['Feature'][1:])) if row['Feature'].startswith('f') else row['Feature']
-      # print(translated_feature)
-      trees[row['Tree']].add_node(row['ID'], row['Feature'], row['Split'], row['Yes'], row['No'], row['Missing'],
-                                  row['Gain'])
-
-    # Handle the generated trees
-    results = {}
-    print("\nGenerated Trees:")
-    for t in trees.values():
-        results = dict_union(results, t.importance_dict())
-        print(t)
-
-    print("\nImportanceDict")
-    print(json.dumps(results, indent=2))
+        # translated_feature = data.transform_id_to_key(int(row['Feature'][1:])) if row['Feature'].startswith('f') else row['Feature']
+        # print(translated_feature)
+        trees[row['Tree']].add_node(row['ID'], row['Feature'], row['Split'], row['Yes'], row['No'], row['Missing'],
+                                    row['Gain'])
 
     return trees
 

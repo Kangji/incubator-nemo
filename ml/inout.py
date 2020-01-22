@@ -43,43 +43,16 @@ configuration_space = [
   # 'PartitionSetProperty',
 ]
 
+space_to_consider = [
+  'inputsize',
+  'jvmmemsize',
+  'totalmemsize',
+  'dagsummary',
 
-# As a result of the method, keypairs are filled with (id,EPKey,Type) tuples and
-# values are filled with the corresponding values for each key tuple and whether it is a digit or not
-def aggregate_dict_properties_json(properties, keypairs, values):
-    vertex_properties = properties['vertex']
-    edge_properties = properties['edge']
-    tpe = properties['type']
-    rules = properties['rules'] if properties['rules'] else []
-
-    for vp in vertex_properties:
-        i = f'{vp["ID"]}'
-        key = f'{vp["EPKeyClass"]}/{vp["EPValueClass"]}'
-        value = f'{vp["EPValue"]}'
-        keypairs.append(f'{i},{key},{tpe}')
-        if key not in values:
-            values[key] = {'data': []}
-        values[key]['isdigit'] = value.isdigit()
-        if not value.isdigit():
-            values[key]['data'].append(value)
-    for ep in edge_properties:
-        i = f'{ep["ID"]}'
-        key = f'{ep["EPKeyClass"]}/{ep["EPValueClass"]}'
-        value = f'{ep["EPValue"]}'
-        keypairs.append(f'{i},{key},{tpe}')
-        if key not in values:
-            values[key] = {'data': []}
-        values[key]['isdigit'] = value.isdigit()
-        if not value.isdigit():
-            values[key]['data'].append(value)
-    for rule in rules:
-        key = f'{rule["name"]}'
-        keypairs.append(f'rule,{key},ignore')
-        if key not in values:
-            values[key] = {'data': []}
-        values[key]['isdigit'] = False
-        values[key]['data'].append(True)  # true if it exists
-    return tpe
+  'total_executor_num',
+  'total_cores',
+  'avg_memory_mb_per_executor',
+] + configuration_space
 
 
 class Data:
@@ -95,8 +68,12 @@ class Data:
     dbuser = "postgres"
     dbpwd = "fake_password"
 
+    # As a result of the method, keypairs are filled with (id,EPKey,Type) tuples and
+    # values are filled with the corresponding values for each key tuple and whether it is a digit or not
     def process_json(self, id, key, tpe, value, is_finalized):
-        res = ''
+        if not self.is_in_space(key, space_to_consider):
+            return ''
+
         keypair = f'{id},{key},{tpe}'
 
         if keypair in self.keypair_to_idx:
@@ -223,13 +200,12 @@ class Data:
         row_size = cur.rowcount
         keyfile_name = 'key.{}.pickle'.format(row_size)
         valuefile_name = 'value.{}.pickle'.format(row_size)
-        file_name = '{}.{}.out'.format(destionation_file, row_size)
 
         if os.path.isfile(keyfile_name) and os.path.isfile(valuefile_name):
             self.load_data_from_file(keyfile_name, valuefile_name)
 
         print("Pre-processing properties..")
-        with open(file_name, 'w') as f:
+        with open(destionation_file, 'w') as f:
             for row in tqdm(cur, total=row_size):
                 f.write('{}\n'.format(self.format_row(row[1], row[2], row[3], row[4], row[5], row[6])))
 
@@ -259,10 +235,10 @@ class Data:
         return [self.transform_id_to_keypair(idx) for idx in ids]
 
     def transform_value_to_id(self, epkey, value):
-        return value if self.value_to_idx_by_key[epkey]['isdigit'] else self.value_to_idx_by_key[epkey][value]
+        return value if epkey not in self.idx_to_value_by_key or self.value_to_idx_by_key[epkey]['isdigit'] else self.value_to_idx_by_key[epkey][value]
 
     def transform_id_to_value(self, epkey, i):
-        return i if self.idx_to_value_by_key[epkey]['isdigit'] else self.idx_to_value_by_key[epkey][i]
+        return i if epkey not in self.idx_to_value_by_key or self.idx_to_value_by_key[epkey]['isdigit'] else self.idx_to_value_by_key[epkey][i]
 
     def value_of_key_isdigit(self, epkey):
         return self.idx_to_value_by_key[epkey]['isdigit']
@@ -290,15 +266,18 @@ class Data:
         return max_value if max_value and value > max_value else (min_value if value < min_value else value)
 
     def is_in_configuration_space(self, key):  #key is recommended to be the feature id, but it could also be the name (e.g. ParallelismProperty)
+        return self.is_in_space(key, configuration_space)
+
+    def is_in_space(self, key, space):
         if key and isinstance(key, int):
             i, k, tpe = self.transform_id_to_keypair(key)
-            return self.is_in_configuration_space(k) and not self.is_finalized_property(key)
+            return self.is_in_space(k, space) and not self.is_finalized_property(key)
         elif key and isinstance(key, str):
             if key.startswith('f') and key[1:].isdigit():  # ex. f55
-                return self.is_in_configuration_space(int(key[1:]))
+                return self.is_in_space(int(key[1:]), space)
             elif key.startswith('org'):  # ex. org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty/java.lang.Integer
-                return self.is_in_configuration_space(key.split('/')[0].split('.')[-1])
-            return key in configuration_space
+                return self.is_in_space(key.split('/')[0].split('.')[-1], space)
+            return key in space
         else:
             return False
 
