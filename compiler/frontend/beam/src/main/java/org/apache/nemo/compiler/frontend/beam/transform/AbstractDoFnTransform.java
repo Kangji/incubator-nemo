@@ -33,6 +33,7 @@ import org.apache.beam.sdk.values.WindowingStrategy;
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.vertex.transform.Transform;
 import org.apache.nemo.compiler.frontend.beam.InMemorySideInputReader;
+import org.apache.nemo.compiler.frontend.beam.JokerDoFnRunner;
 import org.apache.nemo.compiler.frontend.beam.NemoPipelineOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -275,7 +276,7 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
 
     // DoFnRunners.simpleRunner takes care of all the hard stuff of running the DoFn
     // and that this approach is the standard used by most of the Beam runners
-    doFnRunner = DoFnRunners.simpleRunner(
+    doFnRunner = new JokerDoFnRunner<>(
       options,
       wrappedDoFn,
       sideInputReader,
