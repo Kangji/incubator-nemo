@@ -67,8 +67,21 @@ class Data:
     dbname = "nemo_optimization"
     dbuser = "postgres"
     dbpwd = "fake_password"
+    conn = None
 
-    # As a result of the method, keypairs are filled with (id,EPKey,Type) tuples and
+    def __init__(self):
+        try:
+            self.conn = pg.connect(host=self.host, dbname=self.dbname, user=self.dbuser, password=self.dbpwd)
+            print("Connected to the PostgreSQL DB.")
+        except:
+            try:
+                sqlite_file = "./optimization_db.sqlite"
+                self.conn = sq.connect(sqlite_file)
+                print("Connected to the SQLite DB.")
+            except:
+                print("I am unable to connect to the database. Try running the script with `./bin/xgboost_property_optimization.sh`")
+
+# As a result of the method, keypairs are filled with (id,EPKey,Type) tuples and
     # values are filled with the corresponding values for each key tuple and whether it is a digit or not
     def process_json(self, id, key, tpe, value, is_finalized):
         if not self.is_in_space(key, space_to_consider):
@@ -105,7 +118,7 @@ class Data:
 
         return res
 
-    def format_row(self, duration, inputsize, jvmmemsize, totalmemsize, dagsummary, properties):
+    def format_row(self, duration, inputsize, jvmmemsize, totalmemsize, properties, metrics):
         vertex_properties = properties['vertex']
         edge_properties = properties['edge']
         tpe = properties['type']
@@ -114,15 +127,49 @@ class Data:
 
         properties_string = []
 
-        duration_in_sec = int(duration) // 1000
-        properties_string.append(str(duration_in_sec))
+        # duration_in_sec = int(duration) // 1000
+        # properties_string.append(str(duration_in_sec))
         inputsize_in_10kb = int(inputsize) // 10240  # capable of expressing upto around 20TB with int range
-        properties_string.append(self.process_json('env', 'inputsize', 'ignore', str(inputsize_in_10kb), 'true'))
         jvmmemsize_in_mb = int(jvmmemsize) // 1048576
-        properties_string.append(self.process_json('env', 'jvmmemsize', 'ignore', str(jvmmemsize_in_mb), 'true'))
         totalmemsize_in_mb = int(totalmemsize) // 1048576
+
+        stage_id_duration_dict = {}
+        initial_time = [x for x in metrics['JobMetric']['Plan0']['data']['stateTransitionEvents'] if x['prevState'] == 'READY'][0]['timestamp']
+        for stage in metrics['StageMetric']:
+            end_time = [x for x in metrics['StageMetric'][stage]['data']['stateTransitionEvents'] if x['newState'] == 'COMPLETE'][0]['timestamp']
+            stage_id_duration_dict[stage] = end_time - initial_time
+            initial_time = end_time
+
+        if tpe == 'pattern':
+            for stage in metrics['JobMetric']['Plan0']['data']['stage-dag']['vertices']:
+                stage_id = stage['id']
+                properties_string.append(str(stage_id_duration_dict[stage_id]))
+                for vertex in stage['properties']['irDag']['vertices']:
+                    clz = vertex['properties']['class']
+                    transform = vertex['properties']['transform'].split(" / ")[0] if 'OperatorVertex' == clz else ''
+                    name = '{}{}'.format(clz, transform)
+                    i = vertex['id']
+                    for ep in vertex['properties']['executionProperties']:
+                        key, value, is_finalized = self.derive_values_from(name, ep, vertex_properties)
+                        properties_string.append(self.process_json(i, key, tpe, value, is_finalized))
+
+        elif tpe == 'id':
+            # TODO: append stage duration at first, and handle by stages.
+            for p in vertex_properties + edge_properties:
+                i = f'{p["ID"]}'
+                key = f'{p["EPKeyClass"]}/{p["EPValueClass"]}'
+                value = f'{p["EPValue"]}'
+                is_finalized = f'{p["isFinalized"]}'
+                properties_string.append(self.process_json(i, key, tpe, value, is_finalized))
+
+        for rule in rules:
+            key = f'{rule["name"]}'
+            properties_string.append(self.process_json('rule', key, 'ignore', 'true', 'false'))
+
+        properties_string.append(self.process_json('env', 'inputsize', 'ignore', str(inputsize_in_10kb), 'true'))
+        properties_string.append(self.process_json('env', 'jvmmemsize', 'ignore', str(jvmmemsize_in_mb), 'true'))
         properties_string.append(self.process_json('env', 'totalmemsize', 'ignore', str(totalmemsize_in_mb), 'true'))
-        properties_string.append(self.process_json('env', 'dagsummary', 'ignore', dagsummary, 'true'))
+        # properties_string.append(self.process_json('env', 'dagsummary', 'ignore', dagsummary, 'true'))
 
         if resource_data:
             total_executor_num = extract_total_executor_num(resource_data)
@@ -134,32 +181,28 @@ class Data:
             avg_memory_mb_per_executor = extract_avg_memory_mb_per_executor(resource_data)
             properties_string.append(self.process_json('env', 'avg_memory_mb_per_executor', 'ignore', str(avg_memory_mb_per_executor), 'true'))
 
-        for p in vertex_properties + edge_properties:
-            i = f'{p["ID"]}'
-            key = f'{p["EPKeyClass"]}/{p["EPValueClass"]}'
-            value = f'{p["EPValue"]}'
-            is_finalized = f'{p["isFinalized"]}'
-            properties_string.append(self.process_json(i, key, tpe, value, is_finalized))
-
-        for rule in rules:
-            key = f'{rule["name"]}'
-            properties_string.append(self.process_json('rule', key, 'ignore', 'true', 'false'))
-
         return ' '.join(properties_string).strip()
 
+    def derive_values_from(self, name, ep, vertex_properties):
+        key = None
+        value = None
+        is_finalized = None
+        return key, value, is_finalized
+
     # ########################################################
-    def count_rows_from_db(self):
-        conn = pg.connect(host=self.host, dbname=self.dbname, user=self.dbuser, password=self.dbpwd)
-        print("Connected to the PostgreSQL DB.")
-        sql = "SELECT count(*) from nemo_data"
-        cur = conn.cursor()
+    def count_rows_from_db(self, dagsummary):
+        sql = "SELECT count(*) from nemo_data where dagsummary={}".format(dagsummary)
+        cur = self.conn.cursor()
         try:
             cur.execute(sql)
             print("Loaded data from the DB.")
         except:
             print("I can't run " + sql)
 
-        return cur.fetchone()[0]
+        row_size = cur.fetchone()[0]
+        cur.close()
+        return row_size
+
 
     def load_data_from_file(self, keyfile_name, valuefile_name):
         print("Loading pre-processed properties..")
@@ -175,22 +218,9 @@ class Data:
                     self.value_to_idx_by_key[k]['isdigit'] = self.idx_to_value_by_key[k]['isdigit']
             print(f'loaded values for {len(self.idx_to_value_by_key)} key pairs from {valuefile_name}')
 
-    def load_data_from_db(self, destionation_file='nemo_optimization'):
-        conn = None
-
-        try:
-            conn = pg.connect(host=self.host, dbname=self.dbname, user=self.dbuser, password=self.dbpwd)
-            print("Connected to the PostgreSQL DB.")
-        except:
-            try:
-                sqlite_file = "./optimization_db.sqlite"
-                conn = sq.connect(sqlite_file)
-                print("Connected to the SQLite DB.")
-            except:
-                print("I am unable to connect to the database. Try running the script with `./bin/xgboost_property_optimization.sh`")
-
-        sql = "SELECT id, duration, inputsize, jvmmemsize, memsize, dagsummary, properties from nemo_data"
-        cur = conn.cursor()
+    def load_data_from_db(self, destination_file='nemo_optimization', dagsummary='rv1_v7_e6_1GB'):
+        sql = "SELECT id, duration, inputsize, jvmmemsize, memsize, properties, metrics from nemo_data where dagsummary = {}".format(dagsummary)
+        cur = self.conn.cursor()
         try:
             cur.execute(sql)
             print("Loaded data from the DB.")
@@ -205,12 +235,12 @@ class Data:
             self.load_data_from_file(keyfile_name, valuefile_name)
 
         print("Pre-processing properties..")
-        with open(destionation_file, 'w') as f:
+        with open(destination_file, 'w') as f:
             for row in tqdm(cur, total=row_size):
                 f.write('{}\n'.format(self.format_row(row[1], row[2], row[3], row[4], row[5], row[6])))
 
         cur.close()
-        conn.close()
+        self.conn.close()
 
         with open(keyfile_name, 'wb') as fp:
           pickle.dump(self.idx_to_keypair, fp, protocol=pickle.HIGHEST_PROTOCOL)

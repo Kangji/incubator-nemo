@@ -144,7 +144,7 @@ public final class MetricUtils {
         // The vertex itself
         final ObjectNode vertexNode = mapper.createObjectNode();
         v.getExecutionProperties().forEachProperties(ep ->
-          epFormatter(vertexNode, subDAGString + "-" + idx.get(),
+          epFormatter(vertexNode, subDAGString + "-" + idx.get(),  // the vertex itself has the idx of 0.
             ep, v.getExecutionProperties().isPropertyFinalized(ep)));
         verticesNode.add(vertexNode);
         // Main incoming edges & vertex
@@ -154,14 +154,14 @@ public final class MetricUtils {
           .forEachOrdered(e -> {
             e.getExecutionProperties().forEachProperties(ep -> {
               final ObjectNode eNode = mapper.createObjectNode();
-              epFormatter(eNode, subDAGString + "-" + idx.get(),
+              epFormatter(eNode, subDAGString + "-" + idx.get(),  // incoming edges have idx of odd number.
                 ep, e.getExecutionProperties().isPropertyFinalized(ep));
               edgesNode.add(eNode);
             });
             idx.getAndIncrement();
             e.getSrc().getExecutionProperties().forEachProperties(ep -> {
               final ObjectNode vNode = mapper.createObjectNode();
-              epFormatter(vNode, subDAGString + "-" + idx.get(),
+              epFormatter(vNode, subDAGString + "-" + idx.get(),  // incoming vertices have idx of even number gt 0.
                 ep, e.getSrc().getExecutionProperties().isPropertyFinalized(ep));
               verticesNode.add(vNode);
             });

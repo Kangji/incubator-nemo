@@ -25,19 +25,20 @@ from inout import *
 from tree import *
 
 
-def train(data):
+def train(data, dagsummary):
     modelname = "nemo_bst.model"
 
-    row_size = data.count_rows_from_db()
+    row_size = data.count_rows_from_db(dagsummary)
     print(f'row_size = {row_size}')
 
-    filename = 'nemo_optimization.{}.out'.format(row_size)
-    keyfile_name = 'key.{}.pickle'.format(row_size)
-    valuefile_name = 'value.{}.pickle'.format(row_size)
+    identity = '{}.{}'.format(dagsummary, row_size)
+    filename = 'nemo_optimization.{}.out'.format(identity)
+    keyfile_name = 'key.{}.pickle'.format(identity)
+    valuefile_name = 'value.{}.pickle'.format(identity)
     if Path(filename).is_file() and Path(keyfile_name).is_file() and Path(valuefile_name).is_file():
         data.load_data_from_file(keyfile_name, valuefile_name)
     else:
-        row_size = data.load_data_from_db(filename)
+        row_size = data.load_data_from_db(filename, dagsummary)
         print(f'row_size = {row_size}')
     ddata = xgb.DMatrix(filename)
 
@@ -118,4 +119,5 @@ def train(data):
 
 
 if __name__ == "__main__":
-    train(Data())
+    dagsummary = input("Enter the DAG you want to train for : ")
+    train(Data(), dagsummary=dagsummary)
