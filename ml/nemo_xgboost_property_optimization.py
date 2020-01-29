@@ -27,23 +27,26 @@ from train import *
 # MAIN FUNCTION
 # ########################################################
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "hs:r:i:", ["dagpropertydir=", "resourceinfo="])
+    opts, args = getopt.getopt(sys.argv[1:], "hs:d:r:", ["dagsummary=", "dagpropertydir=", "resourceinfo="])
 except getopt.GetoptError:
-    print('nemo_xgboost_property_optimization.py -d <dagpropertydir> -r <resourceinfo>')
+    print('nemo_xgboost_property_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
     sys.exit(2)
+dagsummary = None
 dagpropertydir = None
 resourceinfo = None
 for opt, arg in opts:
     if opt == '-h':
-        print('nemo_xgboost_property_optimization.py -d <dagpropertydir> -r <resourceinfo>')
+        print('nemo_xgboost_property_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
         sys.exit()
+    elif opt in ("-s", "--dagsummary"):
+        dagpropertydir = arg
     elif opt in ("-d", "--dagpropertydir"):
         dagpropertydir = arg
     elif opt in ("-r", "--resourceinfo"):
         resourceinfo = arg
 
 data = Data()
-trees = train(data)
+trees = train(data, dagpropertydir)
 
 # Let's process the data now.
 if dagpropertydir:

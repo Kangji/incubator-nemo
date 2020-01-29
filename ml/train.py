@@ -119,5 +119,5 @@ def train(data, dagsummary):
 
 
 if __name__ == "__main__":
-    dagsummary = input("Enter the DAG you want to train for : ")
-    train(Data(), dagsummary=dagsummary)
+    dag_summary = input("Enter the DAG you want to train for : ")
+    train(Data(), dagsummary=dag_summary)

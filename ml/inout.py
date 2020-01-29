@@ -145,12 +145,9 @@ class Data:
                 stage_id = stage['id']
                 properties_string.append(str(stage_id_duration_dict[stage_id]))
                 for vertex in stage['properties']['irDag']['vertices']:
-                    clz = vertex['properties']['class']
-                    transform = vertex['properties']['transform'].split(" / ")[0] if 'OperatorVertex' == clz else ''
-                    name = '{}{}'.format(clz, transform)
                     i = vertex['id']
                     for ep in vertex['properties']['executionProperties']:
-                        key, value, is_finalized = self.derive_values_from(name, ep, vertex_properties)
+                        key, value, is_finalized = self.derive_values_from(ep, vertex['properties']['executionProperties'][ep], vertex_properties)
                         properties_string.append(self.process_json(i, key, tpe, value, is_finalized))
 
         elif tpe == 'id':
@@ -183,18 +180,19 @@ class Data:
 
         return ' '.join(properties_string).strip()
 
-    def derive_values_from(self, name, ep, vertex_properties):
-        key = None
-        value = None
-        is_finalized = None
+    def derive_values_from(self, ep, val, vertex_properties):
+        filtered_property = [x for x in vertex_properties if ep == x["EPKeyClass"] and (str(val) in x['EPValue'] or str(val).isdigit())][0]
+        key = f'{filtered_property["EPKeyClass"]}/{filtered_property["EPValueClass"]}'
+        value = f'{filtered_property["EPValue"]}' if not str(val).isdigit() else str(val)
+        is_finalized = f'{filtered_property["isFinalized"]}'
         return key, value, is_finalized
 
     # ########################################################
     def count_rows_from_db(self, dagsummary):
-        sql = "SELECT count(*) from nemo_data where dagsummary={}".format(dagsummary)
+        sql = "SELECT count(*) from nemo_data where dagsummary = %s"
         cur = self.conn.cursor()
         try:
-            cur.execute(sql)
+            cur.execute(sql, (dagsummary,))
             print("Loaded data from the DB.")
         except:
             print("I can't run " + sql)
@@ -202,7 +200,6 @@ class Data:
         row_size = cur.fetchone()[0]
         cur.close()
         return row_size
-
 
     def load_data_from_file(self, keyfile_name, valuefile_name):
         print("Loading pre-processed properties..")
@@ -219,10 +216,10 @@ class Data:
             print(f'loaded values for {len(self.idx_to_value_by_key)} key pairs from {valuefile_name}')
 
     def load_data_from_db(self, destination_file='nemo_optimization', dagsummary='rv1_v7_e6_1GB'):
-        sql = "SELECT id, duration, inputsize, jvmmemsize, memsize, properties, metrics from nemo_data where dagsummary = {}".format(dagsummary)
+        sql = "SELECT id, duration, inputsize, jvmmemsize, memsize, properties, metrics from nemo_data where dagsummary = %s"
         cur = self.conn.cursor()
         try:
-            cur.execute(sql)
+            cur.execute(sql, (dagsummary,))
             print("Loaded data from the DB.")
         except:
             print("I can't run " + sql)
