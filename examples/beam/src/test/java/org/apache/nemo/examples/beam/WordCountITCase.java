@@ -84,15 +84,15 @@ public final class WordCountITCase {
       .build());
   }
 
-//  @Test(timeout = ExampleTestArgs.TIMEOUT)
-//  public void testXGBoost() throws Exception {
-//    JobLauncher.main(builder
-//      .addResourceJson(executorResourceFileName)
-//      .addEnableDB()
-//      .addJobId(WordCountITCase.class.getSimpleName() + "_xgboost")
-//      .addOptimizationPolicy(XGBoostPolicy.class.getCanonicalName())
-//      .build());
-//  }
+  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  public void testXGBoost() throws Exception {
+    JobLauncher.main(builder
+      .addResourceJson(executorResourceFileName)
+      .addEnableDB()
+      .addJobId(WordCountITCase.class.getSimpleName() + "_xgboost")
+      .addOptimizationPolicy(XGBoostPolicy.class.getCanonicalName())
+      .build());
+  }
 
   @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testLargeShuffle() throws Exception {

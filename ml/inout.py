@@ -143,11 +143,11 @@ class Data:
         if tpe == 'pattern':
             for stage in metrics['JobMetric']['Plan0']['data']['stage-dag']['vertices']:
                 stage_id = stage['id']
-                properties_string.append(str(stage_id_duration_dict[stage_id]))
+                properties_string.append('\n{}'.format(stage_id_duration_dict[stage_id]))
                 for vertex in stage['properties']['irDag']['vertices']:
                     i = vertex['id']
                     for ep in vertex['properties']['executionProperties']:
-                        key, value, is_finalized = self.derive_values_from(ep, vertex['properties']['executionProperties'][ep], vertex_properties)
+                        key, value, is_finalized = self.derive_info_from(ep, vertex['properties']['executionProperties'][ep], vertex_properties)
                         properties_string.append(self.process_json(i, key, 'id', value, is_finalized))
 
         elif tpe == 'id':
@@ -180,7 +180,7 @@ class Data:
 
         return ' '.join(properties_string).strip()
 
-    def derive_values_from(self, ep, val, vertex_properties):
+    def derive_info_from(self, ep, val, vertex_properties):
         filtered_property = [x for x in vertex_properties if ep == x["EPKeyClass"] and (str(val) in x['EPValue'] or str(val).isdigit())][0]
         key = f'{filtered_property["EPKeyClass"]}/{filtered_property["EPValueClass"]}'
         value = f'{filtered_property["EPValue"]}' if not str(val).isdigit() else str(val)
@@ -324,16 +324,22 @@ class Data:
 
     def process_individual_property_json(self, dagdirectory):
         processed = []
-        properties = self.load_property_json(dagdirectory)
+        properties = self.load_property_json(dagdirectory, 'ir-initial-properties.json')
+        initial_dag = self.load_property_json(dagdirectory, 'ir-0-initial.json')
 
         tpe = properties['type']
         rules = properties['rules'] if properties['rules'] else []
-        for p in properties['vertex'] + properties['edge']:
-            i = f'{p["ID"]}'
-            key = f'{p["EPKeyClass"]}/{p["EPValueClass"]}'
-            value = f'{p["EPValue"]}'
-            is_finalized = f'{p["isFinalized"]}'
-            processed.append(self.process_json(i, key, tpe, value, is_finalized))
+        vertex_properties = properties['vertex']
+        edge_properties = properties['edge']
+
+        if tpe == 'pattern':
+            for vertex in initial_dag['vertices']:
+                for ep in vertex['properties']['executionProperties']:
+                    key, value, is_finalized = self.derive_info_from(ep, vertex['properties']['executionProperties'][ep], vertex_properties)
+                    processed.append(self.process_json(vertex['id'], key, 'id', value, is_finalized))
+        else:
+            pass  # todo
+
         for rule in rules:
             key = f'{rule["name"]}'
             processed.append(self.process_json('rule', key, 'ignore', 'true', 'false'))
@@ -353,14 +359,13 @@ class Data:
 
         return ' '.join(processed)
 
-    def load_property_json(self, dagdirectory):
-        jsonfile = 'ir-initial-properties.json'
-        if jsonfile.startswith("/") and dagdirectory.endswith("/"):
-            path = '{}{}'.format(dagdirectory, jsonfile[1:])
-        elif jsonfile.startswith("/") or dagdirectory.endswith("/"):
-            path = '{}{}'.format(dagdirectory, jsonfile)
+    def load_property_json(self, dagdirectory, filename):
+        if filename.startswith("/") and dagdirectory.endswith("/"):
+            path = '{}{}'.format(dagdirectory, filename[1:])
+        elif filename.startswith("/") or dagdirectory.endswith("/"):
+            path = '{}{}'.format(dagdirectory, filename)
         else:
-            path = '{}/{}'.format(dagdirectory, jsonfile)
+            path = '{}/{}'.format(dagdirectory, filename)
         with open(path) as data_file:
             return json.load(data_file)
 

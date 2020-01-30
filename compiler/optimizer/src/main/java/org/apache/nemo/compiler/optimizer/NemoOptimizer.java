@@ -169,7 +169,8 @@ public final class NemoOptimizer implements Optimizer {
         .setType(ControlMessage.DriverToClientMessageType.LaunchOptimization)
         .setOptimizationType(ControlMessage.OptimizationType.XGBoost)
         .setDataCollected(ControlMessage.DataCollectMessage.newBuilder()
-          .setData(" -d " + new File(this.dagDirectory).getAbsolutePath() + " -r " + this.executorInfoPath)
+          .setData(" -s " + dag.irDAGSummary() + " -d " + new File(this.dagDirectory).getAbsolutePath()
+            + " -r " + this.executorInfoPath)
           .build())
         .build());
     }

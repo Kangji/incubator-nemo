@@ -16,7 +16,10 @@
 #  under the License.
 
 from pathlib import Path
+import random
+from math import sqrt
 
+from sklearn.metrics import mean_squared_error
 import numpy as np
 import xgboost as xgb
 import matplotlib.pyplot as plt
@@ -26,12 +29,11 @@ from tree import *
 
 
 def train(data, dagsummary):
-    modelname = "nemo_bst.model"
-
     row_size = data.count_rows_from_db(dagsummary)
     print(f'row_size = {row_size}')
 
     identity = '{}.{}'.format(dagsummary, row_size)
+    modelname = "nemo_bst.{}.model".format(identity)
     filename = 'nemo_optimization.{}.out'.format(identity)
     keyfile_name = 'key.{}.pickle'.format(identity)
     valuefile_name = 'value.{}.pickle'.format(identity)
@@ -40,46 +42,41 @@ def train(data, dagsummary):
     else:
         row_size = data.load_data_from_db(filename, keyfile_name, valuefile_name, dagsummary)
         print(f'preprocessed {row_size} rows')
+
     print(f'reading from {filename}')
     ddata = xgb.DMatrix(filename)
 
     print("total_rows: ", row_size)
 
-    sample_avg_duration = np.mean(np.random.choice(ddata.get_label(), max(20, row_size // 20)))  # max of 20 or 5% of the data
-    print(f"average job duration: {sample_avg_duration}")
-    allowance = sample_avg_duration // 20  # 5%
-    print(f"allowance: {allowance} seconds")
-
     # TRAIN THE MODEL (REGRESSION)
-    dtrain = ddata.slice([i for i in range(0, row_size) if i % 7 != 6])  # mod is not 6
+    test_indices = sorted(random.sample(range(0, row_size), row_size // 6))
+    dtrain = ddata.slice([i for i in range(0, row_size) if i not in test_indices])  # mod is not 6
     print("train_rows: ", dtrain.num_row())
-    dtest = ddata.slice([i for i in range(0, row_size) if i % 7 == 6])  # mod is 6
+    dtest = ddata.slice(test_indices)  # mod is 6
     print("test_rows: ", dtest.num_row())
     labels = dtest.get_label()
 
     # Load existing booster, if it exists
     bst_opt = xgb.Booster(model_file=modelname) if Path(modelname).is_file() else None
     preds_opt = bst_opt.predict(dtest) if bst_opt is not None else None
-    error_opt = (sum(1 for i in range(len(preds_opt)) if abs(preds_opt[i] - labels[i]) > allowance) / float(
-      len(preds_opt))) if preds_opt is not None and len(preds_opt) != 0 else 1
-    print('opt_error=%f' % error_opt)
+    error_opt = sqrt(mean_squared_error(preds_opt, labels))
+    print('optimal rmse error=%f' % error_opt)
     min_error = error_opt
 
-    learning_rates = [0.01, 0.05, 0.1, 0.25, 0.5, 0.8]
+    learning_rates = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.85]
     for lr in learning_rates:
-        param = {'max_depth': 10, 'eta': lr, 'verbosity': 0, 'objective': 'reg:squarederror'}
+        param = {'max_depth': 6, 'eta': lr, 'gamma': 0.01, 'verbosity': 0, 'objective': 'reg:squarederror'}
 
         watchlist = [(dtest, 'eval'), (dtrain, 'train')]
         num_round = max(row_size // 2, 10)
         bst = xgb.train(param, dtrain, num_round, watchlist, early_stopping_rounds=max(num_round // 10, 5))
 
         preds = bst.predict(dtest)
-        error = (sum(1 for i in range(len(preds)) if abs(preds[i] - labels[i]) > allowance) / float(len(preds))) if len(
-          preds) > 0 else 1.0
-        print(f'error for learning rate {lr} is {error}')
+        error = sqrt(mean_squared_error(preds, labels))
+        print(f'rmse error for learning rate {lr} is {error}')
 
         # Better booster
-        if error <= error_opt:
+        if error <= min_error:
             bst_opt = bst
             bst.save_model(modelname)
             min_error = error
