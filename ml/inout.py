@@ -148,7 +148,7 @@ class Data:
                     i = vertex['id']
                     for ep in vertex['properties']['executionProperties']:
                         key, value, is_finalized = self.derive_values_from(ep, vertex['properties']['executionProperties'][ep], vertex_properties)
-                        properties_string.append(self.process_json(i, key, tpe, value, is_finalized))
+                        properties_string.append(self.process_json(i, key, 'id', value, is_finalized))
 
         elif tpe == 'id':
             # TODO: append stage duration at first, and handle by stages.
@@ -215,7 +215,7 @@ class Data:
                     self.value_to_idx_by_key[k]['isdigit'] = self.idx_to_value_by_key[k]['isdigit']
             print(f'loaded values for {len(self.idx_to_value_by_key)} key pairs from {valuefile_name}')
 
-    def load_data_from_db(self, destination_file='nemo_optimization', dagsummary='rv1_v7_e6_1GB'):
+    def load_data_from_db(self, destination_file='nemo_optimization', keyfile_name='key', valuefile_name='value', dagsummary='rv1_v7_e6_1GB'):
         sql = "SELECT id, duration, inputsize, jvmmemsize, memsize, properties, metrics from nemo_data where dagsummary = %s"
         cur = self.conn.cursor()
         try:
@@ -225,8 +225,6 @@ class Data:
             print("I can't run " + sql)
 
         row_size = cur.rowcount
-        keyfile_name = 'key.{}.pickle'.format(row_size)
-        valuefile_name = 'value.{}.pickle'.format(row_size)
 
         if os.path.isfile(keyfile_name) and os.path.isfile(valuefile_name):
             self.load_data_from_file(keyfile_name, valuefile_name)
@@ -240,10 +238,10 @@ class Data:
         self.conn.close()
 
         with open(keyfile_name, 'wb') as fp:
-          pickle.dump(self.idx_to_keypair, fp, protocol=pickle.HIGHEST_PROTOCOL)
-          print(f'dumped {len(self.idx_to_keypair)} keys to pickle to {keyfile_name}')
+            pickle.dump(self.idx_to_keypair, fp, protocol=pickle.HIGHEST_PROTOCOL)
+            print(f'dumped {len(self.idx_to_keypair)} keys to pickle to {keyfile_name}')
         with open(valuefile_name, 'wb') as fp:
-          pickle.dump(self.idx_to_value_by_key, fp, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.idx_to_value_by_key, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
         print("Pre-processing complete")
 

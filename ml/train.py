@@ -38,8 +38,9 @@ def train(data, dagsummary):
     if Path(filename).is_file() and Path(keyfile_name).is_file() and Path(valuefile_name).is_file():
         data.load_data_from_file(keyfile_name, valuefile_name)
     else:
-        row_size = data.load_data_from_db(filename, dagsummary)
-        print(f'row_size = {row_size}')
+        row_size = data.load_data_from_db(filename, keyfile_name, valuefile_name, dagsummary)
+        print(f'preprocessed {row_size} rows')
+    print(f'reading from {filename}')
     ddata = xgb.DMatrix(filename)
 
     print("total_rows: ", row_size)
