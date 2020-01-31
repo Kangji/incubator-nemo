@@ -18,8 +18,9 @@
 # under the License.
 #
 
-import getopt, sys
+import getopt
 import pprint
+import sys
 
 from train import *
 
@@ -39,14 +40,14 @@ for opt, arg in opts:
         print('nemo_xgboost_property_optimization.py -s <dagsummary> -d <dagpropertydir> -r <resourceinfo>')
         sys.exit()
     elif opt in ("-s", "--dagsummary"):
-        dagpropertydir = arg
+        dagsummary = arg
     elif opt in ("-d", "--dagpropertydir"):
         dagpropertydir = arg
     elif opt in ("-r", "--resourceinfo"):
         resourceinfo = arg
 
 data = Data()
-trees = train(data, dagpropertydir)
+trees = train(data, dagsummary)
 
 # Let's process the data now.
 if dagpropertydir:
@@ -60,7 +61,7 @@ if resourceinfo:
 results = {}
 print("\nGenerated Trees:")
 for t in trees.values():
-    results = dict_union(results, t.importance_dict())
+    results = importance_dict_union(results, t.importance_dict())
     # print(t)
 
 print("\nImportanceDict")
@@ -74,7 +75,7 @@ for k, v in results.items():
         feature_id = int(k[1:])
         i, key, tpe = data.transform_id_to_keypair(feature_id)  # ex. (id), org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty/java.lang.Integer, pattern
         how = 'greater' if vv > 0 else 'smaller'
-        result_string = f'{key} should be {vv} ({how}) than {kk}'
+        result_string = f'{key} should be {vv} ({how}) than {kk} for {i}'
         print(result_string)
         classes = key.split('/')
         key_class = classes[0]  # ex. org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty

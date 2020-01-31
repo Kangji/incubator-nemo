@@ -25,11 +25,11 @@ def stringify_num(num):
     return str(round(num, 2))
 
 
-def dict_union(d1, d2):
+def importance_dict_union(d1, d2):
     for k, v in d2.items():
         if k in d1:
             if type(d1[k]) is dict and type(v) is dict:  # When same 'feature'
-                d1[k] = dict_union(d1[k], v)
+                d1[k] = importance_dict_union(d1[k], v)
             else:  # When same 'split'
                 d1[k] = d1[k] + v
         elif type(v) is dict:  # When no initial data
@@ -37,15 +37,11 @@ def dict_union(d1, d2):
         else:  # k = split, v = diff. include if it does not violate.
             if v > 0 > max(d1.values()) and k < max(d1.keys()):  # If no positive values yet
                 d1[k] = v
-            elif v > max(d1.values()) > 0:  # Update if greater value
-                max_key = max(d1, key=lambda key: d1[key])
-                del d1[max_key]
+            elif v > 0 and k > max([kk for kk, vv in d1.items() if vv > 0]):  # Update if greater value
                 d1[k] = v
             elif v < 0 < min(d1.values()) and min(d1.keys()) < k:  # If no negative values yet
                 d1[k] = v
-            elif v < min(d1.values()) < 0:  # Update if smaller value
-                min_key = min(d1, key=lambda key: d1[key])
-                del d1[min_key]
+            elif v < 0 and k < min([kk for kk, vv in d1.items() if vv < 0]):  # Update if smaller value
                 d1[k] = v
     return d1
 
@@ -63,7 +59,7 @@ class Tree:
             self.idx_to_node[idx] = node
 
     def add_node(self, index, feature_id, split, yes, no, missing, value):
-        if self.root == None:
+        if self.root is None:
             self.root = Node(self, None)
             n = self.root
             self.append_to_dict_if_not_exists(index, n)
@@ -113,10 +109,10 @@ class Node:
             self.missing = idx_to_node[missing]  # feature missing
 
     def is_leaf(self):
-        return self.value != None
+        return self.value is not None
 
     def is_root(self):
-        return self.parent == None
+        return self.parent is None
 
     def is_reachable(self):  # Is the node reachable from the root, following the given conditions?
         if self.reachable is not None:  # dynamic programming
@@ -132,19 +128,18 @@ class Node:
             conditions = []
             p = self.parent
             while not p.is_root():  # aggregate the conditions of the parents for the given feature
-                if p.parent.feature is feature:
-                    is_less_than = False if p is p.parent.right else True
+                if p.parent.feature == feature:
+                    is_less_than = p is p.parent.left
                     conditions.append((is_less_than, p.parent.split))
                 p = p.parent
             must_be_greater_than = None
             must_be_less_than = None
             for condition in conditions:  # check conditions of the parents for the given feature
-                if condition[0] and (not must_be_less_than or condition[1] < must_be_less_than):  # less than split: find min
+                if condition[0] and (not must_be_less_than or condition[1] < must_be_less_than):  # less than split: find min of max possible value
                     must_be_less_than = condition[1]
-                elif not condition[1] and (not must_be_greater_than or condition[1] > must_be_greater_than):  # gt split: find max
+                elif not condition[1] and (not must_be_greater_than or condition[1] > must_be_greater_than):  # gt split: find max of min possible value
                     must_be_greater_than = condition[1]
-            is_less_than = False if self is self.parent.right else True  # see if it meets the given condition
-            if (is_less_than and must_be_greater_than and self.parent.split < must_be_greater_than) or (not is_less_than and must_be_less_than and self.parent.split > must_be_less_than) or (must_be_less_than and must_be_greater_than and must_be_greater_than > must_be_less_than):
+            if must_be_less_than and must_be_greater_than and must_be_greater_than > must_be_less_than:  # min possible value > max possible value
                 self.reachable = False
                 return self.reachable
             else:
@@ -181,25 +176,26 @@ class Node:
                 return min(self.left.get_approx(), self.right.get_approx())
 
     def get_diff(self):
-        lapprox = self.left.get_approx()
-        rapprox = self.right.get_approx()
-        if (rapprox != 0 and rapprox > lapprox and abs(lapprox / rapprox) < 0.04) or (lapprox != 0 and lapprox > rapprox and abs(rapprox / lapprox) < 0.04):
-            return 0  # ignore: too much difference (4%) - dangerous for skews
-        return lapprox - rapprox
+        if not self.left.is_reachable() or self.is_always_right():
+            return 1
+        elif not self.right.is_reachable() or self.is_always_left():
+            return -1
+        elif self.is_always_missing():
+            return 1 if self.missing.get_approx() == self.right.get_approx() else -1 if self.missing.get_approx() == self.left.get_approx() else 0
+        else:
+            lapprox = self.left.get_approx()
+            rapprox = self.right.get_approx()
+            # if (rapprox != 0 and rapprox > lapprox and abs(lapprox / rapprox) < 0.001) or (lapprox != 0 and lapprox > rapprox and abs(rapprox / lapprox) < 0.001):
+            #     return 0  # ignore: too much difference (0.1%) - dangerous for skews
+            return lapprox - rapprox
 
     def importance_dict(self):
         if self.is_leaf():
             return {}
-        elif not self.left.is_reachable() or self.is_always_right():
-            return self.right.importance_dict()
-        elif not self.right.is_reachable() or self.is_always_left():
-            return self.left.importance_dict()
-        elif self.is_always_missing():
-            return self.missing.importance_dict()
         else:
-            d = {}
-            d[self.feature] = {self.split: self.get_diff()}
-            return dict_union(d, dict_union(self.left.importance_dict(), self.right.importance_dict()))
+            d = {self.feature: {self.split: self.get_diff()}}  # left if diff < 0 else right
+            d2 = self.left.importance_dict() if self.get_diff() < 0 else self.right.importance_dict() if self.get_diff() > 0 else self.missing.importance_dict()
+            return importance_dict_union(d, d2)
 
     def __str__(self):
         if self.is_leaf():
@@ -207,5 +203,8 @@ class Node:
         else:
             left = str(self.left) if self.left.is_leaf() else json.loads(str(self.left))
             right = str(self.right) if self.right.is_leaf() else json.loads(str(self.right))
-            return json.dumps({self.index: f'{self.feature}' + '{' + stringify_num(self.get_approx()) + ',' + stringify_num(
-              self.get_diff()) + '}', 'L' + self.left.index: left, 'R' + self.right.index: right})
+            i, k, tpe = self.tree.data.transform_id_to_keypair(int(self.feature[1:]))
+            return json.dumps(
+              {self.index: f'{i}: {k.split("/")[0].split(".")[-1]} < {self.split}? (min: {stringify_num(self.get_approx())}, {stringify_num(self.get_diff())}({"left" if self.get_diff() < 0 else "right" if self.get_diff() > 0 else "missing"}))',
+               f'L{self.left.index}': left,
+               f'R{self.right.index}': right})

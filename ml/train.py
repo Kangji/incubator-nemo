@@ -20,7 +20,6 @@ import random
 from math import sqrt
 
 from sklearn.metrics import mean_squared_error
-import numpy as np
 import xgboost as xgb
 import matplotlib.pyplot as plt
 
@@ -45,6 +44,7 @@ def train(data, dagsummary):
 
     print(f'reading from {filename}')
     ddata = xgb.DMatrix(filename)
+    row_size = ddata.num_row()
 
     print("total_rows: ", row_size)
 
@@ -59,7 +59,7 @@ def train(data, dagsummary):
     # Load existing booster, if it exists
     bst_opt = xgb.Booster(model_file=modelname) if Path(modelname).is_file() else None
     preds_opt = bst_opt.predict(dtest) if bst_opt is not None else None
-    error_opt = sqrt(mean_squared_error(preds_opt, labels))
+    error_opt = sqrt(mean_squared_error(preds_opt, labels)) if bst_opt is not None else float('inf')
     print('optimal rmse error=%f' % error_opt)
     min_error = error_opt
 

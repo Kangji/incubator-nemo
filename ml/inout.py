@@ -307,18 +307,18 @@ class Data:
             return False
 
     def get_loaded_property(self, key):
-        if isinstance(key, str) and key.startswith('f') and key[1:].isdigit():
-            return self.get_loaded_property(int(key[1:]))
-        elif isinstance(key, int) and key in self.loaded_properties:
+        if isinstance(key, int) and key in self.loaded_properties:
             return self.loaded_properties[key]
+        elif isinstance(key, str) and key.startswith('f') and key[1:].isdigit():
+            return self.get_loaded_property(int(key[1:]))
         else:
             return None
 
     def is_finalized_property(self, key):
-        if isinstance(key, str) and key.startswith('f') and key[1:].isdigit():
-            return self.is_finalized_property(int(key[1:]))
-        elif isinstance(key, int):
+        if isinstance(key, int):
             return key in self.finalized_properties
+        elif isinstance(key, str) and key.startswith('f') and key[1:].isdigit():
+            return self.is_finalized_property(int(key[1:]))
         else:
             return False
 
