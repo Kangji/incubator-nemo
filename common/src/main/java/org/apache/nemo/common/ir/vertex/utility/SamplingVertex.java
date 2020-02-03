@@ -31,6 +31,7 @@ public final class SamplingVertex extends IRVertex {
   private final IRVertex cloneOfOriginalVertex;
   private final float desiredSampleRate;
 
+
   /**
    * @param originalVertex    to clone.
    * @param desiredSampleRate percentage of tasks to execute.
@@ -42,16 +43,16 @@ public final class SamplingVertex extends IRVertex {
       throw new IllegalArgumentException(
         "Cannot sample non-Trigger utility vertices: " + originalVertex.toString());
     }
-    if (desiredSampleRate > 1 || desiredSampleRate <= 0) {
-      throw new IllegalArgumentException(String.valueOf(desiredSampleRate));
-    }
     this.originalVertex = originalVertex;
     this.cloneOfOriginalVertex = originalVertex.getClone();
-    this.desiredSampleRate = desiredSampleRate;
 
-    // Copy execution properties.
     originalVertex.copyExecutionPropertiesTo(cloneOfOriginalVertex);
     originalVertex.copyExecutionPropertiesTo(this);
+    this.desiredSampleRate = desiredSampleRate;
+  }
+
+  public IRVertex getOriginalVertex() {
+    return originalVertex;
   }
 
   /**
@@ -69,13 +70,6 @@ public final class SamplingVertex extends IRVertex {
   public IRVertex getCloneOfOriginalVertex() {
     copyExecutionPropertiesTo(cloneOfOriginalVertex); // reflect the updated EPs
     return cloneOfOriginalVertex;
-  }
-
-  /**
-   * @return the desired sample rate.
-   */
-  public float getDesiredSampleRate() {
-    return desiredSampleRate;
   }
 
   /**
@@ -98,10 +92,17 @@ public final class SamplingVertex extends IRVertex {
     }
   }
 
+  /**
+   * @return the desired sample rate.
+   */
+  public float getDesiredSampleRate() {
+    return desiredSampleRate;
+  }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder();
-    sb.append("SamplingVertex ");
+    sb.append("RandomSamplingVertex ");
     sb.append(getId());
     sb.append("(desiredSampleRate:");
     sb.append(String.valueOf(desiredSampleRate));
@@ -113,7 +114,7 @@ public final class SamplingVertex extends IRVertex {
 
   @Override
   public IRVertex getClone() {
-    return new SamplingVertex(originalVertex, desiredSampleRate);
+    return new SamplingVertex(getOriginalVertex(), desiredSampleRate);
   }
 
   @Override

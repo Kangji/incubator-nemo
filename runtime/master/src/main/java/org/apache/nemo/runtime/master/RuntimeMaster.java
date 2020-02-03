@@ -18,14 +18,14 @@
  */
 package org.apache.nemo.runtime.master;
 
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.Pair;
+import org.apache.nemo.common.Util;
 import org.apache.nemo.common.exception.*;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
@@ -42,7 +42,6 @@ import org.apache.nemo.runtime.master.metric.MetricMessageHandler;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.resource.ContainerManager;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
-import org.apache.nemo.runtime.master.resource.ResourceSpecification;
 import org.apache.nemo.runtime.master.scheduler.BatchScheduler;
 import org.apache.nemo.runtime.master.scheduler.Scheduler;
 import org.apache.nemo.runtime.master.servlet.*;
@@ -305,33 +304,14 @@ public final class RuntimeMaster {
   public void requestContainer(final String resourceSpecificationString) {
     final Future<?> containerRequestEventResult = runtimeMasterThread.submit(() -> {
       try {
-        final TreeNode jsonRootNode = objectMapper.readTree(resourceSpecificationString);
+        final List<Pair<Integer, ResourceSpecification>> resourceSpecificationList =  // pair of (# of executors, specs)
+          Util.parseResourceSpecificationString(resourceSpecificationString);
 
-        for (int i = 0; i < jsonRootNode.size(); i++) {
-          final TreeNode resourceNode = jsonRootNode.get(i);
-          final String type = resourceNode.get("type").traverse().nextTextValue();
-          final int memory = resourceNode.get("memory_mb").traverse().getIntValue();
-          final OptionalDouble maxOffheapRatio;
-          final int capacity = resourceNode.get("capacity").traverse().getIntValue();
-          final int executorNum = resourceNode.path("num").traverse().nextIntValue(1);
-          final OptionalInt poisonSec;
-
-          if (resourceNode.path("max_offheap_ratio").traverse().nextToken() == JsonToken.VALUE_NUMBER_FLOAT) {
-            maxOffheapRatio = OptionalDouble.of(resourceNode.path("max_offheap_ratio").traverse().getDoubleValue());
-          } else {
-            maxOffheapRatio = OptionalDouble.empty();
-          }
-
-          if (resourceNode.path("poison_sec").traverse().nextToken() == JsonToken.VALUE_NUMBER_INT) {
-            poisonSec = OptionalInt.of(resourceNode.path("poison_sec").traverse().getIntValue());
-          } else {
-            poisonSec = OptionalInt.empty();
-          }
-
-          resourceRequestCount.getAndAdd(executorNum);
-          containerManager.requestContainer(executorNum, new ResourceSpecification(type, capacity, memory,
-            maxOffheapRatio, poisonSec));
+        for (final Pair<Integer, ResourceSpecification> resourceSpecification: resourceSpecificationList) {
+          resourceRequestCount.getAndAdd(resourceSpecification.left());
+          containerManager.requestContainer(resourceSpecification.left(), resourceSpecification.right());
         }
+
         metricCountDownLatch = new CountDownLatch(resourceRequestCount.get());
       } catch (final Exception e) {
         throw new ContainerException(e);
@@ -467,13 +447,13 @@ public final class RuntimeMaster {
         throw new RuntimeException(exception);
       case RunTimePassMessage:
         ((BatchScheduler) scheduler).onRunTimePassMessage(
+          message.getRunTimePassMessageMsg().getRunTimePassType(),
           message.getRunTimePassMessageMsg().getTaskId(),
           message.getRunTimePassMessageMsg().getEntryList());
         break;
       case MetricMessageReceived:
         final List<ControlMessage.Metric> metricList = message.getMetricMsg().getMetricList();
-        metricList.forEach(metric ->
-          metricMessageHandler.onMetricMessageReceived(
+        metricList.forEach(metric -> metricMessageHandler.onMetricMessageReceived(
             metric.getMetricType(), metric.getMetricId(),
             metric.getMetricField(), metric.getMetricValue().toByteArray()));
         break;

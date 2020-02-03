@@ -24,6 +24,9 @@ import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.LoopVertex;
+import org.apache.nemo.common.ir.vertex.utility.TaskSizeSplitterVertex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Pass for unrolling the loops grouped by the {@link LoopExtractionPass}.
@@ -31,11 +34,13 @@ import org.apache.nemo.common.ir.vertex.LoopVertex;
  * Then, it decomposes each of the LoopVertices with the DAG information that each of them contain.
  */
 public final class LoopUnrollingPass extends ReshapingPass {
+  private static final Logger LOG = LoggerFactory.getLogger(LoopUnrollingPass.class.getName());
   /**
    * Default constructor.
    */
   public LoopUnrollingPass() {
     super(LoopUnrollingPass.class);
+    LOG.error("[HWARIM] loop unrolling pass init");
   }
 
   @Override
@@ -55,8 +60,28 @@ public final class LoopUnrollingPass extends ReshapingPass {
   private DAG<IRVertex, IREdge> recursivelyUnroll(final DAG<IRVertex, IREdge> dag) {
     final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
 
+    LOG.error("[HWARIM] search from here");
     dag.topologicalDo(irVertex -> {
-      if (irVertex instanceof LoopVertex) {
+      LOG.error("{} incoming edges {} outgoing edges {}", irVertex, dag.getIncomingEdgesOf(irVertex),
+        dag.getOutgoingEdgesOf(irVertex));
+      if (irVertex instanceof TaskSizeSplitterVertex) {
+        TaskSizeSplitterVertex splitterVertex = (TaskSizeSplitterVertex) irVertex;
+        splitterVertex.printLogs();
+      }
+    });
+
+    dag.topologicalDo(irVertex -> {
+      LOG.error("[HWARIM] this is {}", irVertex.getId());
+      if (irVertex instanceof TaskSizeSplitterVertex) {
+        TaskSizeSplitterVertex splitterVertex = (TaskSizeSplitterVertex) irVertex;
+        splitterVertex.markDuplicateEdges();
+        int i = 0;
+        while (!splitterVertex.loopTerminationConditionMet()) {
+          LOG.error("[HWARIM] {}, iteration {}", irVertex, i);
+          splitterVertex = splitterVertex.unRollIteration(builder);
+          i++;
+        }
+      } else if (irVertex instanceof LoopVertex) {
         LoopVertex loopVertex = (LoopVertex) irVertex;
         loopVertex.markDuplicateEdges();
         while (!loopVertex.loopTerminationConditionMet()) {

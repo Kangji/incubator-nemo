@@ -261,7 +261,8 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
       throw new IllegalArgumentException("Must be either all sampling vertices, or none: " + vertices.toString());
     }
 
-    if (vertices.iterator().next() instanceof SamplingVertex) {
+    final IRVertex representativeVertex = vertices.iterator().next();
+    if (representativeVertex instanceof SamplingVertex) {
       // Use min of the desired sample rates
       final float minSampleRate = vertices.stream()
         .map(v -> ((SamplingVertex) v).getDesiredSampleRate())

@@ -16,25 +16,24 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.plan;
+package org.apache.nemo.compiler.optimizer.pass.runtime;
 
-import org.apache.nemo.runtime.common.comm.ControlMessage;
+import org.apache.nemo.common.ir.IRDAG;
+//import org.apache.nemo.runtime.common.plan.PhysicalPlan;
+//import org.apache.nemo.runtime.common.plan.PhysicalPlanGenerator;
+
+import java.util.Map;
 
 /**
- * PhysicalPlan rewriter.
+ *
  */
-public interface PlanRewriter {
-  /**
-   * @param currentPhysicalPlan to rewrite.
-   * @param messageId           of the rewrite.
-   * @return physical plan.
-   */
-  PhysicalPlan rewrite(PhysicalPlan currentPhysicalPlan, int messageId);
+public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, Map<String, byte[]>>> {
 
-  /**
-   * @param messageId of the rewrite.
-   * @param data      to accumulate.
-   */
-  void accumulate(int messageId, ControlMessage.RunTimePassType runTimePassType, Object data);
-
+  //private final PhysicalPlanGenerator physicalPlanGenerator;
+  //private final PhysicalPlan physicalPlan;
+  //private final SimulationScheduler simulationScheduler
+  @Override
+  public IRDAG apply(final IRDAG irdag, final Message<Map<String, Map<String, byte[]>>> mapMessage) {
+    return null;
+  }
 }

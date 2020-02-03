@@ -20,6 +20,7 @@ package org.apache.nemo.common.ir;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Sets;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.PairKeyExtractor;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.coder.BytesDecoderFactory;
@@ -28,16 +29,16 @@ import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.dag.DAGInterface;
 import org.apache.nemo.common.exception.CompileTimeOptimizationException;
+import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.LoopVertex;
+import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.common.ir.vertex.utility.MessageAggregatorVertex;
-import org.apache.nemo.common.ir.vertex.utility.TriggerVertex;
-import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
-import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
+import org.apache.nemo.common.ir.vertex.utility.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +79,11 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
   private final Map<IRVertex, Set<IRVertex>> messageVertexToGroup;
 
   /**
+   * To remember the specifications of the executors used to run the IR DAG with.
+   */
+  private final List<Pair<Integer, ResourceSpecification>> executorInfo;
+
+  /**
    * @param originalUserApplicationDAG the initial DAG.
    */
   public IRDAG(final DAG<IRVertex, IREdge> originalUserApplicationDAG) {
@@ -86,6 +92,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     this.streamVertexToOriginalEdge = new HashMap<>();
     this.samplingVertexToGroup = new HashMap<>();
     this.messageVertexToGroup = new HashMap<>();
+    this.executorInfo = new ArrayList<>();
   }
 
   public IRDAGChecker.CheckerResult checkIntegrity() {
@@ -113,6 +120,12 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
    * @return a IR DAG summary string, consisting of only the vertices generated from the frontend.
    */
   public String irDAGSummary() {
+    final Long inputBytes = this.getInputSize();
+    final String inputSizeString = inputBytes < 1024 ? inputBytes + "B"
+      : (inputBytes / 1024 < 1024 ? inputBytes / 1024 + "KB"
+      : (inputBytes / 1048576 < 1024 ? inputBytes / 1048576 + "MB"
+      : (inputBytes / 1073741824L < 1024 ? inputBytes / 1073741824L + "GB"
+      : inputBytes / 1099511627776L + "TB")));
     return "rv" + getRootVertices().size()
       + "_v" + getVertices().stream()
       .filter(v -> !v.isUtilityVertex())  // Exclude utility vertices
@@ -120,7 +133,40 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
       + "_e" + getVertices().stream()
       .filter(v -> !v.isUtilityVertex())  // Exclude utility vertices
       .mapToInt(v -> getIncomingEdgesOf(v).size())
+      .sum() + "_" + inputSizeString;
+  }
+
+  /**
+   * @return the total sum of the input size for the IR DAG.
+   */
+  public Long getInputSize() {
+    return this.getRootVertices().stream()
+      .filter(irVertex -> irVertex instanceof SourceVertex)
+      .mapToLong(srcVertex -> {
+        try {
+          return ((SourceVertex) srcVertex).getEstimatedSizeBytes();
+        } catch (Exception e) {
+          throw new MetricException(e);
+        }
+      })
       .sum();
+  }
+
+  /**
+   * Setter for the executor specifications information.
+   * @param parsedExecutorInfo executor information parsed for processing.
+   */
+  public void recordExecutorInfo(final List<Pair<Integer, ResourceSpecification>> parsedExecutorInfo) {
+    executorInfo.addAll(parsedExecutorInfo);
+  }
+
+  /**
+   * Getter for the executor specifications information.
+   * @return the executor specifications information. It gives pairs of
+   * (# of nodes, resource specification for each node).
+   */
+  public List<Pair<Integer, ResourceSpecification>> getExecutorInfo() {
+    return executorInfo;
   }
 
   ////////////////////////////////////////////////// Methods for reshaping the DAG topology.
@@ -146,7 +192,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     if (vertexToDelete instanceof RelayVertex) {
       return Sets.newHashSet(vertexToDelete);
     } else if (vertexToDelete instanceof SamplingVertex) {
-      final Set<SamplingVertex> samplingVertexGroup = samplingVertexToGroup.get(vertexToDelete);
+      final Set<? extends SamplingVertex> samplingVertexGroup = samplingVertexToGroup.get(vertexToDelete);
       final Set<IRVertex> converted = new HashSet<>(samplingVertexGroup.size());
       for (final IRVertex sv : samplingVertexGroup) {
         converted.add(sv); // explicit conversion to IRVertex is needed.. otherwise the compiler complains :(
@@ -330,7 +376,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
    * <p>
    * For each edge in edgesToGetStatisticsOf...
    * <p>
-   * Before: src - edge - dst
+   * Before: src - edge - dst // ex. sample - oneToOne - original
    * After: src - oneToOneEdge(a clone of edge) - triggerVertex -
    * shuffleEdge - messageAggregatorVertex - broadcastEdge - dst
    * (the "Before" relationships are unmodified)
@@ -339,10 +385,10 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
    * <p>
    * TODO #345: Simplify insert(TriggerVertex)
    *
-   * @param triggerVertex    to insert.
+   * @param triggerVertex  to insert.
    * @param messageAggregatorVertex to insert.
-   * @param triggerOutputEncoder        to use.
-   * @param triggerOutputDecoder        to use.
+   * @param triggerOutputEncoder    to use.
+   * @param triggerOutputDecoder    to use.
    * @param edgesToGetStatisticsOf  to examine.
    * @param edgesToOptimize         to optimize.
    */
@@ -528,6 +574,33 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     modifiedDAG = builder.build(); // update the DAG.
   }
 
+  public void insert(final TaskSizeSplitterVertex toInsert,
+                     final Set<IREdge> incomingEdgesOfOriginalVertices,
+                     final Set<IREdge> outgoingEdgesOfOriginalVertices,
+                     final Set<IREdge> edgesWithSplitterVertex) {
+    final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
+
+    //insert vertex and edges irrelevant to splitter vertex
+    modifiedDAG.topologicalDo(v -> {
+      if (!toInsert.getOriginalVertices().contains(v)) {
+        builder.addVertex(v);
+        for (IREdge edge : modifiedDAG.getIncomingEdgesOf(v)) {
+          if (!incomingEdgesOfOriginalVertices.contains(edge) && !outgoingEdgesOfOriginalVertices.contains(edge)) {
+            builder.connectVertices(edge);
+          }
+        }
+      }
+    });
+
+    //insert splitter vertices
+    builder.addVertex(toInsert);
+
+    //connect splitter to outside world
+    edgesWithSplitterVertex.forEach(builder::connectVertices);
+
+    modifiedDAG = builder.build();
+  }
+
   /**
    * Reshape unsafely, without guarantees on preserving application semantics.
    * TODO #330: Refactor Unsafe Reshaping Passes
@@ -552,9 +625,11 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
 
   private IRVertex wrapSamplingVertexIfNeeded(final IRVertex newVertex, final IRVertex existingVertexToConnectWith) {
     // If the connecting vertex is a sampling vertex, the new vertex must be wrapped inside a sampling vertex too.
-    return existingVertexToConnectWith instanceof SamplingVertex
-      ? new SamplingVertex(newVertex, ((SamplingVertex) existingVertexToConnectWith).getDesiredSampleRate())
-      : newVertex;
+    if (existingVertexToConnectWith instanceof SamplingVertex) {
+      return new SamplingVertex(
+        newVertex, ((SamplingVertex) existingVertexToConnectWith).getDesiredSampleRate());
+    }
+    return newVertex;
   }
 
   private void assertNonControlEdge(final IREdge e) {

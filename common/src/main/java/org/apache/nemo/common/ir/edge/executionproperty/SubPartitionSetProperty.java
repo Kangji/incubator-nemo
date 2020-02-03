@@ -16,25 +16,27 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.plan;
+package org.apache.nemo.common.ir.edge.executionproperty;
 
-import org.apache.nemo.runtime.common.comm.ControlMessage;
+import org.apache.nemo.common.KeyRange;
+import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
+
+import java.util.ArrayList;
 
 /**
- * PhysicalPlan rewriter.
+ * dfdf.
  */
-public interface PlanRewriter {
+public class SubPartitionSetProperty extends EdgeExecutionProperty<ArrayList<KeyRange>> {
   /**
-   * @param currentPhysicalPlan to rewrite.
-   * @param messageId           of the rewrite.
-   * @return physical plan.
+   * Default constructor.
+   *
+   * @param value value of the EdgeExecutionProperty.
    */
-  PhysicalPlan rewrite(PhysicalPlan currentPhysicalPlan, int messageId);
+  public SubPartitionSetProperty(final ArrayList<KeyRange> value) {
+    super(value);
+  }
 
-  /**
-   * @param messageId of the rewrite.
-   * @param data      to accumulate.
-   */
-  void accumulate(int messageId, ControlMessage.RunTimePassType runTimePassType, Object data);
-
+  public static SubPartitionSetProperty of(final ArrayList<KeyRange> value) {
+    return new SubPartitionSetProperty(value);
+  }
 }

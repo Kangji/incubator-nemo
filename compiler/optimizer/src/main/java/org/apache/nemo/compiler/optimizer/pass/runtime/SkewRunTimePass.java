@@ -75,10 +75,8 @@ public final class SkewRunTimePass extends RunTimePass<Map<Object, Long>> {
       messageValue,
       (HashPartitioner) Partitioner.getPartitioner(
         representativeEdge.getExecutionProperties(), representativeEdge.getDst().getExecutionProperties()),
-      partitionerProperty.right() == PartitionerProperty.NUM_EQUAL_TO_DST_PARALLELISM
-        ? dstParallelism
-        : partitionerProperty.right(),
-      dstParallelism);
+      partitionerProperty.right() == PartitionerProperty.NUM_EQUAL_TO_DST_PARALLELISM ? dstParallelism
+        : partitionerProperty.right(), dstParallelism);
 
     LOG.info("Result of analysis: {}", pair);
 

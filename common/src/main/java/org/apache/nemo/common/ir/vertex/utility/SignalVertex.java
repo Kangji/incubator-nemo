@@ -16,25 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.plan;
+package org.apache.nemo.common.ir.vertex.utility;
 
-import org.apache.nemo.runtime.common.comm.ControlMessage;
+import org.apache.nemo.common.ir.vertex.OperatorVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.transform.SignalTransform;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * PhysicalPlan rewriter.
+ * Signal vertex holding signal transform.
+ *
  */
-public interface PlanRewriter {
-  /**
-   * @param currentPhysicalPlan to rewrite.
-   * @param messageId           of the rewrite.
-   * @return physical plan.
-   */
-  PhysicalPlan rewrite(PhysicalPlan currentPhysicalPlan, int messageId);
+public class SignalVertex extends OperatorVertex {
+  private static final AtomicInteger MESSAGE_ID_GENERATOR = new AtomicInteger(0);
 
-  /**
-   * @param messageId of the rewrite.
-   * @param data      to accumulate.
-   */
-  void accumulate(int messageId, ControlMessage.RunTimePassType runTimePassType, Object data);
-
+  public SignalVertex() {
+    super(new SignalTransform());
+    this.setPropertyPermanently(MessageIdVertexProperty.of(MESSAGE_ID_GENERATOR.incrementAndGet()));
+    this.setProperty(ParallelismProperty.of(1));
+  }
 }

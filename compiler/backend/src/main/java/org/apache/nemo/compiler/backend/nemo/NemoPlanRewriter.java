@@ -116,19 +116,37 @@ public final class NemoPlanRewriter implements PlanRewriter {
   }
 
   @Override
-  public void accumulate(final int messageId, final Object data) {
+  public void accumulate(final int messageId, final ControlMessage.RunTimePassType runTimePassType, final Object data) {
     messageIdToAggregatedData.putIfAbsent(messageId, new HashMap<>());
     final Map<Object, Long> aggregatedData = messageIdToAggregatedData.get(messageId);
-    final List<ControlMessage.RunTimePassMessageEntry> messageEntries =
-      (List<ControlMessage.RunTimePassMessageEntry>) data;
-    messageEntries.forEach(entry -> {
-      final Object key = entry.getKey();
-      final long partitionSize = entry.getValue();
-      if (aggregatedData.containsKey(key)) {
-        aggregatedData.compute(key, (originalKey, originalValue) -> originalValue + partitionSize);
-      } else {
-        aggregatedData.put(key, partitionSize);
-      }
-    });
+
+    switch (runTimePassType) {
+      case DataSkewPass:
+        final List<ControlMessage.RunTimePassMessageEntry> messageEntries =
+          (List<ControlMessage.RunTimePassMessageEntry>) data;
+        messageEntries.forEach(entry -> {
+          final Object key = entry.getKey();
+          final long partitionSize = entry.getValue();
+          if (aggregatedData.containsKey(key)) {
+            aggregatedData.compute(key, (originalKey, originalValue) -> (long) originalValue + partitionSize);
+          } else {
+            aggregatedData.put(key, partitionSize);
+          }
+        });
+        break;
+      case DynamicTaskSizingPass:
+        final HashMap<Integer, Long> taskSizeToDuration = (HashMap<Integer, Long>) data;
+        Set<Integer> taskSizeSet = taskSizeToDuration.keySet();
+        if (taskSizeSet.isEmpty()) {
+          break;
+        }
+        for (int taskSize : taskSizeSet) {
+          aggregatedData.put(taskSize, taskSizeToDuration.get(taskSize));
+        }
+        break;
+      default:
+        throw new IllegalArgumentException("This type of run-time pass is not supported");
+    }
+    return;
   }
 }

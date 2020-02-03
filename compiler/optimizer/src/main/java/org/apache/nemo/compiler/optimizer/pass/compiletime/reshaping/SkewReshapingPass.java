@@ -73,7 +73,8 @@ public final class SkewReshapingPass extends ReshapingPass {
         final KeyExtractor keyExtractor = representativeEdge.getPropertyValue(KeyExtractorProperty.class).get();
 
         // Insert the vertices
-        final TriggerVertex trigger = new TriggerVertex<>(SkewHandlingUtil.getMessageGenerator(keyExtractor));
+        final TriggerVertex trigger =
+          new TriggerVertex<>(SkewHandlingUtil.getMessageGenerator(keyExtractor));
         final MessageAggregatorVertex mav =
           new MessageAggregatorVertex(HashMap::new, SkewHandlingUtil.getMessageAggregator());
         dag.insert(trigger, mav, SkewHandlingUtil.getEncoder(representativeEdge),

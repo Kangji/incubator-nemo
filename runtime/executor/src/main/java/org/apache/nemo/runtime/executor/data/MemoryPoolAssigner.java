@@ -72,7 +72,7 @@ public class MemoryPoolAssigner {
    * @return a MemoryChunk
    * @throws MemoryAllocationException if fails to allocate MemoryChunk.
    */
-  public MemoryChunk allocateChunk() throws MemoryAllocationException {
+  public final MemoryChunk allocateChunk() throws MemoryAllocationException {
     return memoryPool.requestChunkFromPool();
   }
 
@@ -81,7 +81,7 @@ public class MemoryPoolAssigner {
    *
    * @param target  the list of MemoryChunks to be returned to the memory pool.
    */
-  public void returnChunksToPool(final Iterable<MemoryChunk> target) {
+  public final void returnChunksToPool(final Iterable<MemoryChunk> target) {
     for (final MemoryChunk chunk: target) {
       memoryPool.returnChunkToPool(chunk);
     }
@@ -92,7 +92,7 @@ public class MemoryPoolAssigner {
    *
    * @return the chunk size in bytes.
    */
-  public int getChunkSize() {
+  public final int getChunkSize() {
     return chunkSize;
   }
 
@@ -102,7 +102,7 @@ public class MemoryPoolAssigner {
    *
    * @return the pool size.
    */
-  int poolSize() {
+  final int poolSize() {
     return memoryPool.size();
   }
 

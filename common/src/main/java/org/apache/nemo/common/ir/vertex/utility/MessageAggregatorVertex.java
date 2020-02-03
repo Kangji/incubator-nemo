@@ -66,6 +66,6 @@ public final class MessageAggregatorVertex<K, V, O> extends OperatorVertex {
    * @param <V> of the input pair.
    * @param <O> of the output aggregated message.
    */
-  public interface MessageAggregatorFunction<K, V, O> extends BiFunction<Pair<K, V>, O, O>, Serializable {
+  public interface  MessageAggregatorFunction<K, V, O> extends BiFunction<Pair<K, V>, O, O>, Serializable {
   }
 }

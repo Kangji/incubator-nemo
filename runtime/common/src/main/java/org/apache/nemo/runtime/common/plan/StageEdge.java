@@ -27,6 +27,7 @@ import org.apache.nemo.common.KeyRange;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionSetProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.SubPartitionSetProperty;
 import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.vertex.IRVertex;
@@ -159,11 +160,17 @@ public final class StageEdge extends RuntimeEdge<Stage> {
    */
   public List<KeyRange> getKeyRanges() {
     final ArrayList<KeyRange> defaultPartitionSet = new ArrayList<>();
+    final List<KeyRange> keyRanges;
     for (int taskIndex = 0; taskIndex < getDst().getParallelism(); taskIndex++) {
       defaultPartitionSet.add(taskIndex, HashRange.of(taskIndex, taskIndex + 1));
     }
-    final List<KeyRange> keyRanges = getExecutionProperties()
-      .get(PartitionSetProperty.class).orElse(defaultPartitionSet);
+    if (getDst().getEnableDynamicTaskSizing()) {
+      keyRanges = getExecutionProperties()
+        .get(SubPartitionSetProperty.class).orElse(defaultPartitionSet); // orElseThrow?
+    } else {
+      keyRanges = getExecutionProperties()
+        .get(PartitionSetProperty.class).orElse(defaultPartitionSet);
+    }
     return keyRanges;
   }
 }

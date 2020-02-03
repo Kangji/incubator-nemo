@@ -31,6 +31,7 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.transform.MessageAggregatorTransform;
+import org.apache.nemo.common.ir.vertex.transform.SignalTransform;
 import org.apache.nemo.common.ir.vertex.transform.Transform;
 import org.apache.nemo.common.punctuation.Finishmark;
 import org.apache.nemo.common.punctuation.Watermark;
@@ -38,6 +39,7 @@ import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.PersistentConnectionToMasterMap;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.RuntimeEdge;
 import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.common.plan.Task;
@@ -230,7 +232,13 @@ public final class TaskExecutor {
       if (irVertex instanceof OperatorVertex
         && ((OperatorVertex) irVertex).getTransform() instanceof MessageAggregatorTransform) {
         outputCollector = new RunTimeMessageOutputCollector(
-          taskId, irVertex, persistentConnectionToMasterMap, this);
+          taskId, irVertex, persistentConnectionToMasterMap, this,
+          ControlMessage.RunTimePassType.DataSkewPass);
+      } else if (irVertex instanceof OperatorVertex
+        && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform) {
+        outputCollector = new RunTimeMessageOutputCollector(
+          taskId, irVertex, persistentConnectionToMasterMap, this,
+          ControlMessage.RunTimePassType.DynamicTaskSizingPass);
       } else {
         outputCollector = new OperatorVertexOutputCollector(
           irVertex, internalMainOutputs, internalAdditionalOutputMap,
@@ -341,11 +349,12 @@ public final class TaskExecutor {
     }
 
     metricMessageSender.send(TASK_METRIC_ID, taskId,
-      "boundedSourceReadTime", SerializationUtils.serialize(boundedSourceReadTime));
+      TaskMetric.TaskMetrics.TASK_BOUNDED_SOURCE_READ_TIME.toString(),
+      SerializationUtils.serialize(boundedSourceReadTime));
     metricMessageSender.send(TASK_METRIC_ID, taskId,
-      "serializedReadBytes", SerializationUtils.serialize(serializedReadBytes));
+      TaskMetric.TaskMetrics.TASK_SERIALIZED_READ_BYTES.toString(), SerializationUtils.serialize(serializedReadBytes));
     metricMessageSender.send(TASK_METRIC_ID, taskId,
-      "encodedReadBytes", SerializationUtils.serialize(encodedReadBytes));
+      TaskMetric.TaskMetrics.TASK_ENCODED_READ_BYTES.toString(), SerializationUtils.serialize(encodedReadBytes));
 
     // Phase 2: Finalize task-internal states and elements
     for (final VertexHarness vertexHarness : sortedHarnesses) {
@@ -683,13 +692,13 @@ public final class TaskExecutor {
     });
 
     // finalize OutputWriters for additional tagged children
-    vertexHarness.getWritersToAdditionalChildrenTasks().values().forEach(outputWriters ->
+    vertexHarness.getWritersToAdditionalChildrenTasks().values().forEach(outputWriters -> {
       outputWriters.forEach(outputWriter -> {
         outputWriter.close();
         final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
         writtenBytes.ifPresent(writtenBytesList::add);
-      })
-    );
+      });
+    });
 
     long totalWrittenBytes = 0;
     for (final Long writtenBytes : writtenBytesList) {
@@ -697,7 +706,7 @@ public final class TaskExecutor {
     }
 
     // TODO #236: Decouple metric collection and sending logic
-    metricMessageSender.send(TASK_METRIC_ID, taskId,
-      "writtenBytes", SerializationUtils.serialize(totalWrittenBytes));
+    metricMessageSender.send(TASK_METRIC_ID, taskId, TaskMetric.TaskMetrics.TASK_OUTPUT_BYTES.toString(),
+      SerializationUtils.serialize(totalWrittenBytes));
   }
 }

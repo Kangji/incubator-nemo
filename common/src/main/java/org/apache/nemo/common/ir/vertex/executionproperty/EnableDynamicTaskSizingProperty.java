@@ -16,25 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.plan;
 
-import org.apache.nemo.runtime.common.comm.ControlMessage;
+package org.apache.nemo.common.ir.vertex.executionproperty;
+
+import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
 /**
- * PhysicalPlan rewriter.
+ * Property to enable dynamic task sizing policy.
  */
-public interface PlanRewriter {
-  /**
-   * @param currentPhysicalPlan to rewrite.
-   * @param messageId           of the rewrite.
-   * @return physical plan.
-   */
-  PhysicalPlan rewrite(PhysicalPlan currentPhysicalPlan, int messageId);
+public class EnableDynamicTaskSizingProperty extends VertexExecutionProperty<Boolean> {
 
   /**
-   * @param messageId of the rewrite.
-   * @param data      to accumulate.
+   * Default constructor.
+   *
+   * @param value value of the VertexExecutionProperty.
    */
-  void accumulate(int messageId, ControlMessage.RunTimePassType runTimePassType, Object data);
+  public EnableDynamicTaskSizingProperty(final Boolean value) {
+    super(value);
+  }
 
+  public static EnableDynamicTaskSizingProperty of(final Boolean value) {
+    return new EnableDynamicTaskSizingProperty(value);
+  }
 }

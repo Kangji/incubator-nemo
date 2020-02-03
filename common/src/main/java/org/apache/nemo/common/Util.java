@@ -18,22 +18,26 @@
  */
 package org.apache.nemo.common;
 
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.nemo.common.exception.JsonParseException;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
+import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.utility.MessageAggregatorVertex;
-import org.apache.nemo.common.ir.vertex.utility.TriggerVertex;
 import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
 import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
+import org.apache.nemo.common.ir.vertex.utility.TriggerVertex;
 
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -129,6 +133,7 @@ public final class Util {
    *
    * @param commPattern to use.
    * @param edgeToClone to copy execution properties from.
+   * @param newSrc      of the new edge.
    * @param newSrc      of the new edge.
    * @param newDst      of the new edge.
    * @return the new edge.
@@ -230,6 +235,55 @@ public final class Util {
    */
   public static String restoreEdgeId(final Integer numericId) {
     return "edge" + numericId;
+  }
+
+
+  /**
+   * Utility method for parsing the resource specification string.
+   *
+   * @param resourceSpecificationString the input resource specification string.
+   * @return the parsed list of resource specifications. The Integer indicates how many of the specified nodes are
+   * required, followed by the ResourceSpecification that indicates the specifications of the nodes.
+   */
+  public static List<Pair<Integer, ResourceSpecification>> parseResourceSpecificationString(
+    final String resourceSpecificationString) {
+    final List<Pair<Integer, ResourceSpecification>> resourceSpecifications = new ArrayList<>();
+    try {
+      if (resourceSpecificationString.trim().startsWith("[")) {
+        final TreeNode jsonRootNode = new ObjectMapper().readTree(resourceSpecificationString);
+
+        for (int i = 0; i < jsonRootNode.size(); i++) {
+          final TreeNode resourceNode = jsonRootNode.get(i);
+          final int executorNum = resourceNode.path("num").traverse().nextIntValue(1);
+          final String type = resourceNode.get("type").traverse().nextTextValue();
+          final int capacity = resourceNode.get("capacity").traverse().getIntValue();
+          final int memory = resourceNode.get("memory_mb").traverse().getIntValue();
+          final OptionalDouble maxOffheapRatio;
+          final OptionalInt poisonSec;
+
+          if (resourceNode.path("max_offheap_ratio").traverse().nextToken() == JsonToken.VALUE_NUMBER_FLOAT) {
+            maxOffheapRatio = OptionalDouble.of(resourceNode.path("max_offheap_ratio").traverse().getDoubleValue());
+          } else {
+            maxOffheapRatio = OptionalDouble.empty();
+          }
+
+          if (resourceNode.path("poison_sec").traverse().nextToken() == JsonToken.VALUE_NUMBER_INT) {
+            poisonSec = OptionalInt.of(resourceNode.path("poison_sec").traverse().getIntValue());
+          } else {
+            poisonSec = OptionalInt.empty();
+          }
+
+          resourceSpecifications.add(
+            Pair.of(executorNum, new ResourceSpecification(type, capacity, memory, maxOffheapRatio, poisonSec)));
+        }
+      } else {
+        throw new UnsupportedOperationException("Executor Info file should be a JSON file.");
+      }
+
+      return resourceSpecifications;
+    } catch (final Exception e) {
+      throw new JsonParseException(e);
+    }
   }
 
   /**

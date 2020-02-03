@@ -23,6 +23,7 @@ import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
 import org.apache.nemo.compiler.optimizer.policy.ConditionalLargeShufflePolicy;
+import org.apache.nemo.compiler.optimizer.policy.DynamicTaskSizingPolicy;
 import org.apache.nemo.examples.beam.policy.*;
 import org.junit.After;
 import org.junit.Before;
@@ -79,6 +80,18 @@ public final class WordCountITCase {
       .addJobId(WordCountITCase.class.getSimpleName() + "_largeShuffle")
       .addOptimizationPolicy(LargeShufflePolicyParallelismFive.class.getCanonicalName())
       .build());
+  }
+
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
+  public void testTaskResizing() throws Exception {
+    JobLauncher.main(new ArgBuilder()
+      .addUserMain(WordCount.class.getCanonicalName())
+      .addUserArgs(inputFilePath, "file:///" + outputFilePath)
+      .addResourceJson(executorResourceFileName)
+      .addJobId(WordCountITCase.class.getSimpleName() + "_taskResizing")
+      .addOptimizationPolicy(DynamicTaskSizingPolicy.class.getCanonicalName())
+      .build()
+    );
   }
 
   @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)

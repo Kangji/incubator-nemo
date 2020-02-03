@@ -31,6 +31,8 @@ import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProper
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
+import org.apache.nemo.runtime.common.comm.ControlMessage;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.common.state.BlockState;
 import org.apache.nemo.runtime.common.state.StageState;
@@ -38,6 +40,7 @@ import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.BlockManagerMaster;
 import org.apache.nemo.runtime.master.PlanAppender;
 import org.apache.nemo.runtime.master.PlanStateManager;
+import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
 import org.slf4j.Logger;
@@ -78,6 +81,7 @@ public final class BatchScheduler implements Scheduler {
    * Other necessary components of this {@link org.apache.nemo.runtime.master.RuntimeMaster}.
    */
   private final BlockManagerMaster blockManagerMaster;
+  private final MetricStore metricStore;
 
   /**
    * The below variables depend on the submitted plan to execute.
@@ -97,6 +101,7 @@ public final class BatchScheduler implements Scheduler {
     this.blockManagerMaster = blockManagerMaster;
     this.executorRegistry = executorRegistry;
     this.planStateManager = planStateManager;
+    this.metricStore = MetricStore.getStore();
   }
 
   ////////////////////////////////////////////////////////////////////// Methods for plan rewriting.
@@ -130,9 +135,22 @@ public final class BatchScheduler implements Scheduler {
    * @param taskId that generated the message.
    * @param data   of the message.
    */
-  public void onRunTimePassMessage(final String taskId, final Object data) {
+  public void onRunTimePassMessage(final ControlMessage.RunTimePassType runTimePassType,
+                                   final String taskId, final Object data) {
     final Set<StageEdge> targetEdges = getEdgesToOptimize(taskId);
-    planRewriter.accumulate(getMessageId(targetEdges), data);
+    switch (runTimePassType) {
+      case DataSkewPass:
+        planRewriter.accumulate(getMessageId(targetEdges), runTimePassType, data);
+        break;
+      case DynamicTaskSizingPass:
+        HashMap<Integer, Long> taskSizeToDuration = new HashMap<>();
+        TaskMetric taskMetric = (TaskMetric) metricStore.getMetricMap(TaskMetric.class).get(taskId);
+        taskSizeToDuration.put(taskMetric.getTaskSize(), taskMetric.getTaskDurationTime());
+        planRewriter.accumulate(getMessageId(targetEdges), runTimePassType, taskSizeToDuration);
+        break;
+      default:
+        throw new IllegalArgumentException("This type of run-time pass is not supported");
+    }
   }
 
   /**
@@ -544,6 +562,17 @@ public final class BatchScheduler implements Scheduler {
     return targetEdges;
   }
 
+  public Stage getStageFromTaskId(final String taskId) {
+    final DAG<Stage, StageEdge> stageDag = planStateManager.getPhysicalPlan().getStageDAG();
+
+    // Get a stage including the given task
+    final Stage targetStage = stageDag.getVertices().stream()
+      .filter(stage -> stage.getId().equals(RuntimeIdManager.getStageIdFromTaskId(taskId)))
+      .findFirst()
+      .orElseThrow(RuntimeException::new);
+
+    return targetStage;
+  }
   /**
    * Action for after task execution has failed but it's recoverable.
    *

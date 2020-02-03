@@ -28,6 +28,8 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DuplicateEdgeGroupProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DuplicateEdgeGroupPropertyValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -40,8 +42,8 @@ import java.util.function.IntPredicate;
 /**
  * IRVertex that contains a partial DAG that is iterative.
  */
-public final class LoopVertex extends IRVertex {
-
+public class LoopVertex extends IRVertex {
+  private static final Logger LOG = LoggerFactory.getLogger(LoopVertex.class.getName());
   private final AtomicInteger duplicateEdgeGroupId = new AtomicInteger(0);
   // Contains DAG information
   private final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
@@ -95,7 +97,7 @@ public final class LoopVertex extends IRVertex {
   }
 
   @Override
-  public LoopVertex getClone() {
+  public final LoopVertex getClone() {
     return new LoopVertex(this);
   }
 
@@ -127,6 +129,21 @@ public final class LoopVertex extends IRVertex {
    * @param edgeWithInternalVertex the corresponding edge from/to internal vertex
    */
   public void mapEdgeWithLoop(final IREdge edgeWithLoop, final IREdge edgeWithInternalVertex) {
+    LOG.error("[LoopVertex][MapEdgeWithLoop] loop {} internal {}", edgeWithLoop, edgeWithInternalVertex);
+    if (this.edgeWithLoopToEdgeWithInternalVertex.containsKey(edgeWithLoop)
+      && !this.edgeWithInternalVertexToEdgeWithLoop.containsKey(edgeWithInternalVertex)) {
+      // A B to A B'
+      LOG.error("[LoopVertex][MapEdgeWithLoop] relation to remove loop {} internal {}",
+        edgeWithLoop, edgeWithLoopToEdgeWithInternalVertex.get(edgeWithLoop));
+      this.edgeWithInternalVertexToEdgeWithLoop.remove(this.edgeWithLoopToEdgeWithInternalVertex.get(edgeWithLoop));
+    } else if (this.edgeWithInternalVertexToEdgeWithLoop.containsKey(edgeWithInternalVertex)
+      && !this.edgeWithLoopToEdgeWithInternalVertex.containsKey(edgeWithLoop)) {
+      // A B to A' B
+      LOG.error("[LoopVertex][MapEdgeWithLoop] relation to remove loop {} internal {}",
+        edgeWithInternalVertexToEdgeWithLoop.get(edgeWithInternalVertex), edgeWithInternalVertex);
+      this.edgeWithLoopToEdgeWithInternalVertex.remove(
+        this.edgeWithInternalVertexToEdgeWithLoop.get(edgeWithInternalVertex));
+    }
     this.edgeWithLoopToEdgeWithInternalVertex.put(edgeWithLoop, edgeWithInternalVertex);
     this.edgeWithInternalVertexToEdgeWithLoop.put(edgeWithInternalVertex, edgeWithLoop);
   }
@@ -140,6 +157,27 @@ public final class LoopVertex extends IRVertex {
   }
 
   /**
+   * @return map of edge to edge
+   */
+  public Map<IREdge, IREdge> getEdgeWithLoopToEdgeWithInternalVertex() {
+    return this.edgeWithLoopToEdgeWithInternalVertex;
+  }
+
+  /**
+   * @return map of edge to edge
+   */
+  public Map<IREdge, IREdge> getEdgeWithInternalVertexToEdgeWithLoop() {
+    return this.edgeWithInternalVertexToEdgeWithLoop;
+  }
+  /**
+   * @param edgeWithLoop on edge with loop
+   * @return the corresponding edge with internal vertex
+   */
+  public IREdge getEdgeWithInternalVertex(final IREdge edgeWithLoop) {
+    return this.edgeWithLoopToEdgeWithInternalVertex.get(edgeWithLoop);
+  }
+
+  /**
    * Adds the incoming edge of the contained DAG.
    *
    * @param edge edge to add.
@@ -147,6 +185,16 @@ public final class LoopVertex extends IRVertex {
   public void addDagIncomingEdge(final IREdge edge) {
     this.dagIncomingEdges.putIfAbsent(edge.getDst(), new HashSet<>());
     this.dagIncomingEdges.get(edge.getDst()).add(edge);
+  }
+
+  /**
+   * Removes the incoming edge of the contained DAG.
+   * @param edge edge to remove
+   */
+  public void removeDagIncomingEdge(final IREdge edge) {
+    if (this.dagIncomingEdges.containsKey(edge.getDst())) {
+      this.dagIncomingEdges.get(edge.getDst()).remove(edge);
+    }
   }
 
   /**
@@ -184,6 +232,14 @@ public final class LoopVertex extends IRVertex {
   }
 
   /**
+   * @param edge edge to remove.
+   */
+  public void removeNonIterativeIncomingEdge(final IREdge edge) {
+    if (this.nonIterativeIncomingEdges.containsKey(edge.getDst())) {
+      this.nonIterativeIncomingEdges.get(edge.getDst()).remove(edge);
+    }
+  }
+  /**
    * @return the non-iterative incoming edges of the LoopVertex.
    */
   public Map<IRVertex, Set<IREdge>> getNonIterativeIncomingEdges() {
@@ -200,6 +256,14 @@ public final class LoopVertex extends IRVertex {
     this.dagOutgoingEdges.get(edge.getSrc()).add(edge);
   }
 
+  /**
+   * @param edge edge to remove.
+   */
+  public void removeDagOutgoingEdge(final IREdge edge) {
+    if (this.dagOutgoingEdges.containsKey(edge.getSrc())) {
+      this.dagOutgoingEdges.get(edge.getSrc()).remove(edge);
+    }
+  }
   /**
    * @return outgoing edges of the contained DAG.
    */
@@ -330,7 +394,7 @@ public final class LoopVertex extends IRVertex {
   /**
    * decrease the value of maximum number of iterations by 1.
    */
-  private void decreaseMaxNumberOfIterations() {
+  protected void decreaseMaxNumberOfIterations() {
     this.maxNumberOfIterations--;
   }
 
@@ -358,6 +422,9 @@ public final class LoopVertex extends IRVertex {
     this.terminationCondition = terminationCondition;
   }
 
+  /**
+   * @return
+   */
   @Override
   public ObjectNode getPropertiesAsJsonNode() {
     final ObjectNode node = getIRVertexPropertiesAsJsonNode();
