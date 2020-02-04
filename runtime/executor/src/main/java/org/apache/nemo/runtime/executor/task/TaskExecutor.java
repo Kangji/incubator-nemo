@@ -53,6 +53,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -328,15 +330,22 @@ public final class TaskExecutor {
    * - Phase 2: Finalize task-internal states and data elements
    */
   private void doExecute() {
+    final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+    long taskStartCpuTime = 0L;
+    long taskFinishCpuTime = 0L;
+    long taskStartTime = 0L;
+    long taskFinishTime = 0L;
+
     // Housekeeping stuff
     if (isExecuted) {
       throw new RuntimeException("Task {" + taskId + "} execution called again");
     }
     LOG.info("{} started", taskId);
+
     taskStateManager.onTaskStateChanged(TaskState.State.EXECUTING, Optional.empty(), Optional.empty());
 
     // Phase 1: Consume task-external input data.
-    if (!handleDataFetchers(dataFetchers)) {
+    if (!handleDataFetchers(dataFetchers)) { // what happens here? fetch data
       return;
     }
 
@@ -348,10 +357,25 @@ public final class TaskExecutor {
     metricMessageSender.send("TaskMetric", taskId,
       TaskMetric.TaskMetrics.TASK_ENCODED_READ_BYTES.toString(), SerializationUtils.serialize(encodedReadBytes));
 
+    taskStartTime = System.currentTimeMillis();
+    if(threadMXBean.isCurrentThreadCpuTimeSupported()){
+      taskStartCpuTime = threadMXBean.getCurrentThreadCpuTime();
+    }
+
     // Phase 2: Finalize task-internal states and elements
     for (final VertexHarness vertexHarness : sortedHarnesses) {
-      finalizeVertex(vertexHarness);
+      finalizeVertex(vertexHarness); // what happens here?
     }
+
+    taskFinishTime = System.currentTimeMillis();
+    if(threadMXBean.isCurrentThreadCpuTimeSupported()){
+      taskFinishCpuTime = threadMXBean.getCurrentThreadCpuTime();
+    }
+
+    metricMessageSender.send("TaskMetric", taskId, TaskMetric.TaskMetrics.TASK_DURATION_TIME.toString(),
+      SerializationUtils.serialize(taskFinishTime - taskStartTime));
+    metricMessageSender.send("TaskMetric", taskId, TaskMetric.TaskMetrics.TASK_CPU_TIME.toString(),
+      SerializationUtils.serialize(taskFinishCpuTime - taskStartCpuTime));
 
     if (idOfVertexPutOnHold == null) {
       taskStateManager.onTaskStateChanged(TaskState.State.COMPLETE, Optional.empty(), Optional.empty());
@@ -647,7 +671,9 @@ public final class TaskExecutor {
     final Transform transform;
     if (irVertex instanceof OperatorVertex) {
       transform = ((OperatorVertex) irVertex).getTransform();
+
       transform.close();
+
     }
 
     vertexHarness.getContext().getSerializedData().ifPresent(data ->

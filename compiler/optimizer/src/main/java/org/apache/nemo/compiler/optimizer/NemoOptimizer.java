@@ -92,8 +92,7 @@ public final class NemoOptimizer implements Optimizer {
     // Handle caching first.
     final IRDAG cacheFilteredDag = handleCaching(dag, cacheIdToEdge);
     if (!cacheIdToEdge.isEmpty()) {
-      cacheFilteredDag.storeJSON(dagDirectory, irDagId + "FilterCache",
-        "IR after cache filtering");
+      cacheFilteredDag.storeJSON(dagDirectory, irDagId + "FilterCache", "IR after cache filtering");
     }
 
     // Conduct compile-time optimization.

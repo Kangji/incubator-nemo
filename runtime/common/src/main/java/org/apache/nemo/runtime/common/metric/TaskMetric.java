@@ -130,14 +130,6 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     this.taskBoundedSourceReadTime = boundedSourceReadTime;
   }
 
-  public final long getTaskInputBytes() {
-    return taskInputBytes;
-  }
-
-  private void setTaskInputBytes(final long taskInputBytes) {
-    this.taskInputBytes = taskInputBytes;
-  }
-
   public final long getTaskOutputBytes() {
     return taskOutputBytes;
   }
@@ -233,8 +225,6 @@ public class TaskMetric implements StateMetric<TaskState.State> {
       case TASK_BOUNDED_SOURCE_READ_TIME:
         setTaskBoundedSourceReadTime(SerializationUtils.deserialize(metricValue));
         break;
-      case TASK_INPUT_BYTES:
-        setTaskInputBytes(SerializationUtils.deserialize(metricValue));
       case TASK_OUTPUT_BYTES:
         setTaskOutputBytes(SerializationUtils.deserialize(metricValue));
         break;
@@ -271,14 +261,13 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     TASK_SCHEDULE_ATTEMPT,
     TASK_STATE_TRANSITION_EVENT,
 
-    TASK_DURATION_TIME,
-    TASK_CPU_TIME,
+    TASK_DURATION_TIME, //done
+    TASK_CPU_TIME, // done
 
     TASK_SERIALIZATION_TIME,
     TASK_DESERIALIZATION_TIME,
     TASK_BOUNDED_SOURCE_READ_TIME,
 
-    TASK_INPUT_BYTES,
     TASK_OUTPUT_BYTES,
     TASK_SERIALIZED_READ_BYTES,
     TASK_ENCODED_READ_BYTES,

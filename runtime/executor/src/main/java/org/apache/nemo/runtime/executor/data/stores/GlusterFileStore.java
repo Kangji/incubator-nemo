@@ -18,6 +18,8 @@
  */
 package org.apache.nemo.runtime.executor.data.stores;
 
+import org.apache.nemo.runtime.executor.MetricManagerWorker;
+import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.data.MemoryPoolAssigner;
 import org.apache.nemo.common.exception.BlockFetchException;
 import org.apache.nemo.common.exception.BlockWriteException;
@@ -47,7 +49,7 @@ import java.util.Optional;
 @ThreadSafe
 public final class GlusterFileStore extends AbstractBlockStore implements RemoteFileStore {
   private final String fileDirectory;
-
+  private final MetricMessageSender metricMessageSender;
   /**
    * Constructor.
    *
@@ -60,9 +62,11 @@ public final class GlusterFileStore extends AbstractBlockStore implements Remote
   private GlusterFileStore(@Parameter(JobConf.GlusterVolumeDirectory.class) final String volumeDirectory,
                            @Parameter(JobConf.JobId.class) final String jobId,
                            final SerializerManager serializerManager,
-                           final MemoryPoolAssigner memoryPoolAssigner) {
+                           final MemoryPoolAssigner memoryPoolAssigner,
+                           final MetricManagerWorker metricMessageSender) {
     super(serializerManager, memoryPoolAssigner);
     this.fileDirectory = volumeDirectory + "/" + jobId;
+    this.metricMessageSender = metricMessageSender;
     new File(fileDirectory).mkdirs();
   }
 
@@ -73,7 +77,7 @@ public final class GlusterFileStore extends AbstractBlockStore implements Remote
     final String filePath = DataUtil.blockIdToFilePath(blockId, fileDirectory);
     final RemoteFileMetadata metadata =
       RemoteFileMetadata.create(DataUtil.blockIdToMetaFilePath(blockId, fileDirectory));
-    return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner());
+    return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner(), metricMessageSender);
   }
 
   /**
@@ -154,6 +158,6 @@ public final class GlusterFileStore extends AbstractBlockStore implements Remote
     final String filePath = DataUtil.blockIdToFilePath(blockId, fileDirectory);
     final RemoteFileMetadata<K> metadata =
       RemoteFileMetadata.open(DataUtil.blockIdToMetaFilePath(blockId, fileDirectory));
-    return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner());
+    return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner(), metricMessageSender);
   }
 }

@@ -18,7 +18,10 @@
  */
 package org.apache.nemo.runtime.executor.data.block;
 
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.KeyRange;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
+import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.data.MemoryAllocationException;
 import org.apache.nemo.runtime.executor.data.MemoryPoolAssigner;
 import org.apache.nemo.common.Pair;
@@ -69,6 +72,7 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
   private final String filePath;
   private final FileMetadata<K> metadata;
   private final MemoryPoolAssigner memoryPoolAssigner;
+  private final MetricMessageSender metricMessageSender;
 
   /**
    * Constructor.
@@ -83,13 +87,15 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
                    final Serializer serializer,
                    final String filePath,
                    final FileMetadata<K> metadata,
-                   final MemoryPoolAssigner memoryPoolAssigner) {
+                   final MemoryPoolAssigner memoryPoolAssigner,
+                   final MetricMessageSender metricMessageSender) {
     this.id = blockId;
     this.nonCommittedPartitionsMap = new HashMap<>();
     this.serializer = serializer;
     this.filePath = filePath;
     this.metadata = metadata;
     this.memoryPoolAssigner = memoryPoolAssigner;
+    this.metricMessageSender = metricMessageSender;
   }
 
   /**
@@ -136,7 +142,11 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
           partition = new SerializedPartition<>(key, serializer, memoryPoolAssigner);
           nonCommittedPartitionsMap.put(key, partition);
         }
+        final long startTime = System.currentTimeMillis();
         partition.write(element);
+        final long finishTime = System.currentTimeMillis();
+        metricMessageSender.send("TaskMetric", null,
+          TaskMetric.TaskMetrics.TASK_SERIALIZATION_TIME.toString(), SerializationUtils.serialize(finishTime - startTime));
       } catch (final IOException | MemoryAllocationException e) {
         throw new BlockWriteException(e);
       }

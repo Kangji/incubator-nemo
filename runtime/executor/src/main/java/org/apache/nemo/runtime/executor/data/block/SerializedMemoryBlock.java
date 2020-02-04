@@ -18,7 +18,11 @@
  */
 package org.apache.nemo.runtime.executor.data.block;
 
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.KeyRange;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
+import org.apache.nemo.runtime.executor.MetricManagerWorker;
+import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.data.MemoryAllocationException;
 import org.apache.nemo.runtime.executor.data.MemoryPoolAssigner;
 import org.apache.nemo.common.exception.BlockFetchException;
@@ -48,6 +52,7 @@ public final class SerializedMemoryBlock<K extends Serializable> implements Bloc
   private final Serializer serializer;
   private volatile boolean committed;
   private final MemoryPoolAssigner memoryPoolAssigner;
+  private final MetricMessageSender metricMessageSender;
 
   /**
    * Constructor.
@@ -58,13 +63,15 @@ public final class SerializedMemoryBlock<K extends Serializable> implements Bloc
    */
   public SerializedMemoryBlock(final String blockId,
                                final Serializer serializer,
-                               final MemoryPoolAssigner memoryPoolAssigner) {
+                               final MemoryPoolAssigner memoryPoolAssigner,
+                               final MetricMessageSender metricMessageSender) {
     this.id = blockId;
     this.serializedPartitions = new ArrayList<>();
     this.nonCommittedPartitionsMap = new HashMap<>();
     this.serializer = serializer;
     this.committed = false;
     this.memoryPoolAssigner = memoryPoolAssigner;
+    this.metricMessageSender = metricMessageSender;
   }
 
   /**
@@ -88,7 +95,12 @@ public final class SerializedMemoryBlock<K extends Serializable> implements Bloc
           partition = new SerializedPartition<>(key, serializer, memoryPoolAssigner);
           nonCommittedPartitionsMap.put(key, partition);
         }
+        final long startTime = System.currentTimeMillis();
         partition.write(element);
+        final long finishTime = System.currentTimeMillis();
+        getId();
+        metricMessageSender.send("TaskMetric", null,
+          TaskMetric.TaskMetrics.TASK_SERIALIZATION_TIME.toString(), SerializationUtils.serialize(finishTime - startTime));
       } catch (final IOException | MemoryAllocationException e) {
         throw new BlockWriteException(e);
       }

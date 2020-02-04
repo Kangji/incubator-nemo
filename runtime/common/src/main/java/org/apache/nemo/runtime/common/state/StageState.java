@@ -40,15 +40,24 @@ public final class StageState {
     // Add states
     stateMachineBuilder.addState(State.INCOMPLETE, "Some tasks in this stage are not complete.");
     stateMachineBuilder.addState(State.COMPLETE, "All of this stage's tasks have completed.");
+    stateMachineBuilder.addState(State.ON_HOLD, "This stage has been halted for dynamic optimization" +
+      " which can change the stage property");
 
     // Add transitions
     stateMachineBuilder.addTransition(
       State.INCOMPLETE, State.INCOMPLETE, "A task in the stage needs to be retried");
     stateMachineBuilder.addTransition(State.INCOMPLETE, State.COMPLETE, "All tasks complete");
+    stateMachineBuilder.addTransition(State.INCOMPLETE, State.ON_HOLD, "Dynamic optimization occurred");
+
     stateMachineBuilder.addTransition(State.COMPLETE, State.INCOMPLETE,
       "Completed before, but a task in this stage should be retried");
     stateMachineBuilder.addTransition(State.COMPLETE, State.COMPLETE,
       "Completed before, but probably a cloned task has completed again");
+    stateMachineBuilder.addTransition(State.COMPLETE, State.ON_HOLD,
+      "Completed before, but a call for dynamic optimization raised");
+
+    stateMachineBuilder.addTransition(State.ON_HOLD, State.INCOMPLETE,
+      "Dynamic optimization done, must re-execute this stage");
 
     stateMachineBuilder.setInitialState(State.INCOMPLETE);
 
@@ -64,7 +73,8 @@ public final class StageState {
    */
   public enum State {
     INCOMPLETE,
-    COMPLETE
+    COMPLETE,
+    ON_HOLD
   }
 
   @Override

@@ -18,6 +18,8 @@
  */
 package org.apache.nemo.runtime.executor.data.stores;
 
+import org.apache.nemo.runtime.executor.MetricManagerWorker;
+import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.data.MemoryPoolAssigner;
 import org.apache.nemo.common.exception.BlockWriteException;
 import org.apache.nemo.runtime.executor.data.SerializerManager;
@@ -34,16 +36,19 @@ import javax.inject.Inject;
 @ThreadSafe
 public final class SerializedMemoryStore extends LocalBlockStore {
 
+  private final MetricMessageSender metricMessageSender;
   /**
    * Constructor.
-   *
    * @param serializerManager the serializer manager.
    * @param memoryPoolAssigner the memory pool assigner.
+   * @param metricMessageSender
    */
   @Inject
   private SerializedMemoryStore(final SerializerManager serializerManager,
-                                final MemoryPoolAssigner memoryPoolAssigner) {
+                                final MemoryPoolAssigner memoryPoolAssigner,
+                                final MetricManagerWorker metricMessageSender) {
     super(serializerManager, memoryPoolAssigner);
+    this.metricMessageSender = metricMessageSender;
   }
 
   /**
@@ -52,7 +57,7 @@ public final class SerializedMemoryStore extends LocalBlockStore {
   @Override
   public Block createBlock(final String blockId) {
     final Serializer serializer = getSerializerFromWorker(blockId);
-    return new SerializedMemoryBlock(blockId, serializer, getMemoryPoolAssigner());
+    return new SerializedMemoryBlock(blockId, serializer, getMemoryPoolAssigner(), metricMessageSender);
   }
 
   /**
