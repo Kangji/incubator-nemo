@@ -276,7 +276,7 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
 
     // DoFnRunners.simpleRunner takes care of all the hard stuff of running the DoFn
     // and that this approach is the standard used by most of the Beam runners
-    doFnRunner = new JokerDoFnRunner<>(
+    doFnRunner = DoFnRunners.simpleRunner(
       options,
       wrappedDoFn,
       sideInputReader,

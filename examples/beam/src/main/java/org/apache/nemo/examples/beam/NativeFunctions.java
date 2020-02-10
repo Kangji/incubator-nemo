@@ -19,5 +19,5 @@
 package org.apache.nemo.examples.beam;
 
 public class NativeFunctions {
-  public native String concatNatively(final String line);
+  public native void printPlusOne(final long address);
 }
