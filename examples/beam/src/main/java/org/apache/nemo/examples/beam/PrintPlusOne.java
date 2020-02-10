@@ -18,12 +18,15 @@
  */
 
 package org.apache.nemo.examples.beam;
+import org.slf4j.Logger;
+
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.PCollection;
+import org.slf4j.LoggerFactory;
 
 public final class PrintPlusOne {
   /**
@@ -38,6 +41,7 @@ public final class PrintPlusOne {
    * @param args  arguments
    */
   public static void main(final String[] args) {
+    final Logger LOG = LoggerFactory.getLogger(PrintPlusOne.class.getName());
     final String inputFilePath = args[0];
 
     final PipelineOptions options = NemoPipelineOptionsFactory.create();
@@ -58,6 +62,7 @@ public final class PrintPlusOne {
         .apply(MapElements.via(new SimpleFunction<Long, Void>() { // the return type Long is not used but specified;
           @Override
           public Void apply(final Long address) {
+            System.loadLibrary("NativeFunctions");
             final NativeFunctions nf = new NativeFunctions();
             nf.printPlusOne(address);
             return null;
