@@ -29,7 +29,9 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.LoopVertex;
+import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.transform.SignalTransform;
 import org.apache.nemo.common.test.EmptyComponents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -234,10 +236,9 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     increaseTestingTrial();
     return this;
   }
-
   private void setParallelismPropertyByTestingTrial(final IRVertex irVertex) {
-    if (testingTrial == 0 && !(irVertex instanceof SignalVertex)) {
-      //(v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof SignalTransform)
+    if (testingTrial == 0 && !(irVertex instanceof OperatorVertex
+      && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform)) {
       irVertex.setPropertyPermanently(ParallelismProperty.of(32));
     } else {
       irVertex.setProperty(ParallelismProperty.of(1));
