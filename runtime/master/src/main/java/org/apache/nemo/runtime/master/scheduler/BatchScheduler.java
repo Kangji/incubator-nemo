@@ -145,7 +145,7 @@ public final class BatchScheduler implements Scheduler {
       case DynamicTaskSizingPass:
         HashMap<Integer, Long> taskSizeToDuration = new HashMap<>();
         TaskMetric taskMetric = (TaskMetric) metricStore.getMetricMap(TaskMetric.class).get(taskId);
-        taskSizeToDuration.put(taskMetric.getTaskSize(), taskMetric.getTaskDurationTime());
+        taskSizeToDuration.put(taskMetric.getTaskSizeRatio(), taskMetric.getTaskDurationTime());
         planRewriter.accumulate(getMessageId(targetEdges), runTimePassType, taskSizeToDuration);
         break;
       default:

@@ -44,7 +44,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
   private long taskSerializedReadBytes = -1;
   private long taskEncodedReadBytes = -1;
   private long taskPeakExecutionMemory = -1;
-  private int taskSize = -1;
+  private int taskSizeRatio = -1;
   private long taskShuffleReadBytes = -1;
   private long taskShuffleReadTime = -1;
   private long taskShuffleWriteBytes = -1;
@@ -163,12 +163,12 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     this.taskPeakExecutionMemory = taskPeakExecutionMemory;
   }
 
-  public final int getTaskSize() {
-    return taskSize;
+  public final int getTaskSizeRatio() {
+    return taskSizeRatio;
   }
 
-  private void setTaskSize(final int taskSize) {
-    this.taskSize = taskSize;
+  private void setTaskSizeRatio(final int taskSizeRatio) {
+    this.taskSizeRatio = taskSizeRatio;
   }
   public final long getTaskShuffleReadBytes() {
     return taskShuffleReadBytes;
@@ -245,8 +245,8 @@ public class TaskMetric implements StateMetric<TaskState.State> {
       case TASK_PEAK_EXECUTION_MEMORY:
         setTaskPeakExecutionMemory(SerializationUtils.deserialize(metricValue));
         break;
-      case TASK_SIZE:
-        setTaskSize(SerializationUtils.deserialize(metricValue));
+      case TASK_SIZE_RATIO:
+        setTaskSizeRatio(SerializationUtils.deserialize(metricValue));
         break;
       case TASK_SHUFFLE_READ_BYTES:
         setTaskShuffleReadBytes(SerializationUtils.deserialize(metricValue));
@@ -287,7 +287,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     TASK_ENCODED_READ_BYTES,
 
     TASK_PEAK_EXECUTION_MEMORY,
-    TASK_SIZE,
+    TASK_SIZE_RATIO,
 
     TASK_SHUFFLE_READ_BYTES,
     TASK_SHUFFLE_READ_TIME,

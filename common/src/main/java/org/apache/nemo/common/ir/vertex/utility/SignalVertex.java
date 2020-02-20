@@ -35,6 +35,6 @@ public class SignalVertex extends OperatorVertex {
   public SignalVertex() {
     super(new SignalTransform());
     this.setPropertyPermanently(MessageIdVertexProperty.of(MESSAGE_ID_GENERATOR.incrementAndGet()));
-    this.setProperty(ParallelismProperty.of(1));
+    this.setPropertyPermanently(ParallelismProperty.of(1));
   }
 }
