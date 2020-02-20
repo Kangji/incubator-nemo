@@ -236,7 +236,8 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   }
 
   private void setParallelismPropertyByTestingTrial(final IRVertex irVertex) {
-    if (testingTrial == 0) {
+    if (testingTrial == 0 && !(irVertex instanceof SignalVertex)) {
+      //(v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof SignalTransform)
       irVertex.setPropertyPermanently(ParallelismProperty.of(32));
     } else {
       irVertex.setProperty(ParallelismProperty.of(1));
@@ -248,7 +249,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     LOG.error("[Vertex] this is splitter vertex {}", this.getId());
     LOG.error("[Vertex] get dag incoming edges: {}", this.getDagIncomingEdges().entrySet());
     LOG.error("[Vertex] get dag iterative incoming edges: {}", this.getIterativeIncomingEdges().entrySet());
-    LOG.error("[Vertex] get dag noniterative incoming edges: {}", this.getNonIterativeIncomingEdges().entrySet());
+    LOG.error("[Vertex] get dag nonIterative incoming edges: {}", this.getNonIterativeIncomingEdges().entrySet());
     LOG.error("[Vertex] get dag outgoing edges: {}", this.getDagOutgoingEdges().entrySet());
     LOG.error("[Vertex] get edge map with loop {}", this.getEdgeWithLoopToEdgeWithInternalVertex().entrySet());
     LOG.error("[Vertex] get edge map with internal vertex {}",
