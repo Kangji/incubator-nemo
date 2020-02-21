@@ -30,6 +30,7 @@ import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.LoopVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.transform.SignalTransform;
 import org.apache.nemo.common.test.EmptyComponents;
@@ -133,6 +134,8 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   public TaskSizeSplitterVertex unRollIteration(final DAGBuilder<IRVertex, IREdge> dagBuilder) {
     final HashMap<IRVertex, IRVertex> originalToNewIRVertex = new HashMap<>();
     final HashSet<IRVertex> originalUtilityVertices = new HashSet<>();
+    final HashSet<IREdge> edgesToOptimize = new HashSet<>();
+    final List<SignalVertex> previousSignalVertex = new ArrayList<>(1);
     final DAG<IRVertex, IREdge> dagToAdd = getDAG();
 
     decreaseMaxNumberOfIterations();
@@ -162,6 +165,11 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
         edge.getSrc(), originalToNewIRVertex.get(dstVertex));
       edge.copyExecutionPropertiesTo(newIrEdge);
       setSubPartitionPropertyByTestingTrial(newIrEdge);
+      if (edge.getSrc() instanceof SignalVertex) {
+        previousSignalVertex.add((SignalVertex) edge.getSrc());
+      } else {
+        edgesToOptimize.add(newIrEdge);
+      }
       dagBuilder.connectVertices(newIrEdge);
     }));
 
@@ -224,6 +232,8 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
         });
       }
     }
+    // assign signal vertex of n-th iteration with nonIterativeIncomingEdges of (n+1)th iteration
+    markEdgesToOptimize(previousSignalVertex.get(0), edgesToOptimize);
     // process next iteration's DAG incoming edges, and add them as the next loop's incoming edges:
     // clear, as we're done with the current loop and need to prepare it for the next one.
     this.getDagIncomingEdges().clear();
@@ -269,6 +279,19 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     } else {
       partitionSet.add(0, HashRange.of(512, partitionerProperty)); // 31+testingTrial
       edge.setProperty(SubPartitionSetProperty.of(partitionSet));
+    }
+  }
+  private void markEdgesToOptimize(final SignalVertex toAssign, final Set<IREdge> edgesToOptimize) {
+    if (testingTrial > 0) {
+      edgesToOptimize.forEach(edge -> {
+        if (!edge.getDst().getPropertyValue(ParallelismProperty.class).get().equals(1)) {
+          throw new IllegalArgumentException();
+        }
+        final HashSet<Integer> msgEdgeIds =
+          edge.getPropertyValue(MessageIdEdgeProperty.class).orElse(new HashSet<>(0));
+        msgEdgeIds.add(toAssign.getPropertyValue(MessageIdVertexProperty.class).get());
+        edge.setProperty(MessageIdEdgeProperty.of(msgEdgeIds));
+      });
     }
   }
   public void printLogs() {

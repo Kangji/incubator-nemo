@@ -27,7 +27,6 @@ import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.EnableDynamicTaskSizingProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.utility.SignalVertex;
 import org.apache.nemo.common.ir.vertex.utility.TaskSizeSplitterVertex;
@@ -313,12 +312,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
 
     final SignalVertex signalVertex = new SignalVertex();
 
-    for (IREdge edge : fromOutsideToOriginal) {
-      final HashSet<Integer> msgEdgeIds =
-        edge.getPropertyValue(MessageIdEdgeProperty.class).orElse(new HashSet<>(0));
-      msgEdgeIds.add(signalVertex.getPropertyValue(MessageIdVertexProperty.class).get());
-      edge.setProperty(MessageIdEdgeProperty.of(msgEdgeIds));
-    }
+
 
     fromOutsideToOriginal.forEach(edge -> toInsert.addDagIncomingEdge(edge));
     fromOutsideToOriginal.forEach(edge -> toInsert.addNonIterativeIncomingEdge(edge)); //
