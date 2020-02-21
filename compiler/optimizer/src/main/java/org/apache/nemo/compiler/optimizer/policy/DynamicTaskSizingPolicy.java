@@ -30,7 +30,7 @@ import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 public final class DynamicTaskSizingPolicy implements Policy {
   public static final PolicyBuilder BUILDER =
     new PolicyBuilder()
-      .registerCompileTimePass(new DefaultParallelismPass(32, 2))
+      .registerCompileTimePass(new DefaultParallelismPass(128, 2))
       .registerCompileTimePass(new SamplingTaskSizingPass())
       .registerCompileTimePass(new LoopUnrollingPass())
       .registerCompileTimePass(new DefaultEdgeEncoderPass())
