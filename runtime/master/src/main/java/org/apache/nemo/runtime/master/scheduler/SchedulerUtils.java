@@ -238,8 +238,7 @@ public final class SchedulerUtils {
     }
 
     if (stageComplete) {
-      return Optional.of(planRewriter.rewrite(
-        planStateManager.getPhysicalPlan(), getMessageId(targetEdges)));
+      return Optional.of(planRewriter.rewrite(getMessageId(targetEdges)));
     } else {
       return Optional.empty();
     }

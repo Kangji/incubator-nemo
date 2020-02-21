@@ -89,7 +89,7 @@ public final class SimulationSchedulerTest {
       physicalPlan2,
       SCHEDULE_ATTEMPT_INDEX);
 
-    final MetricStore resultingMetricStore = scheduler.collectMetricStoreAndTerminate();
+    final MetricStore resultingMetricStore = scheduler.collectMetricStore();
 
     resultingMetricStore.getMetricMap(TaskMetric.class).forEach((id, taskMetric) -> {
       assertTrue(0 <= ((TaskMetric) taskMetric).getTaskDuration());

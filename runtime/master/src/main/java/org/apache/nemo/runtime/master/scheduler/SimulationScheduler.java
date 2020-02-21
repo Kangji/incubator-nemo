@@ -290,8 +290,9 @@ public final class SimulationScheduler implements Scheduler {
    * @param taskId that generated the message.
    * @param data   of the message.
    */
-  public void onRunTimePassMessage(final String taskId, final Object data) {
-    SchedulerUtils.onRunTimePassMessage(planStateManager, planRewriter, taskId, data);
+  public void onRunTimePassMessage(final ControlMessage.RunTimePassType runTimePassType,
+                                   final String taskId, final Object data) {
+    SchedulerUtils.onRunTimePassMessage(planStateManager, planRewriter, runTimePassType, taskId, data);
   }
 
   @Override
@@ -384,7 +385,7 @@ public final class SimulationScheduler implements Scheduler {
    * The endpoint of the simulator. Collect the metric store, and terminate the simulator.
    * @return the metrics of the simulation.
    */
-  public MetricStore collectMetricStoreAndTerminate() {
+  public MetricStore collectMetricStore() {
     try {
       // wait for metric flush
       if (!metricCountDownLatch.await(10000, TimeUnit.MILLISECONDS)) {
@@ -396,7 +397,6 @@ public final class SimulationScheduler implements Scheduler {
       Thread.currentThread().interrupt();
     }
 
-    this.terminate();
     return this.metricStore;
   }
 
@@ -508,6 +508,7 @@ public final class SimulationScheduler implements Scheduler {
           throw new SimulationException(exception);
         case RunTimePassMessage:
           scheduler.onRunTimePassMessage(
+            message.getRunTimePassMessageMsg().getRunTimePassType(),
             message.getRunTimePassMessageMsg().getTaskId(),
             message.getRunTimePassMessageMsg().getEntryList());
           break;
