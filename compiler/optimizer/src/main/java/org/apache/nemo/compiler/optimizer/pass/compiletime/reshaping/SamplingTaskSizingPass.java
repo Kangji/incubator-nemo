@@ -88,7 +88,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       return dag;
     }
      */
-    final int partitionerProperty = setPartitonerProperty(dag);
+    //set partitionerProperty by job data size
+    final int partitionerProperty = setPartitionerProperty(dag);
     dag.topologicalDo(v -> {
      v.setProperty(EnableDynamicTaskSizingProperty.of(enableDynamicTaskSizing));
       for (IREdge e : dag.getIncomingEdgesOf(v)) {
@@ -138,24 +139,27 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     return dag;
   }
 
+  /**
+   * get and set edges which come to stage vertices from outer sources by observing the dag. This wil be the
+   * 'dagIncomingEdges' in Splitter vertex.
+   * Edge case: When previous vertex(i.e. outer source) is also a splitter vertex. In this case, we need to get
+   *            original(invisible) edges by hacking in to previous splitter vertex.
+   * @param dag               dag to observe
+   * @param partitionSources  stage vertices
+   * @return                  edges from outside to stage vertices
+   */
   private Set<IREdge> setEdgesFromOutsideToOriginal(final IRDAG dag,
                                                     final Set<IRVertex> partitionSources) {
     // if previous vertex is splitter vertex, add the last vertex of that splitter vertex in map
-    LOG.error("set edges from outside to original");
     HashSet<IREdge> fromOutsideToOriginal = new HashSet<>();
     for (IRVertex partitionSource : partitionSources) {
-      LOG.error("[HWARIM] partition source is {}", partitionSource.getId());
       for (IREdge edge : dag.getIncomingEdgesOf(partitionSource)) {
         if (edge.getSrc() instanceof TaskSizeSplitterVertex) {
-          LOG.error("[HWARIM] this should be splitter {}", edge.getSrc());
           IRVertex originalInnerSource = ((TaskSizeSplitterVertex) edge.getSrc()).getStageEndingVertex();
-          LOG.error("[HWARIM] original inner source is {}", originalInnerSource.getId());
           Set<IREdge> candidates = ((TaskSizeSplitterVertex) edge.getSrc()).
             getDagOutgoingEdges().get(originalInnerSource);
-          LOG.error("[HWARIM] print candidates {}", candidates);
           candidates.stream().filter(edge2 -> edge2.getDst().equals(partitionSource))
             .forEach(fromOutsideToOriginal::add);
-          LOG.error("[HWARIM] on the way from outside to original {}", fromOutsideToOriginal);
         } else {
           fromOutsideToOriginal.add(edge);
         }
@@ -163,24 +167,27 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     }
     return fromOutsideToOriginal;
   }
+
+  /**
+   * set edges which come to splitter from outside sources. These edges have a one-to-one relationship with
+   * edgesFromOutsideToOriginal.
+   * @param dag                   dag to observe
+   * @param toInsert              splitter vertex to insert
+   * @param stageOpeningVertices  stage opening vertices
+   * @return                      set of edges pointing at splitter vertex
+   */
   private Set<IREdge> setEdgesFromOutsideToSplitter(final IRDAG dag,
                                                     final TaskSizeSplitterVertex toInsert,
-                                                    final Set<IRVertex> partitionSources) {
+                                                    final Set<IRVertex> stageOpeningVertices) {
     HashSet<IREdge> fromOutsideToSplitter = new HashSet<>();
-    LOG.error("Set edges from outside to splitter");
-    for (IRVertex partitionSource : partitionSources) {
-      LOG.error("[HWARIM] partitoin Source {}", partitionSource.getId());
+    for (IRVertex partitionSource : stageOpeningVertices) {
       for (IREdge incomingEdge : dag.getIncomingEdgesOf(partitionSource)) {
-        LOG.error("[HWARIM] incoming edge {}", incomingEdge);
         if (incomingEdge.getSrc() instanceof TaskSizeSplitterVertex) {
           TaskSizeSplitterVertex prevSplitter = (TaskSizeSplitterVertex) incomingEdge.getSrc();
           IREdge internalEdge = prevSplitter.getEdgeWithInternalVertex(incomingEdge);
           IREdge newIrEdge = Util.cloneEdge(incomingEdge, incomingEdge.getSrc(), toInsert);
-          LOG.error("[HWARIM] original {}, new edge {}", incomingEdge, newIrEdge);
           prevSplitter.mapEdgeWithLoop(newIrEdge, internalEdge);
           fromOutsideToSplitter.add(newIrEdge);
-          LOG.error("[HWARIM] prev id {} edge {}", prevSplitter.getId(),
-            prevSplitter.getEdgeWithLoopToEdgeWithInternalVertex());
         } else {
           IREdge cloneOfIncomingEdge = Util.cloneEdge(incomingEdge, incomingEdge.getSrc(), toInsert);
           fromOutsideToSplitter.add(cloneOfIncomingEdge);
@@ -190,7 +197,12 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     return fromOutsideToSplitter;
   }
 
-  private int setPartitonerProperty(final IRDAG dag) {
+  /**
+   * should be called after EnableDynamicTaskSizingProperty is declared as true.
+   * @param dag   IRDAG to get job input data size from
+   * @return      partitioner property regarding job size
+   */
+  private int setPartitionerProperty(final IRDAG dag) {
     long jobSizeInBytes = dag.getInputSize();
     long jobSizeInGB = jobSizeInBytes / (1024 * 1024 * 1024);
     if (1 <= jobSizeInGB && jobSizeInGB < 10) {
@@ -253,20 +265,16 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       .filter(ovInEdge -> partitionAll.contains(ovInEdge.getSrc()))
       .collect(Collectors.toSet());
     final Set<IREdge> fromOutsideToOriginal = setEdgesFromOutsideToOriginal(dag, partitionSources);
-    LOG.error("[HWARIM]from outside to original : {}", fromOutsideToOriginal);
     final Set<IREdge> fromOriginalToOutside = new HashSet<>(outgoingEdgesOfOriginalVertices);
     fromOriginalToOutside.removeAll(edgesBetweenOriginalVertices);
-    LOG.error("[HWARIM]from original to outside : {}", fromOriginalToOutside);
-      final TaskSizeSplitterVertex toInsert = new TaskSizeSplitterVertex(
-        "Splitter" + stageEndingVertex.getId(), partitionAll, partitionSources,
-        stageEndingVertex, partitionerProperty);
-
+    final TaskSizeSplitterVertex toInsert = new TaskSizeSplitterVertex(
+      "Splitter" + stageEndingVertex.getId(), partitionAll, partitionSources,
+      stageEndingVertex, partitionerProperty);
 
     // By default, set the number of iterations as 2
     toInsert.setMaxNumberOfIterations(2);
     // make edges connected to splitter vertex
     final Set<IREdge> fromOutsideToSplitter = setEdgesFromOutsideToSplitter(dag, toInsert, partitionSources);
-    LOG.error("[HWARIM]from outside to splitter : {}", fromOutsideToSplitter);
     final Set<IREdge> fromSplitterToOutside = new HashSet<>();
     fromOriginalToOutside.stream().map(outEdge -> Util.cloneEdge(
       outEdge,
@@ -277,8 +285,6 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     final Set<IREdge> edgesWithSplitterVertex = new HashSet<>();
     edgesWithSplitterVertex.addAll(fromOutsideToSplitter);
     edgesWithSplitterVertex.addAll(fromSplitterToOutside);
-
-    LOG.error("[HWARIM]edges with splitter vertex : {}", edgesWithSplitterVertex);
     //fill in splitter vertex information
     toInsert.insertWorkingVertices(partitionAll, edgesBetweenOriginalVertices);
 
@@ -289,12 +295,10 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
           TaskSizeSplitterVertex prevSplitter = (TaskSizeSplitterVertex) splitterEdge.getSrc();
           if (prevSplitter.getOriginalVertices().contains(internalEdge.getSrc())) {
             toInsert.mapEdgeWithLoop(splitterEdge, internalEdge);
-            LOG.error("[HWARIM] loop edge {} vertex edge {}", splitterEdge, internalEdge);
           }
         } else {
           if (splitterEdge.getSrc().equals(internalEdge.getSrc())) {
             toInsert.mapEdgeWithLoop(splitterEdge, internalEdge);
-            LOG.error("[HWARIM] loop edge {} vertex edge {}", splitterEdge, internalEdge);
           }
         }
       }
@@ -303,20 +307,14 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       for (IREdge internalEdge : fromOriginalToOutside) {
         if (splitterEdge.getDst().equals(internalEdge.getDst())) {
           toInsert.mapEdgeWithLoop(splitterEdge, internalEdge);
-          LOG.error("[HWARIM] loop edge {} vertex edge {}", splitterEdge, internalEdge);
         }
       }
     }
 
     final SignalVertex signalVertex = new SignalVertex();
 
-    for (IREdge edge : fromOutsideToOriginal) {
-      final HashSet<Integer> msgEdgeIds =
-        edge.getPropertyValue(MessageIdEdgeProperty.class).orElse(new HashSet<>(0));
-      msgEdgeIds.add(signalVertex.getPropertyValue(MessageIdVertexProperty.class).get());
-      edge.setProperty(MessageIdEdgeProperty.of(msgEdgeIds));
-    }
-    //else
+
+
     fromOutsideToOriginal.forEach(edge -> toInsert.addDagIncomingEdge(edge));
     fromOutsideToOriginal.forEach(edge -> toInsert.addNonIterativeIncomingEdge(edge)); //
     fromOriginalToOutside.forEach(edge -> toInsert.addDagOutgoingEdge(edge));

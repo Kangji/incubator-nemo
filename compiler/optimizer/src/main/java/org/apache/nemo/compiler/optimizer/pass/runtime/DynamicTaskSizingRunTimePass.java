@@ -19,21 +19,42 @@
 package org.apache.nemo.compiler.optimizer.pass.runtime;
 
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 //import org.apache.nemo.runtime.common.plan.PhysicalPlan;
 //import org.apache.nemo.runtime.common.plan.PhysicalPlanGenerator;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  *
  */
 public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, Map<String, byte[]>>> {
-
+  private static final Logger LOG = LoggerFactory.getLogger(DynamicTaskSizingRunTimePass.class.getName());
   //private final PhysicalPlanGenerator physicalPlanGenerator;
   //private final PhysicalPlan physicalPlan;
   //private final SimulationScheduler simulationScheduler
+
+  public DynamicTaskSizingRunTimePass() {
+
+  }
+
   @Override
   public IRDAG apply(final IRDAG irdag, final Message<Map<String, Map<String, byte[]>>> mapMessage) {
+    final Set<IREdge> edges = mapMessage.getExaminedEdges();
+    LOG.info("Examined edges {}", edges.stream().map(IREdge::getId).collect(Collectors.toList()));
+
+    final IREdge representativeEdge = edges.iterator().next();
+
+
     return null;
+  }
+
+  private int getOptimizedTaskSizeRatioFromMessage(final Message<Map<String, Map<String, byte[]>>> mapMessage) {
+    //dummy code for now
+    return 1;
   }
 }
