@@ -18,22 +18,91 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.runtime;
 
+import org.apache.nemo.common.HashRange;
+import org.apache.nemo.common.KeyRange;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
+import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.SubPartitionSetProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.EnableDynamicTaskSizingProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 //import org.apache.nemo.runtime.common.plan.PhysicalPlan;
 //import org.apache.nemo.runtime.common.plan.PhysicalPlanGenerator;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  *
  */
-public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, Map<String, byte[]>>> {
-
+public final class DynamicTaskSizingRunTimePass extends RunTimePass<Integer> {
+  private static final Logger LOG = LoggerFactory.getLogger(DynamicTaskSizingRunTimePass.class.getName());
   //private final PhysicalPlanGenerator physicalPlanGenerator;
   //private final PhysicalPlan physicalPlan;
   //private final SimulationScheduler simulationScheduler
+
+  public DynamicTaskSizingRunTimePass() {
+
+  }
+
   @Override
-  public IRDAG apply(final IRDAG irdag, final Message<Map<String, Map<String, byte[]>>> mapMessage) {
-    return null;
+  public IRDAG apply(final IRDAG irdag, final Message<Integer> message) {
+    final Set<IREdge> edgesToOptimize = message.getExaminedEdges();
+    LOG.info("Examined edges {}", edgesToOptimize.stream().map(IREdge::getId).collect(Collectors.toList()));
+
+    final IREdge representativeEdge = edgesToOptimize.iterator().next();
+    // double check
+    if (!representativeEdge.getDst().getPropertyValue(EnableDynamicTaskSizingProperty.class).get()) {
+      return irdag;
+    }
+    final int optimizedTaskSizeRatio = message.getMessageValue();
+    final int partitionerProperty = getPartitionerProperty(irdag);
+    for ( IREdge edge : edgesToOptimize) {
+      if(edge.getPropertyValue(CommunicationPatternProperty.class).get()
+        .equals(CommunicationPatternProperty.Value.SHUFFLE)
+        && !edge.getPropertyValue(PartitionerProperty.class).get().right().equals(partitionerProperty)) {
+          throw new IllegalArgumentException();
+      }
+    }
+    final int partitionUnit = partitionerProperty / optimizedTaskSizeRatio;
+
+    edgesToOptimize.forEach(irEdge -> setSubPartitionProperty(irEdge, partitionUnit, partitionerProperty));
+    edgesToOptimize.forEach(irEdge -> setDstVertexParallelismProperty(irEdge, partitionUnit, partitionerProperty));
+    return irdag;
+  }
+
+  private int getPartitionerProperty(final IRDAG dag) {
+    long jobSizeInBytes = dag.getInputSize();
+    long jobSizeInGB = jobSizeInBytes / (1024 * 1024 * 1024);
+    if (1 <= jobSizeInGB && jobSizeInGB < 10) {
+      return 1024;
+    } else if (10 <= jobSizeInGB && jobSizeInGB < 100) {
+      return 2048;
+    } else {
+      return 4096;
+    }
+  }
+
+  private void setSubPartitionProperty(final IREdge edge, final int growingFactor, final int partitionerProperty) {
+    final int start = (int) edge.getPropertyValue(SubPartitionSetProperty.class).get().get(0).rangeBeginInclusive();
+    final ArrayList<KeyRange> partitionSet = new ArrayList<>();
+    int taskIndex = 0;
+    for (int startIndex = start; startIndex < partitionerProperty; startIndex += growingFactor) {
+      partitionSet.add(taskIndex, HashRange.of(startIndex, startIndex + growingFactor));
+      taskIndex++;
+    }
+    edge.setPropertyPermanently(SubPartitionSetProperty.of(partitionSet));
+  }
+
+  private void setDstVertexParallelismProperty(final IREdge edge,
+                                               final int partitionSize,
+                                               final int partitionerProperty) {
+    final int start = (int) edge.getPropertyValue(SubPartitionSetProperty.class).get().get(0).rangeBeginInclusive();
+    final int newParallelism = (partitionerProperty - start) / partitionSize;
+    edge.getDst().setPropertyPermanently(ParallelismProperty.of(newParallelism));
   }
 }
