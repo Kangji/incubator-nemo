@@ -135,7 +135,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     final HashMap<IRVertex, IRVertex> originalToNewIRVertex = new HashMap<>();
     final HashSet<IRVertex> originalUtilityVertices = new HashSet<>();
     final HashSet<IREdge> edgesToOptimize = new HashSet<>();
-    final List<SignalVertex> previousSignalVertex = new ArrayList<>(1);
+    final List<OperatorVertex> previousSignalVertex = new ArrayList<>(1);
     final DAG<IRVertex, IREdge> dagToAdd = getDAG();
 
     decreaseMaxNumberOfIterations();
@@ -167,7 +167,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
       setSubPartitionPropertyByTestingTrial(newIrEdge);
       if (edge.getSrc() instanceof OperatorVertex
         && ((OperatorVertex) edge.getSrc()).getTransform() instanceof SignalTransform) {
-        previousSignalVertex.add((SignalVertex) edge.getSrc());
+        previousSignalVertex.add((OperatorVertex) edge.getSrc());
       } else {
         edgesToOptimize.add(newIrEdge);
       }
@@ -282,7 +282,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
       edge.setProperty(SubPartitionSetProperty.of(partitionSet));
     }
   }
-  private void markEdgesToOptimize(final List<SignalVertex> toAssign, final Set<IREdge> edgesToOptimize) {
+  private void markEdgesToOptimize(final List<OperatorVertex> toAssign, final Set<IREdge> edgesToOptimize) {
     if (testingTrial > 0) {
       edgesToOptimize.forEach(edge -> {
         if (!edge.getDst().getPropertyValue(ParallelismProperty.class).get().equals(1)) {
