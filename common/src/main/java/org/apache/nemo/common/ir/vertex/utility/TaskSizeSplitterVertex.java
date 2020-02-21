@@ -152,6 +152,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
             new IREdge(edge.getPropertyValue(CommunicationPatternProperty.class).get(), newSrc, newIrVertex);
           edge.copyExecutionPropertiesTo(newIrEdge);
           setSubPartitionPropertyByTestingTrial(newIrEdge);
+          edgesToOptimize.add(newIrEdge);
           dagBuilder.connectVertices(newIrEdge);
         });
       } else {
