@@ -165,7 +165,8 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
         edge.getSrc(), originalToNewIRVertex.get(dstVertex));
       edge.copyExecutionPropertiesTo(newIrEdge);
       setSubPartitionPropertyByTestingTrial(newIrEdge);
-      if (edge.getSrc() instanceof SignalVertex) {
+      if (edge.getSrc() instanceof OperatorVertex
+        && ((OperatorVertex) edge.getSrc()).getTransform() instanceof SignalTransform) {
         previousSignalVertex.add((SignalVertex) edge.getSrc());
       } else {
         edgesToOptimize.add(newIrEdge);
