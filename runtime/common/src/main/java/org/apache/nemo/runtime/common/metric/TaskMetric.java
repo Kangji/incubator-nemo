@@ -34,9 +34,12 @@ public class TaskMetric implements StateMetric<TaskState.State> {
   private String taskContainerId = "";
   private int taskScheduleAttempt = -1;
   private List<StateTransitionEvent<TaskState.State>> stateTransitionEvents = new ArrayList<>();
-  private long taskDurationTime;
-  private long taskCPUTime;
-  private long taskSerializationTime;
+  private long taskDuration = -1;
+  private long schedulingOverhead = -1;
+  private long serializedReadBytes = -1;
+  private long encodedReadBytes = -1;
+  private long writtenBytes = -1;
+  private long boundedSourceReadTime = -1;
   private long taskDeserializationTime = -1;
   private long taskBoundedSourceReadTime = -1;
   private long taskInputBytes = -1;
@@ -59,6 +62,45 @@ public class TaskMetric implements StateMetric<TaskState.State> {
   @Override
   public final String getId() {
     return id;
+
+  public final long getTaskDuration() {
+    return taskDuration;
+  }
+
+  public final void setTaskDuration(final long taskDuration) {
+    this.taskDuration = taskDuration;
+  }
+
+  public final long getSchedulingOverhead() {
+    return schedulingOverhead;
+  }
+
+  public final void setSchedulingOverhead(final long schedulingOverhead) {
+    this.schedulingOverhead = schedulingOverhead;
+  }
+
+  public final long getSerializedReadBytes() {
+    return serializedReadBytes;
+  }
+
+  private void setSerializedReadBytes(final long serializedReadBytes) {
+    this.serializedReadBytes = serializedReadBytes;
+  }
+
+  public final long getEncodedReadBytes() {
+    return encodedReadBytes;
+  }
+
+  private void setEncodedReadBytes(final long encodedReadBytes) {
+    this.encodedReadBytes = encodedReadBytes;
+  }
+
+  public final long getBoundedSourceReadTime() {
+    return boundedSourceReadTime;
+  }
+
+  private void setBoundedSourceReadTime(final long boundedSourceReadTime) {
+    this.boundedSourceReadTime = boundedSourceReadTime;
   }
 
   public final String getTaskContainerId() {
@@ -204,11 +246,16 @@ public class TaskMetric implements StateMetric<TaskState.State> {
 
   @Override
   public final boolean processMetricMessage(final String metricField, final byte[] metricValue) {
-    final TaskMetrics metricFieldEnum = TaskMetrics.valueOf(metricField);
-    LOG.debug("metric {} is just arrived!", metricFieldEnum);
-    switch (metricFieldEnum) {
-      case TASK_CONTAINER_ID:
-        setTaskContainerId(SerializationUtils.deserialize(metricValue));
+    LOG.debug("metric {} has just arrived!", metricField);
+    switch (metricField) {
+      case "taskDuration":
+        setTaskDuration(SerializationUtils.deserialize(metricValue));
+        break;
+      case "schedulingOverhead":
+        setSchedulingOverhead(SerializationUtils.deserialize(metricValue));
+        break;
+      case "serializedReadBytes":
+        setSerializedReadBytes(SerializationUtils.deserialize(metricValue));
         break;
       case TASK_SCHEDULE_ATTEMPT:
         setTaskScheduleAttempt(SerializationUtils.deserialize(metricValue));
