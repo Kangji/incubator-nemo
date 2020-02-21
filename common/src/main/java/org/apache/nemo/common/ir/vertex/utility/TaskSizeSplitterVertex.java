@@ -233,7 +233,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
       }
     }
     // assign signal vertex of n-th iteration with nonIterativeIncomingEdges of (n+1)th iteration
-    markEdgesToOptimize(previousSignalVertex.get(0), edgesToOptimize);
+    markEdgesToOptimize(previousSignalVertex, edgesToOptimize);
     // process next iteration's DAG incoming edges, and add them as the next loop's incoming edges:
     // clear, as we're done with the current loop and need to prepare it for the next one.
     this.getDagIncomingEdges().clear();
@@ -281,7 +281,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
       edge.setProperty(SubPartitionSetProperty.of(partitionSet));
     }
   }
-  private void markEdgesToOptimize(final SignalVertex toAssign, final Set<IREdge> edgesToOptimize) {
+  private void markEdgesToOptimize(final List<SignalVertex> toAssign, final Set<IREdge> edgesToOptimize) {
     if (testingTrial > 0) {
       edgesToOptimize.forEach(edge -> {
         if (!edge.getDst().getPropertyValue(ParallelismProperty.class).get().equals(1)) {
@@ -289,7 +289,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
         }
         final HashSet<Integer> msgEdgeIds =
           edge.getPropertyValue(MessageIdEdgeProperty.class).orElse(new HashSet<>(0));
-        msgEdgeIds.add(toAssign.getPropertyValue(MessageIdVertexProperty.class).get());
+        msgEdgeIds.add(toAssign.get(0).getPropertyValue(MessageIdVertexProperty.class).get());
         edge.setProperty(MessageIdEdgeProperty.of(msgEdgeIds));
       });
     }
