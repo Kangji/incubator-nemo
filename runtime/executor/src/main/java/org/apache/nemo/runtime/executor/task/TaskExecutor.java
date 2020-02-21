@@ -270,7 +270,7 @@ public final class TaskExecutor {
         .filter(inEdge -> inEdge.getDstIRVertex().getId().equals(irVertex.getId())) // edge to this vertex
         .map(incomingEdge ->
           Pair.of(incomingEdge, intermediateDataIOFactory
-            .createReader(task, incomingEdge.getSrcIRVertex(), incomingEdge, metricMessageSender)))
+            .createReader(task, incomingEdge.getSrcIRVertex(), incomingEdge)))
         .forEach(pair -> {
           if (irVertex instanceof OperatorVertex) {
             final StageEdge edge = pair.left();
@@ -635,7 +635,7 @@ public final class TaskExecutor {
     return inEdgesFromParentTasks
       .stream()
       .map(inEdgeForThisVertex -> intermediateDataIOFactory
-        .createReader(task, inEdgeForThisVertex.getSrcIRVertex(), inEdgeForThisVertex, metricMessageSender))
+        .createReader(task, inEdgeForThisVertex.getSrcIRVertex(), inEdgeForThisVertex))
       .collect(Collectors.toList());
   }
 
