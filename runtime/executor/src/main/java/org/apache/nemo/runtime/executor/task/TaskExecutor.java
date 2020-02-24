@@ -39,7 +39,6 @@ import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.PersistentConnectionToMasterMap;
-import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.RuntimeEdge;
 import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.common.plan.Task;
@@ -234,7 +233,7 @@ public final class TaskExecutor {
 
       if (irVertex instanceof OperatorVertex
         && ((OperatorVertex) irVertex).getTransform() instanceof MessageAggregatorTransform) {
-        outputCollector = new RunTimeMessageOutputCollector(
+        outputCollector = new RunTimeMessageOutputCollector<Map<String, Long>>(
           taskId, irVertex, persistentConnectionToMasterMap, this,
           ControlMessage.RunTimePassType.DataSkewPass);
       } else if (irVertex instanceof OperatorVertex

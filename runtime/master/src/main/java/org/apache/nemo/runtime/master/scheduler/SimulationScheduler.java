@@ -82,15 +82,20 @@ public final class SimulationScheduler implements Scheduler {
   /**
    * Components related to scheduling the given plan.
    */
-  private final TaskDispatcher taskDispatcher;
+  private TaskDispatcher taskDispatcher;
   private final PendingTaskCollectionPointer pendingTaskCollectionPointer;
-  private final ExecutorRegistry executorRegistry;
-  private final PlanStateManager planStateManager;
+  private ExecutorRegistry executorRegistry;
+  private PlanStateManager planStateManager;
   private final ExecutorService serializationExecutorService; // Executor service for scheduling message serialization.
   private final BlockManagerMaster blockManagerMaster;
   private final MetricStore actualMetricStore;
-  private final MetricStore metricStore;
-  private final CountDownLatch metricCountDownLatch;
+  private MetricStore metricStore;
+  private CountDownLatch metricCountDownLatch;
+
+  private final SchedulingConstraintRegistry schedulingConstraintRegistry;
+  private final SchedulingPolicy schedulingPolicy;
+  private final String resourceSpecificationString;
+  private final String dagDirectory;
 
   private final Map<String, SimulatedTaskExecutor> simulatedTaskExecutorMap;
 
@@ -112,16 +117,26 @@ public final class SimulationScheduler implements Scheduler {
     this.blockManagerMaster = blockManagerMaster;
     this.pendingTaskCollectionPointer = PendingTaskCollectionPointer.newInstance();
     this.executorRegistry = ExecutorRegistry.newInstance();
+    this.schedulingConstraintRegistry = schedulingConstraintRegistry;
+    this.schedulingPolicy = schedulingPolicy;
+    this.resourceSpecificationString = resourceSpecificationString;
+    this.dagDirectory = dagDirectory;
     this.planStateManager = PlanStateManager.newInstance(dagDirectory);
     this.taskDispatcher = TaskDispatcher.newInstance(schedulingConstraintRegistry, schedulingPolicy,
       pendingTaskCollectionPointer, executorRegistry, planStateManager);
     this.serializationExecutorService = Executors.newFixedThreadPool(scheduleSerThread);
     this.clientRPC = clientRPC;
     this.actualMetricStore = MetricStore.getStore();
-    this.metricStore = getSimulationMetricStore();
+    this.metricStore = MetricStore.newInstance();
+    this.planStateManager.setMetricStore(this.metricStore);
     this.simulatedTaskExecutorMap = new HashMap<>();
+    setUpExecutors();
+  }
 
-    // Simulate launch of executors.
+  /**
+   * Simulate the launch of executors.
+   */
+  private void setUpExecutors() {
     final List<Pair<Integer, ResourceSpecification>> resourceSpecs =
       Util.parseResourceSpecificationString(resourceSpecificationString);
     // Role of ActiveContextHandler + RuntimeMaster.onExecuterLaunched.
@@ -139,19 +154,19 @@ public final class SimulationScheduler implements Scheduler {
   }
 
   /**
-   * Instance holder for metric store.
+   * Reset the instance to its initial state.
    */
-  private static class MetricStoreInstanceHolder {
-    private static final MetricStore INSTANCE = MetricStore.newInstance();
-  }
-
-  /**
-   * Get the static metric store instance of the simulation scheduler.
-   *
-   * @return the metric store of the simulation.
-   */
-  public static MetricStore getSimulationMetricStore() {
-    return MetricStoreInstanceHolder.INSTANCE;
+  public void reset() {
+    this.terminate();
+    this.executorRegistry = ExecutorRegistry.newInstance();
+    this.planStateManager = PlanStateManager.newInstance(dagDirectory);
+    this.pendingTaskCollectionPointer.getAndSetNull();
+    this.taskDispatcher = TaskDispatcher.newInstance(schedulingConstraintRegistry, schedulingPolicy,
+      pendingTaskCollectionPointer, executorRegistry, planStateManager);
+    this.metricStore = MetricStore.newInstance();
+    this.planStateManager.setMetricStore(metricStore);
+    this.simulatedTaskExecutorMap.clear();
+    setUpExecutors();
   }
 
   @VisibleForTesting
@@ -397,7 +412,9 @@ public final class SimulationScheduler implements Scheduler {
       Thread.currentThread().interrupt();
     }
 
-    return this.metricStore;
+    final MetricStore res = this.metricStore;
+    this.reset();
+    return res;
   }
 
   @Override
