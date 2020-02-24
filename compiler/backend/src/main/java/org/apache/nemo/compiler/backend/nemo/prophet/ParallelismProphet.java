@@ -23,7 +23,6 @@ import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.exception.SimulationException;
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
@@ -48,12 +47,12 @@ public final class ParallelismProphet implements Prophet {
   private final PhysicalPlanGenerator physicalPlanGenerator;
   private final IRDAG currentIRDAG;
   private final PhysicalPlan currentPhysicalPlan;
-  private final Set<IREdge> edgesToOptimize;
+  private final Set<StageEdge> edgesToOptimize;
   private int partitionerProperty;
 
   public ParallelismProphet(final IRDAG irdag, final PhysicalPlan physicalPlan,
                             final PhysicalPlanGenerator physicalPlanGenerator,
-                            final Set<IREdge> edgesToOptimize) {
+                            final Set<StageEdge> edgesToOptimize) {
     this.currentIRDAG = irdag;
     this.currentPhysicalPlan = physicalPlan;
     this.physicalPlanGenerator = physicalPlanGenerator;
@@ -99,15 +98,16 @@ public final class ParallelismProphet implements Prophet {
   private void setPartitionerProperty(final int partitionerProperty) {
     this.partitionerProperty = partitionerProperty;
   }
-  private void calculatePartitionerProperty(final Set<IREdge> edges) {
+  private void calculatePartitionerProperty(final Set<StageEdge> edges) {
     setPartitionerProperty(edges.iterator().next().getPropertyValue(PartitionerProperty.class).get().right());
   }
 
   private PhysicalPlan makePhysicalPlanForSimulation(final int parallelism,
-                                                     final Set<IREdge> edges,
+                                                     final Set<StageEdge> edges,
                                                      final IRDAG currentDag) {
     Set<IRVertex> verticesToChangeParallelism = edges.stream()
-      .map(edge -> edge.getDst()).collect(Collectors.toSet());
+      .map(edge -> edge.getDst().getIRDAG().getVertices())
+      .flatMap(list -> list.stream()).collect(Collectors.toSet());
     final IRDAG newDag = currentDag;
     newDag.topologicalDo(v -> {
       if (verticesToChangeParallelism.contains(v)) {
