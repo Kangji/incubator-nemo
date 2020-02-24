@@ -20,24 +20,44 @@
 package org.apache.nemo.compiler.backend.nemo.prophet;
 
 import org.apache.nemo.common.Pair;
+import org.apache.nemo.common.dag.DAG;
+import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
+import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.PhysicalPlan;
+import org.apache.nemo.runtime.common.plan.PhysicalPlanGenerator;
+import org.apache.nemo.runtime.common.plan.Stage;
+import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A prophet for Parallelism.
  */
 public final class ParallelismProphet implements Prophet {
   private final SimulationScheduler simulationScheduler;
-  private final int messageId;
+  private final PhysicalPlanGenerator physicalPlanGenerator;
+  private final IRDAG currentIRDAG;
+  private final PhysicalPlan currentPhysicalPlan;
+  private final Set<IREdge> edgesToOptimize;
+  private int partitionerProperty;
 
-  public ParallelismProphet(final int messageId, final PhysicalPlan physicalPlan,
-                            final SimulationScheduler simulationScheduler) {
-    this.messageId = messageId;
+  public ParallelismProphet(final IRDAG irdag, final PhysicalPlan physicalPlan,
+                            final SimulationScheduler simulationScheduler,
+                            final PhysicalPlanGenerator physicalPlanGenerator,
+                            final Set<IREdge> edgesToOptimize) {
+    this.currentIRDAG = irdag;
+    this.currentPhysicalPlan = physicalPlan;
     this.simulationScheduler = simulationScheduler;
+    this.physicalPlanGenerator = physicalPlanGenerator;
+    this.edgesToOptimize = edgesToOptimize;
+    calculatePartitionerProperty(edgesToOptimize);
   }
 
   private Pair<Integer, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
@@ -55,7 +75,12 @@ public final class ParallelismProphet implements Prophet {
   public Map<String, Long> calculate() {
     final Map<String, Long> result = new HashMap<>();
     final List<PhysicalPlan> listOfPhysicalPlans = new ArrayList<>(); // when to update here?
-
+    for (int i = 0; i < 7; i++) {
+      final int parallelism = (int) (partitionerProperty / Math.pow(2, i));
+      PhysicalPlan newPlan = makePhysicalPlanForSimulation(parallelism, edgesToOptimize, currentIRDAG);
+      listOfPhysicalPlans.add(newPlan);
+    }
+    // is this right?
     final Pair<Integer, Long> pairWithMinDuration =
       listOfPhysicalPlans.stream().map(this::launchSimulationForPlan).min(Comparator.comparing(p -> p.right())).get();
 
@@ -63,5 +88,27 @@ public final class ParallelismProphet implements Prophet {
 
     result.put("opt.parallelism", pairWithMinDuration.left().longValue());
     return result;
+  }
+
+  private void setPartitionerProperty(final int partitionerProperty) {
+    this.partitionerProperty = partitionerProperty;
+  }
+  private void calculatePartitionerProperty(final Set<IREdge> edges) {
+    setPartitionerProperty(edges.iterator().next().getPropertyValue(PartitionerProperty.class).get().right());
+  }
+
+  private PhysicalPlan makePhysicalPlanForSimulation(final int parallelism,
+                                                     final Set<IREdge> edges,
+                                                     final IRDAG currentDag) {
+    Set<IRVertex> verticesToChangeParallelism = edges.stream()
+      .map(edge -> edge.getDst()).collect(Collectors.toSet());
+    final IRDAG newDag = currentDag;
+    newDag.topologicalDo(v -> {
+      if (verticesToChangeParallelism.contains(v)) {
+        v.setProperty(ParallelismProperty.of(parallelism));
+      }
+    });
+    final DAG<Stage, StageEdge> stageDag = physicalPlanGenerator.apply(newDag);
+    return new PhysicalPlan(currentPhysicalPlan.getPlanId().concat("-" + parallelism), stageDag);
   }
 }

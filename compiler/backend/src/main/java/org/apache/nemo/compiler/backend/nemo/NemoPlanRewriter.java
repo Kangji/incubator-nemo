@@ -31,6 +31,7 @@ import org.apache.nemo.compiler.optimizer.NemoOptimizer;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.plan.PhysicalPlan;
+import org.apache.nemo.runtime.common.plan.PhysicalPlanGenerator;
 import org.apache.nemo.runtime.common.plan.PlanRewriter;
 import org.apache.nemo.runtime.common.plan.Stage;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
@@ -67,6 +68,7 @@ public final class NemoPlanRewriter implements PlanRewriter {
   private final Map<Integer, Map<Object, Long>> messageIdToAggregatedData;
   private CountDownLatch readyToRewriteLatch;
   private final SimulationScheduler simulationScheduler;
+  private final PhysicalPlanGenerator physicalPlanGenerator;
 
   private IRDAG currentIRDAG;
   private PhysicalPlan currentPhysicalPlan;
@@ -74,10 +76,12 @@ public final class NemoPlanRewriter implements PlanRewriter {
   @Inject
   public NemoPlanRewriter(final NemoOptimizer nemoOptimizer,
                           final NemoBackend nemoBackend,
-                          final SimulationScheduler simulationScheduler) {
+                          final SimulationScheduler simulationScheduler,
+                          final PhysicalPlanGenerator physicalPlanGenerator) {
     this.nemoOptimizer = nemoOptimizer;
     this.nemoBackend = nemoBackend;
     this.simulationScheduler = simulationScheduler;
+    this.physicalPlanGenerator = physicalPlanGenerator;
     this.messageIdToAggregatedData = new HashMap<>();
     this.readyToRewriteLatch = new CountDownLatch(1);
   }
@@ -141,13 +145,14 @@ public final class NemoPlanRewriter implements PlanRewriter {
   @Override
   public void accumulate(final int messageId, final ControlMessage.RunTimePassType runTimePassType, final Object data) {
     final Prophet prophet;
-
+    //final int messageId;
     switch (runTimePassType) {
       case DataSkewPass:
         prophet = new SkewProphet((List<ControlMessage.RunTimePassMessageEntry>) data);
         break;
       case DynamicTaskSizingPass:
-        prophet = new ParallelismProphet(messageId, currentPhysicalPlan, simulationScheduler);
+        prophet = new ParallelismProphet(currentIRDAG, currentPhysicalPlan, simulationScheduler,
+          physicalPlanGenerator, (Set<IREdge>) data);
         break;
       default:
         throw new IllegalArgumentException("This type of run-time pass is not supported");

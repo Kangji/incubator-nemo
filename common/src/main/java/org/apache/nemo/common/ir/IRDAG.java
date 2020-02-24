@@ -573,6 +573,29 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     modifiedDAG = builder.build(); // update the DAG.
   }
 
+  public void insert(final TaskSizeSplitterVertex toInsert,
+                     final Set<IREdge> incomingEdgesOfOriginalVertices,
+                     final Set<IREdge> outgoingEdgesOfOriginalVertices,
+                     final Set<IREdge> edgesWithSplitterVertex) {
+    final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
+    //insert vertex and edges irrelevant to splitter vertex
+    modifiedDAG.topologicalDo(v -> {
+      if (!toInsert.getOriginalVertices().contains(v)) {
+        builder.addVertex(v);
+        for (IREdge edge : modifiedDAG.getIncomingEdgesOf(v)) {
+          if (!incomingEdgesOfOriginalVertices.contains(edge) && !outgoingEdgesOfOriginalVertices.contains(edge)) {
+            builder.connectVertices(edge);
+          }
+        }
+      }
+    });
+    //insert splitter vertices
+    builder.addVertex(toInsert);
+    //connect splitter to outside world
+    edgesWithSplitterVertex.forEach(builder::connectVertices);
+    modifiedDAG = builder.build();
+  }
+
   /**
    * Reshape unsafely, without guarantees on preserving application semantics.
    * TODO #330: Refactor Unsafe Reshaping Passes

@@ -256,7 +256,11 @@ public final class SchedulerUtils {
                                           final ControlMessage.RunTimePassType runTimePassType,
                                           final String taskId, final Object data) {
     final Set<StageEdge> targetEdges = SchedulerUtils.getEdgesToOptimize(planStateManager, taskId);
-    planRewriter.accumulate(getMessageId(targetEdges), runTimePassType, data);
+    if (runTimePassType.equals(ControlMessage.RunTimePassType.DynamicTaskSizingPass)) {
+      planRewriter.accumulate(getMessageId(targetEdges), runTimePassType, targetEdges);
+    } else {
+      planRewriter.accumulate(getMessageId(targetEdges), runTimePassType, data);
+    }
   }
 
   static int getMessageId(final Set<StageEdge> stageEdges) {
