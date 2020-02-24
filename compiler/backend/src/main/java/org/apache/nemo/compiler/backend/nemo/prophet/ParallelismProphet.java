@@ -21,6 +21,7 @@ package org.apache.nemo.compiler.backend.nemo.prophet;
 
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
+import org.apache.nemo.common.exception.SimulationException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
@@ -33,6 +34,8 @@ import org.apache.nemo.runtime.common.plan.Stage;
 import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
+import org.apache.reef.tang.Tang;
+import org.apache.reef.tang.exceptions.InjectionException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -49,15 +52,18 @@ public final class ParallelismProphet implements Prophet {
   private int partitionerProperty;
 
   public ParallelismProphet(final IRDAG irdag, final PhysicalPlan physicalPlan,
-                            final SimulationScheduler simulationScheduler,
                             final PhysicalPlanGenerator physicalPlanGenerator,
                             final Set<IREdge> edgesToOptimize) {
     this.currentIRDAG = irdag;
     this.currentPhysicalPlan = physicalPlan;
-    this.simulationScheduler = simulationScheduler;
     this.physicalPlanGenerator = physicalPlanGenerator;
     this.edgesToOptimize = edgesToOptimize;
     calculatePartitionerProperty(edgesToOptimize);
+    try {
+      this.simulationScheduler = Tang.Factory.getTang().newInjector().getInstance(SimulationScheduler.class);
+    } catch (final InjectionException e) {
+      throw new SimulationException(e);
+    }
   }
 
   private Pair<Integer, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {

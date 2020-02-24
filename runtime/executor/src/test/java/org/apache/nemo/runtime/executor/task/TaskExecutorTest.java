@@ -71,7 +71,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
@@ -115,7 +114,7 @@ public final class TaskExecutorTest {
     // Mock a IntermediateDataIOFactory.
     runtimeEdgeToOutputData = new HashMap<>();
     intermediateDataIOFactory = mock(IntermediateDataIOFactory.class);
-    when(intermediateDataIOFactory.createReader(anyInt(), any(), any())).then(new ParentTaskReaderAnswer());
+    when(intermediateDataIOFactory.createReader(any(), any(), any())).then(new ParentTaskReaderAnswer());
     when(intermediateDataIOFactory.createWriter(any(), any())).then(new ChildTaskWriterAnswer());
 
     // Mock a MetricMessageSender.
