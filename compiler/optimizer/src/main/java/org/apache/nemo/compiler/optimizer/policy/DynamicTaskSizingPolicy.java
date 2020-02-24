@@ -22,7 +22,6 @@ import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.*;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping.LoopUnrollingPass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping.SamplingTaskSizingPass;
-import org.apache.nemo.compiler.optimizer.pass.runtime.DynamicTaskSizingRunTimePass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 
 /**
