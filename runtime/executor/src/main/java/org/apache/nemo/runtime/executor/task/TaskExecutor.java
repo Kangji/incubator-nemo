@@ -713,7 +713,7 @@ public final class TaskExecutor {
     }
 
     // TODO #236: Decouple metric collection and sending logic
-    metricMessageSender.send(TASK_METRIC_ID, taskId, "writtenBytes",
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "taskOutputBytes",
       SerializationUtils.serialize(totalWrittenBytes));
   }
 }

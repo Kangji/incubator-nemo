@@ -181,8 +181,7 @@ public final class BlockInputReader implements InputReader {
     final int partitionerProperty = ((StageEdge) runtimeEdge).getPropertyValue(PartitionerProperty.class).get().right();
     final int taskSize = ((HashRange) hashRangeToRead).rangeEndExclusive()
       - ((HashRange) hashRangeToRead).rangeBeginInclusive();
-    metricMessageSender.send("TaskMetric", dstTask.getTaskId(),
-      TaskMetric.TaskMetrics.TASK_SIZE_RATIO.toString(),
+    metricMessageSender.send("TaskMetric", dstTask.getTaskId(), "taskSizeRatio",
       SerializationUtils.serialize(partitionerProperty / taskSize));
 
     final int numSrcTasks = InputReader.getSourceParallelism(this);
