@@ -39,7 +39,6 @@ import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.PersistentConnectionToMasterMap;
-import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.RuntimeEdge;
 import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.common.plan.Task;
@@ -713,7 +712,7 @@ public final class TaskExecutor {
     }
 
     // TODO #236: Decouple metric collection and sending logic
-    metricMessageSender.send(TASK_METRIC_ID, taskId, "writtenBytes",
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "taskOutputBytes",
       SerializationUtils.serialize(totalWrittenBytes));
   }
 }

@@ -31,7 +31,6 @@ import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
-import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.RuntimeEdge;
 import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.common.plan.Task;
@@ -181,8 +180,7 @@ public final class BlockInputReader implements InputReader {
     final int partitionerProperty = ((StageEdge) runtimeEdge).getPropertyValue(PartitionerProperty.class).get().right();
     final int taskSize = ((HashRange) hashRangeToRead).rangeEndExclusive()
       - ((HashRange) hashRangeToRead).rangeBeginInclusive();
-    metricMessageSender.send("TaskMetric", dstTask.getTaskId(),
-      TaskMetric.TaskMetrics.TASK_SIZE_RATIO.toString(),
+    metricMessageSender.send("TaskMetric", dstTask.getTaskId(), "taskSizeRatio",
       SerializationUtils.serialize(partitionerProperty / taskSize));
 
     final int numSrcTasks = InputReader.getSourceParallelism(this);
