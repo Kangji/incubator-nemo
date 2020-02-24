@@ -77,7 +77,6 @@ public final class SimulationScheduler implements Scheduler {
    * Run-time optimizations.
    */
   private final PlanRewriter planRewriter;
-  private final ClientRPC clientRPC;
 
   /**
    * Components related to scheduling the given plan.
@@ -109,7 +108,6 @@ public final class SimulationScheduler implements Scheduler {
                               final SchedulingConstraintRegistry schedulingConstraintRegistry,
                               final SchedulingPolicy schedulingPolicy,
                               final BlockManagerMaster blockManagerMaster,
-                              final ClientRPC clientRPC,
                               @Parameter(JobConf.ExecutorJSONContents.class) final String resourceSpecificationString,
                               @Parameter(JobConf.ScheduleSerThread.class) final int scheduleSerThread,
                               @Parameter(JobConf.DAGDirectory.class) final String dagDirectory) {
@@ -125,7 +123,6 @@ public final class SimulationScheduler implements Scheduler {
     this.taskDispatcher = TaskDispatcher.newInstance(schedulingConstraintRegistry, schedulingPolicy,
       pendingTaskCollectionPointer, executorRegistry, planStateManager);
     this.serializationExecutorService = Executors.newFixedThreadPool(scheduleSerThread);
-    this.clientRPC = clientRPC;
     this.actualMetricStore = MetricStore.getStore();
     this.metricStore = MetricStore.newInstance();
     this.planStateManager.setMetricStore(this.metricStore);
@@ -539,10 +536,10 @@ public final class SimulationScheduler implements Scheduler {
         case ExecutorDataCollected:
           final String serializedData = message.getDataCollected().getData();
           // Unsure.
-          scheduler.clientRPC.send(ControlMessage.DriverToClientMessage.newBuilder()
-            .setType(ControlMessage.DriverToClientMessageType.DataCollected)
-            .setDataCollected(ControlMessage.DataCollectMessage.newBuilder().setData(serializedData).build())
-            .build());
+//          scheduler.clientRPC.send(ControlMessage.DriverToClientMessage.newBuilder()
+//            .setType(ControlMessage.DriverToClientMessageType.DataCollected)
+//            .setDataCollected(ControlMessage.DataCollectMessage.newBuilder().setData(serializedData).build())
+//            .build());
           break;
         //  Messages sent to the executor
         case ScheduleTask:

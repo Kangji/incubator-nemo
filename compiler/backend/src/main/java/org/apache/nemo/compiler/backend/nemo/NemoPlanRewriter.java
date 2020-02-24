@@ -29,8 +29,12 @@ import org.apache.nemo.compiler.backend.nemo.prophet.Prophet;
 import org.apache.nemo.compiler.backend.nemo.prophet.SkewProphet;
 import org.apache.nemo.compiler.optimizer.NemoOptimizer;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
+import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.plan.*;
+import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
+import org.apache.reef.tang.InjectionFuture;
+import org.apache.reef.tang.annotations.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +67,7 @@ public final class NemoPlanRewriter implements PlanRewriter {
   private final NemoBackend nemoBackend;
   private final Map<Integer, Map<Object, Long>> messageIdToAggregatedData;
   private CountDownLatch readyToRewriteLatch;
+  private final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture;
   private final PhysicalPlanGenerator physicalPlanGenerator;
 
   private IRDAG currentIRDAG;
@@ -71,9 +76,14 @@ public final class NemoPlanRewriter implements PlanRewriter {
   @Inject
   public NemoPlanRewriter(final NemoOptimizer nemoOptimizer,
                           final NemoBackend nemoBackend,
-                          final PhysicalPlanGenerator physicalPlanGenerator) {
+                          final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture,
+                          final PhysicalPlanGenerator physicalPlanGenerator,
+                          @Parameter(JobConf.ClientSideRPCServerHost.class) final String clientHost,
+                          @Parameter(JobConf.ClientSideRPCServerPort.class) final int clientPort,
+                          @Parameter(JobConf.ExecutorJSONContents.class) final String executorJSONContents) {
     this.nemoOptimizer = nemoOptimizer;
     this.nemoBackend = nemoBackend;
+    this.simulationSchedulerInjectionFuture = simulationSchedulerInjectionFuture;
     this.physicalPlanGenerator = physicalPlanGenerator;
     this.messageIdToAggregatedData = new HashMap<>();
     this.readyToRewriteLatch = new CountDownLatch(1);
@@ -144,8 +154,8 @@ public final class NemoPlanRewriter implements PlanRewriter {
         prophet = new SkewProphet((List<ControlMessage.RunTimePassMessageEntry>) data);
         break;
       case DynamicTaskSizingPass:
-        prophet = new ParallelismProphet(currentIRDAG, currentPhysicalPlan, physicalPlanGenerator,
-          (Set<StageEdge>) data);
+        prophet = new ParallelismProphet(currentIRDAG, currentPhysicalPlan, simulationSchedulerInjectionFuture.get(),
+          physicalPlanGenerator, (Set<StageEdge>) data);
         break;
       default:
         throw new IllegalArgumentException("This type of run-time pass is not supported");

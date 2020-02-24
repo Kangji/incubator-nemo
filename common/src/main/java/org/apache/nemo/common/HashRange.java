@@ -36,7 +36,8 @@ public final class HashRange implements KeyRange<Integer> {
    */
   private HashRange(final int rangeBeginInclusive, final int rangeEndExclusive) {
     if (rangeBeginInclusive < 0 || rangeEndExclusive < 0) {
-      throw new RuntimeException("Each boundary value of the range have to be non-negative.");
+      throw new RuntimeException("Each boundary value of the range have to be non-negative. "
+        + "rangeBegin: " + rangeBeginInclusive + " rangeEnd: " + rangeEndExclusive);
     }
     this.rangeBeginInclusive = rangeBeginInclusive;
     this.rangeEndExclusive = rangeEndExclusive;

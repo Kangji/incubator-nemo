@@ -26,15 +26,17 @@ import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.compiler.backend.nemo.NemoPlanRewriter;
+import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.metric.TaskMetric;
-import org.apache.nemo.runtime.common.plan.PhysicalPlan;
-import org.apache.nemo.runtime.common.plan.PhysicalPlanGenerator;
-import org.apache.nemo.runtime.common.plan.Stage;
-import org.apache.nemo.runtime.common.plan.StageEdge;
+import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
+import org.apache.reef.tang.Configuration;
 import org.apache.reef.tang.Tang;
 import org.apache.reef.tang.exceptions.InjectionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,6 +45,7 @@ import java.util.stream.Collectors;
  * A prophet for Parallelism.
  */
 public final class ParallelismProphet implements Prophet {
+  private static final Logger LOG = LoggerFactory.getLogger(ParallelismProphet.class.getName());
   private final SimulationScheduler simulationScheduler;
   private final PhysicalPlanGenerator physicalPlanGenerator;
   private final IRDAG currentIRDAG;
@@ -51,18 +54,15 @@ public final class ParallelismProphet implements Prophet {
   private int partitionerProperty;
 
   public ParallelismProphet(final IRDAG irdag, final PhysicalPlan physicalPlan,
+                            final SimulationScheduler simulationScheduler,
                             final PhysicalPlanGenerator physicalPlanGenerator,
                             final Set<StageEdge> edgesToOptimize) {
     this.currentIRDAG = irdag;
     this.currentPhysicalPlan = physicalPlan;
+    this.simulationScheduler = simulationScheduler;
     this.physicalPlanGenerator = physicalPlanGenerator;
     this.edgesToOptimize = edgesToOptimize;
     calculatePartitionerProperty(edgesToOptimize);
-    try {
-      this.simulationScheduler = Tang.Factory.getTang().newInjector().getInstance(SimulationScheduler.class);
-    } catch (final InjectionException e) {
-      throw new SimulationException(e);
-    }
   }
 
   private Pair<Integer, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
@@ -82,13 +82,16 @@ public final class ParallelismProphet implements Prophet {
     final List<PhysicalPlan> listOfPhysicalPlans = new ArrayList<>(); // when to update here?
     for (int i = 0; i < 7; i++) {
       final int parallelism = (int) (partitionerProperty / Math.pow(2, i));
+      LOG.error("parallelism = {}", parallelism);
       PhysicalPlan newPlan = makePhysicalPlanForSimulation(parallelism, edgesToOptimize, currentIRDAG);
       listOfPhysicalPlans.add(newPlan);
     }
     // is this right?
     final Pair<Integer, Long> pairWithMinDuration =
-      listOfPhysicalPlans.stream().map(this::launchSimulationForPlan).min(Comparator.comparing(p -> p.right())).get();
-
+      listOfPhysicalPlans.stream().map(this::launchSimulationForPlan)
+        .filter(pair -> pair.right() > 0.5)
+        .min(Comparator.comparing(p -> p.right())).get();
+    LOG.error("optimal pair {}", pairWithMinDuration);
     this.simulationScheduler.terminate();
 
     result.put("opt.parallelism", pairWithMinDuration.left().longValue());
@@ -115,6 +118,6 @@ public final class ParallelismProphet implements Prophet {
       }
     });
     final DAG<Stage, StageEdge> stageDag = physicalPlanGenerator.apply(newDag);
-    return new PhysicalPlan(currentPhysicalPlan.getPlanId().concat("-" + parallelism), stageDag);
+    return new PhysicalPlan(currentPhysicalPlan.getPlanId().concat("--p" + parallelism), stageDag);
   }
 }

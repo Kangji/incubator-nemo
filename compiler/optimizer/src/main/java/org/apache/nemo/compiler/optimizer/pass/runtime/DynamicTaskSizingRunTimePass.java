@@ -59,7 +59,9 @@ public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, 
     final Map<String, Long> messageValue = message.getMessageValue();
     LOG.info("messageValue {}", messageValue);
     final int optimizedTaskSizeRatio = messageValue.get(mapKey).intValue();
+    LOG.error("task size ratio : {}", optimizedTaskSizeRatio);
     final int partitionerProperty = getPartitionerProperty(irdag);
+    LOG.error("partitioner property {}", partitionerProperty);
     for (IREdge edge : edgesToOptimize) {
       if (edge.getPropertyValue(CommunicationPatternProperty.class).get()
         .equals(CommunicationPatternProperty.Value.SHUFFLE)
@@ -68,7 +70,7 @@ public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, 
       }
     }
     final int partitionUnit = partitionerProperty / optimizedTaskSizeRatio;
-
+    LOG.error("partitionUnit: {}", partitionUnit);
     edgesToOptimize.forEach(irEdge -> setSubPartitionProperty(irEdge, partitionUnit, partitionerProperty));
     edgesToOptimize.forEach(irEdge -> setDstVertexParallelismProperty(irEdge, partitionUnit, partitionerProperty));
     return irdag;
