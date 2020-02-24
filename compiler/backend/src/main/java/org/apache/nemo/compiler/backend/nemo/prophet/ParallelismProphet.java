@@ -21,14 +21,12 @@ package org.apache.nemo.compiler.backend.nemo.prophet;
 
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.runtime.common.metric.JobMetric;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.PhysicalPlan;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A prophet for Parallelism.
@@ -44,9 +42,25 @@ public final class ParallelismProphet implements Prophet {
   private Pair<Integer, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
     this.simulationScheduler.schedulePlan(physicalPlan, 1);
     final MetricStore resultingMetricStore = this.simulationScheduler.collectMetricStore();
-    final Long duration = resultingMetricStore.getMetricMap(JobMetric.class).values().stream().mapToLong(jobMetric ->
-      ((JobMetric) jobMetric).getJobDuration()).findFirst().orElse(Long.MAX_VALUE);
-    return Pair.of(4096, duration);
+    final List<Pair<Integer, Long>> taskSizeRatioToDuration = new ArrayList<>();
+    resultingMetricStore.getMetricMap(TaskMetric.class).values().forEach(taskMetric -> {
+      taskSizeRatioToDuration.add(Pair.of(((TaskMetric) taskMetric).getTaskSizeRatio(),
+        ((TaskMetric) taskMetric).getTaskDuration()));
+    });
+    final Pair<Integer, Long> optimalPair = Collections.min(taskSizeRatioToDuration,
+      new Comparator<Pair<Integer, Long>>() {
+      @Override
+      public int compare(Pair<Integer, Long> o1, Pair<Integer, Long> o2) {
+        if (o1.right() > o2.right()) {
+          return 1;
+        } else if (o1.right() < o2.right()) {
+          return -1;
+        } else {
+          return 0;
+        }
+      }
+    });
+    return optimalPair;
   }
 
   @Override
@@ -55,7 +69,7 @@ public final class ParallelismProphet implements Prophet {
     final List<PhysicalPlan> listOfPhysicalPlans = new ArrayList<>();
 
     final Pair<Integer, Long> pairWithMinDuration =
-      listOfPhysicalPlans.stream().map(this::launchSimulationForPlan).min((pLeft, pRight) -> Long.compare(pLeft.right(), pRight.right()));
+      listOfPhysicalPlans.stream().map(this::launchSimulationForPlan).min(Comparator.comparing(p -> p.right())).get();
 
     this.simulationScheduler.terminate();
 

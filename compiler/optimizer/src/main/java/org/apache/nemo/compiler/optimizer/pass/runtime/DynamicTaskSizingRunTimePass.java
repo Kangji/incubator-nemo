@@ -33,14 +33,16 @@ import org.slf4j.LoggerFactory;
 //import org.apache.nemo.runtime.common.plan.PhysicalPlanGenerator;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  *
  */
-public final class DynamicTaskSizingRunTimePass extends RunTimePass<Integer> {
+public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, Long>> {
   private static final Logger LOG = LoggerFactory.getLogger(DynamicTaskSizingRunTimePass.class.getName());
+  private final String MAP_KEY = "opt.parallelism";
   //private final PhysicalPlanGenerator physicalPlanGenerator;
   //private final PhysicalPlan physicalPlan;
   //private final SimulationScheduler simulationScheduler
@@ -50,7 +52,7 @@ public final class DynamicTaskSizingRunTimePass extends RunTimePass<Integer> {
   }
 
   @Override
-  public IRDAG apply(final IRDAG irdag, final Message<Integer> message) {
+  public IRDAG apply(final IRDAG irdag, final Message<Map<String, Long>> message) {
     final Set<IREdge> edgesToOptimize = message.getExaminedEdges();
     LOG.info("Examined edges {}", edgesToOptimize.stream().map(IREdge::getId).collect(Collectors.toList()));
 
@@ -59,7 +61,8 @@ public final class DynamicTaskSizingRunTimePass extends RunTimePass<Integer> {
     if (!representativeEdge.getDst().getPropertyValue(EnableDynamicTaskSizingProperty.class).get()) {
       return irdag;
     }
-    final int optimizedTaskSizeRatio = message.getMessageValue();
+    final Map<String, Long> messageValue = message.getMessageValue();
+    final int optimizedTaskSizeRatio = messageValue.get(MAP_KEY).intValue();
     final int partitionerProperty = getPartitionerProperty(irdag);
     for ( IREdge edge : edgesToOptimize) {
       if(edge.getPropertyValue(CommunicationPatternProperty.class).get()
