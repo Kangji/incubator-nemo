@@ -16,24 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.plan;
 
-import org.apache.nemo.runtime.common.comm.ControlMessage;
+package org.apache.nemo.compiler.backend.nemo.prophet;
+
+import java.util.Map;
 
 /**
- * PhysicalPlan rewriter.
+ * A prophet class for dynamic optimizations.
  */
-public interface PlanRewriter {
-  /**
-   * @param messageId           of the rewrite.
-   * @return physical plan.
-   */
-  PhysicalPlan rewrite(int messageId);
+public interface Prophet {
+
+
 
   /**
-   * @param messageId of the rewrite.
-   * @param data      to accumulate.
+   * Calculate the optimized values based on runtime messages.
+   * @return A map containing the optimized values.
    */
-  void accumulate(int messageId, ControlMessage.RunTimePassType runTimePassType, Object data);
-
+  Map<String, Long> calculate();
 }

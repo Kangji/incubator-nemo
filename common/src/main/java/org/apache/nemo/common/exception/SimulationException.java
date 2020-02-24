@@ -16,24 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.runtime.common.plan;
 
-import org.apache.nemo.runtime.common.comm.ControlMessage;
+package org.apache.nemo.common.exception;
 
 /**
- * PhysicalPlan rewriter.
+ * SimulationException.
+ * Thrown when any exception occurs while trying to simulate
+ * a {org.apache.nemo.runtime.common.plan.physical.Task} to an executor.
  */
-public interface PlanRewriter {
+public final class SimulationException extends RuntimeException {
   /**
-   * @param messageId           of the rewrite.
-   * @return physical plan.
+   * SimulationException.
+   *
+   * @param exception exception
    */
-  PhysicalPlan rewrite(int messageId);
+  public SimulationException(final Throwable exception) {
+    super(exception);
+  }
 
   /**
-   * @param messageId of the rewrite.
-   * @param data      to accumulate.
+   * SimulationException.
+   *
+   * @param exception exception
    */
-  void accumulate(int messageId, ControlMessage.RunTimePassType runTimePassType, Object data);
-
+  public SimulationException(final String exception) {
+    super(exception);
+  }
 }

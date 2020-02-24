@@ -78,6 +78,7 @@ public final class TaskExecutor {
   private long boundedSourceReadTime = 0;
   private long serializedReadBytes = 0;
   private long encodedReadBytes = 0;
+  private long timeSinceLastExecution;
   private final MetricMessageSender metricMessageSender;
 
   // Dynamic optimization
@@ -122,6 +123,8 @@ public final class TaskExecutor {
     final Pair<List<DataFetcher>, List<VertexHarness>> pair = prepare(task, irVertexDag, intermediateDataIOFactory);
     this.dataFetchers = pair.left();
     this.sortedHarnesses = pair.right();
+
+    this.timeSinceLastExecution = System.currentTimeMillis();
   }
 
   // Get all of the intra-task edges + inter-task edges
@@ -270,7 +273,7 @@ public final class TaskExecutor {
         .filter(inEdge -> inEdge.getDstIRVertex().getId().equals(irVertex.getId())) // edge to this vertex
         .map(incomingEdge ->
           Pair.of(incomingEdge, intermediateDataIOFactory
-            .createReader(taskIndex, incomingEdge.getSrcIRVertex(), incomingEdge)))
+            .createReader(task, incomingEdge.getSrcIRVertex(), incomingEdge)))
         .forEach(pair -> {
           if (irVertex instanceof OperatorVertex) {
             final StageEdge edge = pair.left();
@@ -342,25 +345,30 @@ public final class TaskExecutor {
     }
     LOG.info("{} started", taskId);
     taskStateManager.onTaskStateChanged(TaskState.State.EXECUTING, Optional.empty(), Optional.empty());
+    final long executionStartTime = System.currentTimeMillis();
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "schedulingOverhead",
+      SerializationUtils.serialize(executionStartTime - timeSinceLastExecution));
 
     // Phase 1: Consume task-external input data.
     if (!handleDataFetchers(dataFetchers)) {
       return;
     }
 
-    metricMessageSender.send(TASK_METRIC_ID, taskId,
-      TaskMetric.TaskMetrics.TASK_BOUNDED_SOURCE_READ_TIME.toString(),
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "boundedSourceReadTime",
       SerializationUtils.serialize(boundedSourceReadTime));
-    metricMessageSender.send(TASK_METRIC_ID, taskId,
-      TaskMetric.TaskMetrics.TASK_SERIALIZED_READ_BYTES.toString(), SerializationUtils.serialize(serializedReadBytes));
-    metricMessageSender.send(TASK_METRIC_ID, taskId,
-      TaskMetric.TaskMetrics.TASK_ENCODED_READ_BYTES.toString(), SerializationUtils.serialize(encodedReadBytes));
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "serializedReadBytes",
+      SerializationUtils.serialize(serializedReadBytes));
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "encodedReadBytes",
+      SerializationUtils.serialize(encodedReadBytes));
 
     // Phase 2: Finalize task-internal states and elements
     for (final VertexHarness vertexHarness : sortedHarnesses) {
       finalizeVertex(vertexHarness);
     }
 
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDuration",
+      SerializationUtils.serialize(System.currentTimeMillis() - executionStartTime));
+    this.timeSinceLastExecution = System.currentTimeMillis();
     if (idOfVertexPutOnHold == null) {
       taskStateManager.onTaskStateChanged(TaskState.State.COMPLETE, Optional.empty(), Optional.empty());
       LOG.info("{} completed", taskId);
@@ -629,13 +637,13 @@ public final class TaskExecutor {
     }
   }
 
-  private List<InputReader> getParentTaskReaders(final int taskIndex,
+  private List<InputReader> getParentTaskReaders(final Task task,
                                                  final List<StageEdge> inEdgesFromParentTasks,
                                                  final IntermediateDataIOFactory intermediateDataIOFactory) {
     return inEdgesFromParentTasks
       .stream()
       .map(inEdgeForThisVertex -> intermediateDataIOFactory
-        .createReader(taskIndex, inEdgeForThisVertex.getSrcIRVertex(), inEdgeForThisVertex))
+        .createReader(task, inEdgeForThisVertex.getSrcIRVertex(), inEdgeForThisVertex))
       .collect(Collectors.toList());
   }
 
@@ -692,13 +700,12 @@ public final class TaskExecutor {
     });
 
     // finalize OutputWriters for additional tagged children
-    vertexHarness.getWritersToAdditionalChildrenTasks().values().forEach(outputWriters -> {
+    vertexHarness.getWritersToAdditionalChildrenTasks().values().forEach(outputWriters ->
       outputWriters.forEach(outputWriter -> {
         outputWriter.close();
         final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
         writtenBytes.ifPresent(writtenBytesList::add);
-      });
-    });
+      }));
 
     long totalWrittenBytes = 0;
     for (final Long writtenBytes : writtenBytesList) {
@@ -706,7 +713,7 @@ public final class TaskExecutor {
     }
 
     // TODO #236: Decouple metric collection and sending logic
-    metricMessageSender.send(TASK_METRIC_ID, taskId, TaskMetric.TaskMetrics.TASK_OUTPUT_BYTES.toString(),
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "writtenBytes",
       SerializationUtils.serialize(totalWrittenBytes));
   }
 }

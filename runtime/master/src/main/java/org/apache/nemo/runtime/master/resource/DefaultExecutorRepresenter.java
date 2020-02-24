@@ -121,7 +121,6 @@ public final class DefaultExecutorRepresenter implements ExecutorRepresenter {
     runningTaskToAttempt.put(task, task.getAttemptIdx());
     failedTasks.remove(task);
 
-
     serializationExecutorService.execute(() -> {
       final byte[] serialized = SerializationUtils.serialize(task);
       sendControlMessage(

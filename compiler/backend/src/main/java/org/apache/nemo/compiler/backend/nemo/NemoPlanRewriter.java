@@ -24,12 +24,16 @@ import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.utility.MessageAggregatorVertex;
+import org.apache.nemo.compiler.backend.nemo.prophet.ParallelismProphet;
+import org.apache.nemo.compiler.backend.nemo.prophet.Prophet;
+import org.apache.nemo.compiler.backend.nemo.prophet.SkewProphet;
 import org.apache.nemo.compiler.optimizer.NemoOptimizer;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.plan.PhysicalPlan;
 import org.apache.nemo.runtime.common.plan.PlanRewriter;
 import org.apache.nemo.runtime.common.plan.Stage;
+import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 /**
@@ -60,23 +65,40 @@ public final class NemoPlanRewriter implements PlanRewriter {
   private final NemoOptimizer nemoOptimizer;
   private final NemoBackend nemoBackend;
   private final Map<Integer, Map<Object, Long>> messageIdToAggregatedData;
+  private CountDownLatch readyToRewriteLatch;
+  private final SimulationScheduler simulationScheduler;
 
   private IRDAG currentIRDAG;
+  private PhysicalPlan currentPhysicalPlan;
 
   @Inject
   public NemoPlanRewriter(final NemoOptimizer nemoOptimizer,
-                          final NemoBackend nemoBackend) {
+                          final NemoBackend nemoBackend,
+                          final SimulationScheduler simulationScheduler) {
     this.nemoOptimizer = nemoOptimizer;
     this.nemoBackend = nemoBackend;
+    this.simulationScheduler = simulationScheduler;
     this.messageIdToAggregatedData = new HashMap<>();
+    this.readyToRewriteLatch = new CountDownLatch(1);
   }
 
-  public void setIRDAG(final IRDAG irdag) {
-    this.currentIRDAG = irdag;
+  public void setCurrentIRDAG(final IRDAG currentIRDAG) {
+    this.currentIRDAG = currentIRDAG;
+  }
+
+  public void setCurrentPhysicalPlan(final PhysicalPlan currentPhysicalPlan) {
+    this.currentPhysicalPlan = currentPhysicalPlan;
   }
 
   @Override
-  public PhysicalPlan rewrite(final PhysicalPlan currentPhysicalPlan, final int messageId) {
+  public PhysicalPlan rewrite(final int messageId) {
+    try {
+      this.readyToRewriteLatch.await();
+    } catch (final InterruptedException e) {
+      LOG.error("Interrupted while waiting for the rewrite latch: {}", e);
+      Thread.currentThread().interrupt();
+    }
+
     if (currentIRDAG == null) {
       throw new IllegalStateException();
     }
@@ -101,6 +123,7 @@ public final class NemoPlanRewriter implements PlanRewriter {
     // Optimize using the Message
     final Message message = new Message(messageId, examiningEdges, aggregatedData);
     final IRDAG newIRDAG = nemoOptimizer.optimizeAtRunTime(currentIRDAG, message);
+    this.setCurrentIRDAG(newIRDAG);
 
     // Re-compile the IRDAG into a physical plan
     final PhysicalPlan newPhysicalPlan = nemoBackend.compile(newIRDAG);
@@ -117,36 +140,22 @@ public final class NemoPlanRewriter implements PlanRewriter {
 
   @Override
   public void accumulate(final int messageId, final ControlMessage.RunTimePassType runTimePassType, final Object data) {
-    messageIdToAggregatedData.putIfAbsent(messageId, new HashMap<>());
-    final Map<Object, Long> aggregatedData = messageIdToAggregatedData.get(messageId);
+    final Prophet prophet;
 
     switch (runTimePassType) {
       case DataSkewPass:
-        final List<ControlMessage.RunTimePassMessageEntry> messageEntries =
-          (List<ControlMessage.RunTimePassMessageEntry>) data;
-        messageEntries.forEach(entry -> {
-          final Object key = entry.getKey();
-          final long partitionSize = entry.getValue();
-          if (aggregatedData.containsKey(key)) {
-            aggregatedData.compute(key, (originalKey, originalValue) -> (long) originalValue + partitionSize);
-          } else {
-            aggregatedData.put(key, partitionSize);
-          }
-        });
+        prophet = new SkewProphet((List<ControlMessage.RunTimePassMessageEntry>) data);
         break;
       case DynamicTaskSizingPass:
-        final HashMap<Integer, Long> taskSizeToDuration = (HashMap<Integer, Long>) data;
-        Set<Integer> taskSizeSet = taskSizeToDuration.keySet();
-        if (taskSizeSet.isEmpty()) {
-          break;
-        }
-        for (int taskSize : taskSizeSet) {
-          aggregatedData.put(taskSize, taskSizeToDuration.get(taskSize));
-        }
+        prophet = new ParallelismProphet(messageId, currentPhysicalPlan, simulationScheduler);
         break;
       default:
         throw new IllegalArgumentException("This type of run-time pass is not supported");
     }
-    return;
+    messageIdToAggregatedData.putIfAbsent(messageId, new HashMap<>());
+    final Map<String, Long> aggregatedData = prophet.calculate();
+    this.messageIdToAggregatedData.get(messageId).putAll(aggregatedData);
+
+    this.readyToRewriteLatch.countDown();
   }
 }

@@ -19,6 +19,7 @@
 package org.apache.nemo.common.ir.executionproperty;
 
 import org.apache.nemo.common.ir.IdManager;
+
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 

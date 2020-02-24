@@ -20,8 +20,12 @@ package org.apache.nemo.runtime.executor.datatransfer;
 
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.plan.RuntimeEdge;
 import org.apache.nemo.runtime.common.plan.StageEdge;
+import org.apache.nemo.runtime.common.plan.Task;
+import org.apache.nemo.runtime.executor.MetricManagerWorker;
+import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.data.BlockManagerWorker;
 import org.apache.nemo.runtime.executor.data.PipeManagerWorker;
 
@@ -34,12 +38,15 @@ import java.util.Optional;
 public final class IntermediateDataIOFactory {
   private final PipeManagerWorker pipeManagerWorker;
   private final BlockManagerWorker blockManagerWorker;
+  private final MetricMessageSender metricMessageSender;
 
   @Inject
   private IntermediateDataIOFactory(final BlockManagerWorker blockManagerWorker,
-                                    final PipeManagerWorker pipeManagerWorker) {
+                                    final PipeManagerWorker pipeManagerWorker,
+                                    final MetricManagerWorker metricMessageSender) {
     this.blockManagerWorker = blockManagerWorker;
     this.pipeManagerWorker = pipeManagerWorker;
+    this.metricMessageSender = metricMessageSender;
   }
 
   /**
@@ -62,18 +69,18 @@ public final class IntermediateDataIOFactory {
   /**
    * Creates an {@link InputReader} between two stages.
    *
-   * @param dstTaskIdx  the index of the destination task.
+   * @param dstTask  the destination task.
    * @param srcIRVertex the {@link IRVertex} that output the data to be read.
    * @param runtimeEdge that connects the tasks belonging to srcIRVertex to dstTask.
    * @return the {@link InputReader} created.
    */
-  public InputReader createReader(final int dstTaskIdx,
+  public InputReader createReader(final Task dstTask,
                                   final IRVertex srcIRVertex,
                                   final RuntimeEdge runtimeEdge) {
     if (isPipe(runtimeEdge)) {
-      return new PipeInputReader(dstTaskIdx, srcIRVertex, runtimeEdge, pipeManagerWorker);
+      return new PipeInputReader(dstTask, srcIRVertex, runtimeEdge, pipeManagerWorker, metricMessageSender);
     } else {
-      return new BlockInputReader(dstTaskIdx, srcIRVertex, runtimeEdge, blockManagerWorker);
+      return new BlockInputReader(dstTask, srcIRVertex, runtimeEdge, blockManagerWorker, metricMessageSender);
     }
   }
 

@@ -19,14 +19,12 @@
 package org.apache.nemo.runtime.executor;
 
 import org.apache.commons.lang3.SerializationUtils;
-import org.apache.nemo.common.exception.UnknownExecutionStateException;
-import org.apache.nemo.common.exception.UnknownFailureCauseException;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
+import org.apache.nemo.runtime.common.message.MessageUtils;
 import org.apache.nemo.runtime.common.message.PersistentConnectionToMasterMap;
 import org.apache.nemo.runtime.common.metric.StateTransitionEvent;
-import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.reef.annotations.audience.EvaluatorSide;
@@ -61,9 +59,9 @@ public final class TaskStateManager {
     this.persistentConnectionToMasterMap = persistentConnectionToMasterMap;
     this.metricMessageSender = metricMessageSender;
 
-    metricMessageSender.send(METRIC, taskId, TaskMetric.TaskMetrics.TASK_CONTAINER_ID.toString(),
+    metricMessageSender.send(METRIC, taskId, "containerId",
       SerializationUtils.serialize(executorId));
-    metricMessageSender.send(METRIC, taskId, TaskMetric.TaskMetrics.TASK_SCHEDULE_ATTEMPT.toString(),
+    metricMessageSender.send(METRIC, taskId, "scheduleAttempt",
       SerializationUtils.serialize(attemptIdx));
   }
 
@@ -77,11 +75,8 @@ public final class TaskStateManager {
   public synchronized void onTaskStateChanged(final TaskState.State newState,
                                               final Optional<String> vertexPutOnHold,
                                               final Optional<TaskState.RecoverableTaskFailureCause> cause) {
-    metricMessageSender.send("TaskMetric", taskId,
-      TaskMetric.TaskMetrics.TASK_STATE_TRANSITION_EVENT.toString(),
-      SerializationUtils.serialize(new StateTransitionEvent<>(
-        System.currentTimeMillis(), null, newState
-      )));
+    metricMessageSender.send(METRIC, taskId, "stateTransitionEvent",
+      SerializationUtils.serialize(new StateTransitionEvent<>(System.currentTimeMillis(), null, newState)));
 
     switch (newState) {
       case EXECUTING:
@@ -123,13 +118,9 @@ public final class TaskStateManager {
         .setExecutorId(executorId)
         .setTaskId(taskId)
         .setAttemptIdx(attemptIdx)
-        .setState(convertState(newState));
-    if (vertexPutOnHold.isPresent()) {
-      msgBuilder.setVertexPutOnHoldId(vertexPutOnHold.get());
-    }
-    if (cause.isPresent()) {
-      msgBuilder.setFailureCause(convertFailureCause(cause.get()));
-    }
+        .setState(MessageUtils.convertState(newState));
+    vertexPutOnHold.ifPresent(msgBuilder::setVertexPutOnHoldId);
+    cause.ifPresent(c -> msgBuilder.setFailureCause(MessageUtils.convertFailureCause(c)));
 
     // Send taskStateChangedMsg to master!
     persistentConnectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).send(
@@ -139,38 +130,6 @@ public final class TaskStateManager {
         .setType(ControlMessage.MessageType.TaskStateChanged)
         .setTaskStateChangedMsg(msgBuilder.build())
         .build());
-  }
-
-  private ControlMessage.TaskStateFromExecutor convertState(final TaskState.State state) {
-    switch (state) {
-      case READY:
-        return ControlMessage.TaskStateFromExecutor.READY;
-      case EXECUTING:
-        return ControlMessage.TaskStateFromExecutor.EXECUTING;
-      case COMPLETE:
-        return ControlMessage.TaskStateFromExecutor.COMPLETE;
-      case SHOULD_RETRY:
-        return ControlMessage.TaskStateFromExecutor.FAILED_RECOVERABLE;
-      case FAILED:
-        return ControlMessage.TaskStateFromExecutor.FAILED_UNRECOVERABLE;
-      case ON_HOLD:
-        return ControlMessage.TaskStateFromExecutor.ON_HOLD;
-      default:
-        throw new UnknownExecutionStateException(new Exception("This TaskState is unknown: " + state));
-    }
-  }
-
-  private ControlMessage.RecoverableFailureCause convertFailureCause(
-    final TaskState.RecoverableTaskFailureCause cause) {
-    switch (cause) {
-      case INPUT_READ_FAILURE:
-        return ControlMessage.RecoverableFailureCause.InputReadFailure;
-      case OUTPUT_WRITE_FAILURE:
-        return ControlMessage.RecoverableFailureCause.OutputWriteFailure;
-      default:
-        throw new UnknownFailureCauseException(
-          new Throwable("The failure cause for the recoverable failure is unknown"));
-    }
   }
 
   // Tentative

@@ -40,7 +40,6 @@ import org.apache.nemo.runtime.common.message.MessageContext;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.MessageListener;
 import org.apache.nemo.runtime.common.message.PersistentConnectionToMasterMap;
-import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.RuntimeEdge;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.executor.data.BroadcastManagerWorker;
@@ -127,8 +126,7 @@ public final class Executor {
       final long deserializationStartTime = System.currentTimeMillis();
       final DAG<IRVertex, RuntimeEdge<IRVertex>> irDag =
         SerializationUtils.deserialize(task.getSerializedIRDag());
-      metricMessageSender.send("TaskMetric", task.getTaskId(),
-        TaskMetric.TaskMetrics.TASK_DESERIALIZATION_TIME.toString(),
+      metricMessageSender.send("TaskMetric", task.getTaskId(), "taskDeserializationTime",
         SerializationUtils.serialize(System.currentTimeMillis() - deserializationStartTime));
       final TaskStateManager taskStateManager =
         new TaskStateManager(task, executorId, persistentConnectionToMasterMap, metricMessageSender);
@@ -143,13 +141,12 @@ public final class Executor {
         getDecoderFactory(e.getPropertyValue(DecoderProperty.class).get()),
         e.getPropertyValue(CompressionProperty.class).orElse(null),
         e.getPropertyValue(DecompressionProperty.class).orElse(null)));
-      irDag.getVertices().forEach(v -> {
+      irDag.getVertices().forEach(v ->
         irDag.getOutgoingEdgesOf(v).forEach(e -> serializerManager.register(e.getId(),
           getEncoderFactory(e.getPropertyValue(EncoderProperty.class).get()),
           getDecoderFactory(e.getPropertyValue(DecoderProperty.class).get()),
           e.getPropertyValue(CompressionProperty.class).orElse(null),
-          e.getPropertyValue(DecompressionProperty.class).orElse(null)));
-      });
+          e.getPropertyValue(DecompressionProperty.class).orElse(null))));
 
       new TaskExecutor(task, irDag, taskStateManager, intermediateDataIOFactory, broadcastManagerWorker,
         metricMessageSender, persistentConnectionToMasterMap).execute();

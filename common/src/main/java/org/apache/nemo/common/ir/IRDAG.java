@@ -162,8 +162,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
 
   /**
    * Getter for the executor specifications information.
-   * @return the executor specifications information. It gives pairs of
-   * (# of nodes, resource specification for each node).
+   * @return the executor specifications information.
    */
   public List<Pair<Integer, ResourceSpecification>> getExecutorInfo() {
     return executorInfo;
@@ -376,7 +375,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
    * <p>
    * For each edge in edgesToGetStatisticsOf...
    * <p>
-   * Before: src - edge - dst // ex. sample - oneToOne - original
+   * Before: src - edge - dst
    * After: src - oneToOneEdge(a clone of edge) - triggerVertex -
    * shuffleEdge - messageAggregatorVertex - broadcastEdge - dst
    * (the "Before" relationships are unmodified)
@@ -385,10 +384,10 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
    * <p>
    * TODO #345: Simplify insert(TriggerVertex)
    *
-   * @param triggerVertex  to insert.
+   * @param triggerVertex    to insert.
    * @param messageAggregatorVertex to insert.
-   * @param triggerOutputEncoder    to use.
-   * @param triggerOutputDecoder    to use.
+   * @param triggerOutputEncoder        to use.
+   * @param triggerOutputDecoder        to use.
    * @param edgesToGetStatisticsOf  to examine.
    * @param edgesToOptimize         to optimize.
    */
@@ -574,33 +573,6 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     modifiedDAG = builder.build(); // update the DAG.
   }
 
-  public void insert(final TaskSizeSplitterVertex toInsert,
-                     final Set<IREdge> incomingEdgesOfOriginalVertices,
-                     final Set<IREdge> outgoingEdgesOfOriginalVertices,
-                     final Set<IREdge> edgesWithSplitterVertex) {
-    final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
-
-    //insert vertex and edges irrelevant to splitter vertex
-    modifiedDAG.topologicalDo(v -> {
-      if (!toInsert.getOriginalVertices().contains(v)) {
-        builder.addVertex(v);
-        for (IREdge edge : modifiedDAG.getIncomingEdgesOf(v)) {
-          if (!incomingEdgesOfOriginalVertices.contains(edge) && !outgoingEdgesOfOriginalVertices.contains(edge)) {
-            builder.connectVertices(edge);
-          }
-        }
-      }
-    });
-
-    //insert splitter vertices
-    builder.addVertex(toInsert);
-
-    //connect splitter to outside world
-    edgesWithSplitterVertex.forEach(builder::connectVertices);
-
-    modifiedDAG = builder.build();
-  }
-
   /**
    * Reshape unsafely, without guarantees on preserving application semantics.
    * TODO #330: Refactor Unsafe Reshaping Passes
@@ -625,11 +597,9 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
 
   private IRVertex wrapSamplingVertexIfNeeded(final IRVertex newVertex, final IRVertex existingVertexToConnectWith) {
     // If the connecting vertex is a sampling vertex, the new vertex must be wrapped inside a sampling vertex too.
-    if (existingVertexToConnectWith instanceof SamplingVertex) {
-      return new SamplingVertex(
-        newVertex, ((SamplingVertex) existingVertexToConnectWith).getDesiredSampleRate());
-    }
-    return newVertex;
+    return existingVertexToConnectWith instanceof SamplingVertex
+      ? new SamplingVertex(newVertex, ((SamplingVertex) existingVertexToConnectWith).getDesiredSampleRate())
+      : newVertex;
   }
 
   private void assertNonControlEdge(final IREdge e) {
