@@ -25,7 +25,7 @@ import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.runtime.common.metric.TaskMetric;
+import org.apache.nemo.runtime.common.metric.JobMetric;
 import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
@@ -45,6 +45,7 @@ public final class ParallelismProphet implements Prophet {
   private final IRDAG currentIRDAG;
   private final PhysicalPlan currentPhysicalPlan;
   private final Set<StageEdge> edgesToOptimize;
+  private final Set<String> stageId;
   private int partitionerProperty;
 
   public ParallelismProphet(final IRDAG irdag, final PhysicalPlan physicalPlan,
@@ -56,16 +57,17 @@ public final class ParallelismProphet implements Prophet {
     this.simulationScheduler = simulationScheduler;
     this.physicalPlanGenerator = physicalPlanGenerator;
     this.edgesToOptimize = edgesToOptimize;
+    this.stageId = edgesToOptimize.stream().map(StageEdge::getDst).map(Stage::getId).collect(Collectors.toSet());
     calculatePartitionerProperty(edgesToOptimize);
   }
-
+  //task size ratio is same as parallelism
   private Pair<Integer, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
     this.simulationScheduler.schedulePlan(physicalPlan, 1);
     final MetricStore resultingMetricStore = this.simulationScheduler.collectMetricStore();
     final List<Pair<Integer, Long>> taskSizeRatioToDuration = new ArrayList<>();
-    resultingMetricStore.getMetricMap(TaskMetric.class).values().forEach(taskMetric -> {
-      taskSizeRatioToDuration.add(Pair.of(((TaskMetric) taskMetric).getTaskSizeRatio(),
-        ((TaskMetric) taskMetric).getTaskDuration()));
+    resultingMetricStore.getMetricMap(JobMetric.class).values().forEach(jobMetric -> {
+      final int taskSizeRatio = Integer.parseInt(((JobMetric) jobMetric).getId().split("-")[1]);
+      taskSizeRatioToDuration.add(Pair.of(taskSizeRatio, ((JobMetric) jobMetric).getJobDuration()));
     });
     return Collections.min(taskSizeRatioToDuration, Comparator.comparing(Pair::right));
   }
@@ -112,6 +114,6 @@ public final class ParallelismProphet implements Prophet {
       }
     });
     final DAG<Stage, StageEdge> stageDag = physicalPlanGenerator.apply(newDag);
-    return new PhysicalPlan(currentPhysicalPlan.getPlanId().concat("--p" + parallelism), stageDag);
+    return new PhysicalPlan(currentPhysicalPlan.getPlanId().concat("-" + parallelism), stageDag);
   }
 }
