@@ -21,20 +21,14 @@ package org.apache.nemo.compiler.backend.nemo.prophet;
 
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
-import org.apache.nemo.common.exception.SimulationException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.compiler.backend.nemo.NemoPlanRewriter;
-import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
-import org.apache.reef.tang.Configuration;
-import org.apache.reef.tang.Tang;
-import org.apache.reef.tang.exceptions.InjectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
