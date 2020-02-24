@@ -29,8 +29,6 @@ import org.apache.nemo.common.ir.vertex.executionproperty.EnableDynamicTaskSizin
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-//import org.apache.nemo.runtime.common.plan.PhysicalPlan;
-//import org.apache.nemo.runtime.common.plan.PhysicalPlanGenerator;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -42,10 +40,7 @@ import java.util.stream.Collectors;
  */
 public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, Long>> {
   private static final Logger LOG = LoggerFactory.getLogger(DynamicTaskSizingRunTimePass.class.getName());
-  private final String MAP_KEY = "opt.parallelism";
-  //private final PhysicalPlanGenerator physicalPlanGenerator;
-  //private final PhysicalPlan physicalPlan;
-  //private final SimulationScheduler simulationScheduler
+  private final String mapKey = "opt.parallelism";
 
   public DynamicTaskSizingRunTimePass() {
 
@@ -62,10 +57,11 @@ public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, 
       return irdag;
     }
     final Map<String, Long> messageValue = message.getMessageValue();
-    final int optimizedTaskSizeRatio = messageValue.get(MAP_KEY).intValue();
+    LOG.info("messageValue {}", messageValue);
+    final int optimizedTaskSizeRatio = messageValue.get(mapKey).intValue();
     final int partitionerProperty = getPartitionerProperty(irdag);
-    for ( IREdge edge : edgesToOptimize) {
-      if(edge.getPropertyValue(CommunicationPatternProperty.class).get()
+    for (IREdge edge : edgesToOptimize) {
+      if (edge.getPropertyValue(CommunicationPatternProperty.class).get()
         .equals(CommunicationPatternProperty.Value.SHUFFLE)
         && !edge.getPropertyValue(PartitionerProperty.class).get().right().equals(partitionerProperty)) {
           throw new IllegalArgumentException();

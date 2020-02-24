@@ -20,7 +20,6 @@
 package org.apache.nemo.compiler.backend.nemo.prophet;
 
 import org.apache.nemo.common.Pair;
-import org.apache.nemo.runtime.common.metric.JobMetric;
 import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.PhysicalPlan;
 import org.apache.nemo.runtime.master.metric.MetricStore;
@@ -33,9 +32,11 @@ import java.util.*;
  */
 public final class ParallelismProphet implements Prophet {
   private final SimulationScheduler simulationScheduler;
+  private final int messageId;
 
   public ParallelismProphet(final int messageId, final PhysicalPlan physicalPlan,
                             final SimulationScheduler simulationScheduler) {
+    this.messageId = messageId;
     this.simulationScheduler = simulationScheduler;
   }
 
@@ -47,26 +48,13 @@ public final class ParallelismProphet implements Prophet {
       taskSizeRatioToDuration.add(Pair.of(((TaskMetric) taskMetric).getTaskSizeRatio(),
         ((TaskMetric) taskMetric).getTaskDuration()));
     });
-    final Pair<Integer, Long> optimalPair = Collections.min(taskSizeRatioToDuration,
-      new Comparator<Pair<Integer, Long>>() {
-      @Override
-      public int compare(Pair<Integer, Long> o1, Pair<Integer, Long> o2) {
-        if (o1.right() > o2.right()) {
-          return 1;
-        } else if (o1.right() < o2.right()) {
-          return -1;
-        } else {
-          return 0;
-        }
-      }
-    });
-    return optimalPair;
+    return Collections.min(taskSizeRatioToDuration, Comparator.comparing(Pair::right));
   }
 
   @Override
   public Map<String, Long> calculate() {
     final Map<String, Long> result = new HashMap<>();
-    final List<PhysicalPlan> listOfPhysicalPlans = new ArrayList<>();
+    final List<PhysicalPlan> listOfPhysicalPlans = new ArrayList<>(); // when to update here?
 
     final Pair<Integer, Long> pairWithMinDuration =
       listOfPhysicalPlans.stream().map(this::launchSimulationForPlan).min(Comparator.comparing(p -> p.right())).get();
