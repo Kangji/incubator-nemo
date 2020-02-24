@@ -312,8 +312,6 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
 
     final SignalVertex signalVertex = new SignalVertex();
 
-
-
     fromOutsideToOriginal.forEach(edge -> toInsert.addDagIncomingEdge(edge));
     fromOutsideToOriginal.forEach(edge -> toInsert.addNonIterativeIncomingEdge(edge)); //
     fromOriginalToOutside.forEach(edge -> toInsert.addDagOutgoingEdge(edge));
