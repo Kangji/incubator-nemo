@@ -21,7 +21,9 @@ package org.apache.nemo.compiler.backend.nemo.prophet;
 
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
+import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
@@ -83,10 +85,14 @@ public final class ParallelismProphet implements Prophet {
       listOfPhysicalPlans.add(newPlan);
     }
     // is this right?
+    final List<Pair<Integer, Long>> listOfParallelismToDurationPair = listOfPhysicalPlans.stream()
+      .map(this::launchSimulationForPlan)
+      .filter(pair -> pair.right() > 0.5)
+      .collect(Collectors.toList());
+    LOG.error("list of pairs {}", listOfParallelismToDurationPair);
+
     final Pair<Integer, Long> pairWithMinDuration =
-      listOfPhysicalPlans.stream().map(this::launchSimulationForPlan)
-        .filter(pair -> pair.right() > 0.5)
-        .min(Comparator.comparing(p -> p.right())).get();
+        Collections.min(listOfParallelismToDurationPair, Comparator.comparing(p -> p.right()));
     LOG.error("optimal pair {}", pairWithMinDuration);
     this.simulationScheduler.terminate();
 
@@ -107,12 +113,20 @@ public final class ParallelismProphet implements Prophet {
     Set<IRVertex> verticesToChangeParallelism = edges.stream()
       .map(edge -> edge.getDst().getIRDAG().getVertices())
       .flatMap(list -> list.stream()).collect(Collectors.toSet());
-    final IRDAG newDag = currentDag;
-    newDag.topologicalDo(v -> {
+    final DAGBuilder<IRVertex, IREdge> dagBuilder = new DAGBuilder<>();
+    // make dag of only one stage (targetStage)
+    currentDag.topologicalDo(v -> {
       if (verticesToChangeParallelism.contains(v)) {
         v.setProperty(ParallelismProperty.of(parallelism));
+        dagBuilder.addVertex(v);
+        for (IREdge edge : currentDag.getIncomingEdgesOf(v)) {
+          if (verticesToChangeParallelism.contains(edge.getSrc())) {
+            dagBuilder.connectVertices(edge);
+          }
+        }
       }
     });
+    final IRDAG newDag = new IRDAG(dagBuilder.build());
     final DAG<Stage, StageEdge> stageDag = physicalPlanGenerator.apply(newDag);
     return new PhysicalPlan(currentPhysicalPlan.getPlanId().concat("-" + parallelism), stageDag);
   }

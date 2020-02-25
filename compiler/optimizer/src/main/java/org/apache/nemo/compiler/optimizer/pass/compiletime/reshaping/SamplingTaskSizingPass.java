@@ -70,8 +70,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    boolean enableDynamicTaskSizing = true; //boolean enableDynamicTaskSizing = getEnableFromJobSize(dag);
-    /*
+    boolean enableDynamicTaskSizing = getEnableFromJobSize(dag);
+
     if (!enableDynamicTaskSizing) {
       dag.topologicalDo(v -> {
         v.setProperty(EnableDynamicTaskSizingProperty.of(enableDynamicTaskSizing));
@@ -86,7 +86,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       });
       return dag;
     }
-     */
+
     //set partitionerProperty by job data size
     final int partitionerProperty = setPartitionerProperty(dag);
     dag.topologicalDo(v -> {
