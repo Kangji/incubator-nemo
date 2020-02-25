@@ -105,7 +105,6 @@ public final class SimulationScheduler implements Scheduler {
   @Inject
   private SimulationScheduler(final PlanRewriter planRewriter,
                               final SchedulingConstraintRegistry schedulingConstraintRegistry,
-                              final SchedulingPolicy schedulingPolicy,
                               final BlockManagerMaster blockManagerMaster,
                               @Parameter(JobConf.ExecutorJSONContents.class) final String resourceSpecificationString,
                               @Parameter(JobConf.ScheduleSerThread.class) final int scheduleSerThread,
@@ -115,7 +114,7 @@ public final class SimulationScheduler implements Scheduler {
     this.pendingTaskCollectionPointer = PendingTaskCollectionPointer.newInstance();
     this.executorRegistry = ExecutorRegistry.newInstance();
     this.schedulingConstraintRegistry = schedulingConstraintRegistry;
-    this.schedulingPolicy = schedulingPolicy;
+    this.schedulingPolicy = new SimulationSchedulingPolicy();
     this.resourceSpecificationString = resourceSpecificationString;
     this.dagDirectory = dagDirectory;
     this.planStateManager = PlanStateManager.newInstance(dagDirectory);
@@ -566,6 +565,18 @@ public final class SimulationScheduler implements Scheduler {
     @Override
     public void close() {
       // do nothing.
+    }
+  }
+
+
+  /**
+   * Scheduling policy for simulations.
+   */
+  private final class SimulationSchedulingPolicy implements SchedulingPolicy {
+    @Override
+    public ExecutorRepresenter selectExecutor(final Collection<ExecutorRepresenter> executors, final Task task) {
+      return Collections.min(executors,
+        Comparator.comparing(e -> simulatedTaskExecutorMap.get(e.getExecutorId()).getElapsedTime().intValue()));
     }
   }
 }
