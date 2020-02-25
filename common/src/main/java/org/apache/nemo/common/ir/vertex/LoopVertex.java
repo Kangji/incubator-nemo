@@ -433,7 +433,7 @@ public class LoopVertex extends IRVertex {
     node.set("dagIncomingEdges", crossingEdgesToJSON(dagIncomingEdges));
     node.set("dagOutgoingEdges", crossingEdgesToJSON(dagOutgoingEdges));
     final ObjectNode edgeMappings = node.putObject("edgeWithLoopToEdgeWithInternalVertex");
-    edgeWithLoopToEdgeWithInternalVertex.entrySet()
+    edgeWithLoopToEdgeWithInternalVertex.entrySet().stream().filter(e -> e.getKey() != null && e.getValue() != null)
       .forEach(entry -> edgeMappings.put(entry.getKey().getId(), entry.getValue().getId()));
     return node;
   }

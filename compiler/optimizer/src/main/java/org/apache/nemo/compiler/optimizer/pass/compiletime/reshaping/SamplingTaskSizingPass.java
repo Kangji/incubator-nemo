@@ -18,8 +18,13 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
+import org.apache.beam.sdk.util.WindowedValue;
+import org.apache.beam.sdk.values.KV;
+import org.apache.nemo.common.KeyExtractor;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
+import org.apache.nemo.common.coder.DecoderFactory;
+import org.apache.nemo.common.coder.EncoderFactory;
 import org.apache.nemo.common.dag.Edge;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
@@ -34,7 +39,10 @@ import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -162,6 +170,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
         } else {
           fromOutsideToOriginal.add(edge);
         }
+        setCommunicationPatternToShuffle(edge);
       }
     }
     return fromOutsideToOriginal;
@@ -186,14 +195,53 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
           IREdge internalEdge = prevSplitter.getEdgeWithInternalVertex(incomingEdge);
           IREdge newIrEdge = Util.cloneEdge(incomingEdge, incomingEdge.getSrc(), toInsert);
           prevSplitter.mapEdgeWithLoop(newIrEdge, internalEdge);
+          setCommunicationPatternToShuffle(newIrEdge);
           fromOutsideToSplitter.add(newIrEdge);
         } else {
           IREdge cloneOfIncomingEdge = Util.cloneEdge(incomingEdge, incomingEdge.getSrc(), toInsert);
+          setCommunicationPatternToShuffle(cloneOfIncomingEdge);
           fromOutsideToSplitter.add(cloneOfIncomingEdge);
         }
       }
     }
     return fromOutsideToSplitter;
+  }
+
+  /**
+   * Method to change the communication pattern of the edge to shuffle.
+   * @param edge the edge subject to change.
+   */
+  private void setCommunicationPatternToShuffle(final IREdge edge) {
+    edge.setPropertyPermanently(
+      CommunicationPatternProperty.of(CommunicationPatternProperty.Value.SHUFFLE));
+    edge.setProperty(DataFlowProperty.of(
+      edge.getPropertyValue(DataFlowProperty.class).orElse(DataFlowProperty.Value.PULL)));
+    edge.setProperty(PartitionerProperty.of(
+      edge.getPropertyValue(PartitionerProperty.class).orElse(Pair.of(PartitionerProperty.Type.HASH, 0))));
+    edge.setProperty(DataStoreProperty.of(
+      edge.getPropertyValue(DataStoreProperty.class).orElse(DataStoreProperty.Value.LOCAL_FILE_STORE)));
+    edge.setProperty(EncoderProperty.of(
+      edge.getPropertyValue(EncoderProperty.class).orElse(EncoderFactory.DUMMY_ENCODER_FACTORY)));
+    edge.setProperty(DecoderProperty.of(
+      edge.getPropertyValue(DecoderProperty.class).orElse(DecoderFactory.DUMMY_DECODER_FACTORY)));
+    edge.setProperty(KeyExtractorProperty.of(
+      edge.getPropertyValue(KeyExtractorProperty.class).orElse(new KeyExtractor() {
+        @Override
+        public Object extractKey(final Object element) {
+          final Object valueToExtract = element instanceof WindowedValue ? ((WindowedValue) element).getValue() : element;
+          if (valueToExtract instanceof KV) {
+            // Handle null keys, since Beam allows KV with null keys.
+            final Object key = ((KV) valueToExtract).getKey();
+            return key == null ? 0 : key;
+          } else {
+            return element;
+          }
+        }
+      })));
+    edge.setProperty(KeyEncoderProperty.of(
+      edge.getPropertyValue(KeyEncoderProperty.class).orElse(EncoderFactory.DUMMY_ENCODER_FACTORY)));
+    edge.setProperty(KeyDecoderProperty.of(
+      edge.getPropertyValue(KeyDecoderProperty.class).orElse(DecoderFactory.DUMMY_DECODER_FACTORY)));
   }
 
   /**
@@ -214,8 +262,9 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
   }
 
   private boolean getEnableFromJobSize(final IRDAG dag) {
-    long jobSizeInBytes = dag.getInputSize();
-    return jobSizeInBytes >= 1024 * 1024 * 1024;
+    // long jobSizeInBytes = dag.getInputSize();
+    // return jobSizeInBytes >= 1024 * 1024 * 1024;
+    return true;
   }
 
   private int getNumberOfTotalExecutorCores(final IRDAG dag) {

@@ -21,6 +21,7 @@ package org.apache.nemo.examples.beam;
 import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
+import org.apache.nemo.compiler.optimizer.policy.DynamicTaskSizingPolicy;
 import org.apache.nemo.examples.beam.policy.DefaultPolicyParallelismFive;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,6 +55,22 @@ public final class MultinomialLogisticRegressionITCase {
       .addUserMain(MultinomialLogisticRegression.class.getCanonicalName())
       .addUserArgs(input, numFeatures, numClasses, numIteration)
       .addOptimizationPolicy(DefaultPolicyParallelismFive.class.getCanonicalName())
+      .addResourceJson(executorResourceFileName)
+      .build());
+  }
+
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
+  public void testDTS() throws Exception {
+    final String input = ExampleTestArgs.getFileBasePath() + "inputs/test_input_mlr";
+    final String numFeatures = "100";
+    final String numClasses = "5";
+    final String numIteration = "3";
+
+    JobLauncher.main(builder
+      .addJobId(MultinomialLogisticRegressionITCase.class.getSimpleName() + "_dts")
+      .addUserMain(MultinomialLogisticRegression.class.getCanonicalName())
+      .addUserArgs(input, numFeatures, numClasses, numIteration)
+      .addOptimizationPolicy(DynamicTaskSizingPolicy.class.getCanonicalName())
       .addResourceJson(executorResourceFileName)
       .build());
   }

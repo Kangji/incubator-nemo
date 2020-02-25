@@ -122,6 +122,19 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   public void insertSignalVertex(final SignalVertex toInsert) {
     getBuilder().addVertex(toInsert);
     IREdge edgesToSignal = EmptyComponents.newDummyShuffleEdge(stageEndingVertex, toInsert);
+    getDagOutgoingEdges().entrySet().stream().filter(e -> e.getKey().getId().equals(stageEndingVertex.getId()))
+      .forEach(e -> e.getValue().forEach(edge -> {
+        edge.getPropertyValue(EncoderProperty.class).ifPresent(ep ->
+          edgesToSignal.setProperty(EncoderProperty.of(ep)));
+        edge.getPropertyValue(DecoderProperty.class).ifPresent(ep ->
+          edgesToSignal.setProperty(DecoderProperty.of(ep)));
+        edge.getPropertyValue(KeyExtractorProperty.class).ifPresent(ep ->
+          edgesToSignal.setProperty(KeyExtractorProperty.of(ep)));
+        edge.getPropertyValue(KeyEncoderProperty.class).ifPresent(ep ->
+          edgesToSignal.setProperty(KeyEncoderProperty.of(ep)));
+        edge.getPropertyValue(KeyDecoderProperty.class).ifPresent(ep ->
+          edgesToSignal.setProperty(KeyDecoderProperty.of(ep)));
+      }));
     getBuilder().connectVertices(edgesToSignal);
     IREdge controlEdgeToBeginning = Util.createControlEdge(toInsert, stageOpeningVertex);
     addIterativeIncomingEdge(controlEdgeToBeginning);
@@ -176,46 +189,49 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     }));
 
     getDagOutgoingEdges().forEach((srcVertex, irEdges) -> irEdges.forEach(edgeFromOriginal -> {
-      for (Map.Entry<IREdge, IREdge> entry : this.getEdgeWithInternalVertexToEdgeWithLoop().entrySet()) {
-        if (entry.getKey().getId().equals(edgeFromOriginal.getId())) {
-          final IREdge correspondingEdge = entry.getValue(); // edge to next splitter vertex
-          if (correspondingEdge.getDst() instanceof TaskSizeSplitterVertex) {
-            TaskSizeSplitterVertex nextSplitter = (TaskSizeSplitterVertex) correspondingEdge.getDst();
-            IRVertex dstVertex = edgeFromOriginal.getDst(); // vertex inside of next splitter vertex
-            List<IREdge> edgesToDelete = new ArrayList<>();
-            List<IREdge> edgesToAdd = new ArrayList<>();
-            for (IREdge edgeToDst : nextSplitter.getDagIncomingEdges().get(dstVertex)) {
-              if (edgeToDst.getSrc().getId().equals(srcVertex.getId())) {
+      this.getEdgeWithInternalVertexToEdgeWithLoop().entrySet().stream()
+        .filter(e -> e.getKey() != null)
+        .filter(e -> e.getKey().getId().equals(edgeFromOriginal.getId())).forEach(entry -> {
+        final IREdge correspondingEdge = entry.getValue(); // edge to next splitter vertex
+        if (correspondingEdge.getDst() instanceof TaskSizeSplitterVertex) {
+          TaskSizeSplitterVertex nextSplitter = (TaskSizeSplitterVertex) correspondingEdge.getDst();
+          IRVertex dstVertex = edgeFromOriginal.getDst(); // vertex inside of next splitter vertex
+          List<IREdge> edgesToDelete = new ArrayList<>();
+          List<IREdge> edgesToAdd = new ArrayList<>();
+          nextSplitter.getDagIncomingEdges().entrySet().stream()
+            .filter(e -> e.getKey().getId().equals(dstVertex.getId()))
+            .forEach(e -> e.getValue().stream()
+              .filter(edgeToDst -> edgeToDst.getSrc().getId().equals(srcVertex.getId()))
+              .forEach(edgeToDst -> {
                 final IREdge newIrEdge = new IREdge(
                   edgeFromOriginal.getPropertyValue(CommunicationPatternProperty.class).get(),
                   originalToNewIRVertex.get(srcVertex),
                   edgeFromOriginal.getDst());
+                edgeToDst.copyExecutionPropertiesTo(newIrEdge);
                 edgesToDelete.add(edgeToDst);
                 edgesToAdd.add(newIrEdge);
                 final IREdge newLoopEdge = Util.cloneEdge(
                   correspondingEdge, newIrEdge.getSrc(), correspondingEdge.getDst());
                 nextSplitter.mapEdgeWithLoop(newLoopEdge, newIrEdge);
-              }
+              }));
+          if (loopTerminationConditionMet()) {
+            for (IREdge edgeToDelete : edgesToDelete) {
+              nextSplitter.removeDagIncomingEdge(edgeToDelete);
+              nextSplitter.removeNonIterativeIncomingEdge(edgeToDelete);
             }
-            if (loopTerminationConditionMet()) {
-              for (IREdge edgeToDelete : edgesToDelete) {
-                nextSplitter.removeDagIncomingEdge(edgeToDelete);
-                nextSplitter.removeNonIterativeIncomingEdge(edgeToDelete);
-              }
-            }
-            for (IREdge edgeToAdd : edgesToAdd) {
-              nextSplitter.addDagIncomingEdge(edgeToAdd);
-              nextSplitter.addNonIterativeIncomingEdge(edgeToAdd);
-            }
-          } else {
-            final IREdge newIrEdge = new IREdge(
-              edgeFromOriginal.getPropertyValue(CommunicationPatternProperty.class).get(),
-              originalToNewIRVertex.get(srcVertex), edgeFromOriginal.getDst());
-            edgeFromOriginal.copyExecutionPropertiesTo(newIrEdge);
-            dagBuilder.addVertex(edgeFromOriginal.getDst()).connectVertices(newIrEdge);
           }
+          for (IREdge edgeToAdd : edgesToAdd) {
+            nextSplitter.addDagIncomingEdge(edgeToAdd);
+            nextSplitter.addNonIterativeIncomingEdge(edgeToAdd);
+          }
+        } else {
+          final IREdge newIrEdge = new IREdge(
+            edgeFromOriginal.getPropertyValue(CommunicationPatternProperty.class).get(),
+            originalToNewIRVertex.get(srcVertex), edgeFromOriginal.getDst());
+          edgeFromOriginal.copyExecutionPropertiesTo(newIrEdge);
+          dagBuilder.addVertex(edgeFromOriginal.getDst()).connectVertices(newIrEdge);
         }
-      }
+      });
     }));
 
     // if loop termination condition is false, add signal vertex
@@ -257,6 +273,13 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   private void setParallelismPropertyByTestingTrial(final IRVertex irVertex) {
     if (testingTrial == 0 && !(irVertex instanceof OperatorVertex
       && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform)) {
+      // getDagIncomingEdges().entrySet().stream()
+      //   .filter(e -> e.getKey().getId().equals(irVertex.getId()))
+      //   .forEach(entry -> entry.getValue().stream()
+      //     .filter(e -> e.getPropertyValue(CommunicationPatternProperty.class)
+      //       .orElse(CommunicationPatternProperty.Value.SHUFFLE)
+      //       .equals(CommunicationPatternProperty.Value.ONE_TO_ONE))
+      //     .forEach(e -> e.getSrc().setProperty(ParallelismProperty.of(32))));
       irVertex.setPropertyPermanently(ParallelismProperty.of(32));
     } else {
       irVertex.setProperty(ParallelismProperty.of(1));
