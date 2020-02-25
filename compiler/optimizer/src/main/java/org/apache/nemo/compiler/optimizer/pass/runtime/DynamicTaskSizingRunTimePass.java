@@ -25,6 +25,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.SubPartitionSetProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.EnableDynamicTaskSizingProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.slf4j.Logger;
@@ -49,6 +50,12 @@ public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, 
   @Override
   public IRDAG apply(final IRDAG irdag, final Message<Map<String, Long>> message) {
     final Set<IREdge> edgesToOptimize = message.getExaminedEdges();
+    final Set<IRVertex> stageVertices = edgesToOptimize.stream().map(IREdge::getDst).collect(Collectors.toSet());
+    irdag.topologicalDo(v -> {
+      if (stageVertices.contains(v)) {
+        edgesToOptimize.addAll(irdag.getIncomingEdgesOf(v));
+      }
+    });
     LOG.info("Examined edges {}", edgesToOptimize.stream().map(IREdge::getId).collect(Collectors.toList()));
 
     final IREdge representativeEdge = edgesToOptimize.iterator().next();

@@ -315,11 +315,11 @@ public final class BatchScheduler implements Scheduler {
         .flatMap(stage -> SchedulerUtils.selectSchedulableTasks(planStateManager, blockManagerMaster, stage).stream())
         .collect(Collectors.toList());
       if (!tasksToSchedule.isEmpty()) {
-        LOG.info("Scheduling some tasks in {}, which are in the same ScheduleGroup", tasksToSchedule.stream()
-          .map(Task::getTaskId)
-          .map(RuntimeIdManager::getStageIdFromTaskId)
-          .collect(Collectors.toSet()));
-        LOG.error("Tasks: {}", tasksToSchedule);
+        LOG.info("Scheduling {} tasks in {}, which are in the same ScheduleGroup", tasksToSchedule.size(),
+          tasksToSchedule.stream()
+            .map(Task::getTaskId)
+            .map(RuntimeIdManager::getStageIdFromTaskId)
+            .collect(Collectors.toSet()));
 
         // Set the pointer to the schedulable tasks.
         pendingTaskCollectionPointer.setToOverwrite(tasksToSchedule);
