@@ -31,7 +31,6 @@ import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
-import org.apache.nemo.runtime.common.message.ClientRPC;
 import org.apache.nemo.runtime.common.message.MessageSender;
 import org.apache.nemo.runtime.common.message.MessageUtils;
 import org.apache.nemo.runtime.common.metric.JobMetric;
