@@ -155,7 +155,7 @@ public final class SimulatedTaskExecutor {
     // Connect incoming / outgoing edges.
 
     // Execute
-    LOG.info("{} started", taskId);
+    LOG.debug("{} started", taskId);
 
     // Fetch external data (Read) and process them
     // this.sendMetric(TASK_METRIC_ID, taskId,
@@ -173,15 +173,16 @@ public final class SimulatedTaskExecutor {
 
     this.sendMetric(TASK_METRIC_ID, taskId, "taskDuration",
       SerializationUtils.serialize(this.currentTime.getValue() - executionStartTime));
+    LOG.warn("[HWARIM] elapsed time for {} is {}", task.getPlanId().split("-")[1], this.getElapsedTime());
     this.timeCheckpoint.setValue(System.currentTimeMillis());
     if (idOfVertexPutOnHold == null) {
       this.onTaskStateChanged(taskId, attemptIdx, TaskState.State.COMPLETE,
         Optional.empty(), Optional.empty());
-      LOG.info("{} completed", taskId);
+      LOG.debug("{} completed", taskId);
     } else {
       this.onTaskStateChanged(taskId, attemptIdx, TaskState.State.ON_HOLD,
         Optional.of(idOfVertexPutOnHold), Optional.empty());
-      LOG.info("{} on hold", taskId);
+      LOG.debug("{} on hold", taskId);
     }
   }
 
