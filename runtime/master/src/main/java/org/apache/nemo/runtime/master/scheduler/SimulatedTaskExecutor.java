@@ -63,6 +63,7 @@ public final class SimulatedTaskExecutor {
   private final ExecutorRepresenter executorRepresenter;
   private final Long executorInitializationTime;
   private final MutableLong currentTime;
+  private final MutableLong timeCheckpoint;
   private final MetricStore actualMetricStore;
   private final ConcurrentMap<String, DAG<IRVertex, RuntimeEdge<IRVertex>>> stageIDToStageIRDAG;
 
@@ -76,6 +77,7 @@ public final class SimulatedTaskExecutor {
     this.scheduler = scheduler;
     this.executorInitializationTime = System.currentTimeMillis();
     this.currentTime = new MutableLong(System.currentTimeMillis());
+    this.timeCheckpoint = new MutableLong(System.currentTimeMillis());
     this.executorRepresenter = executorRepresenter;
     this.actualMetricStore = actualMetricStore;
     this.stageIDToStageIRDAG = new ConcurrentHashMap<>();
@@ -141,10 +143,13 @@ public final class SimulatedTaskExecutor {
     final String taskId = task.getTaskId();
     final int attemptIdx = task.getAttemptIdx();
     String idOfVertexPutOnHold = null;
-    final long executionStartTime = System.currentTimeMillis();
+
+    final long schedulingOverhead = System.currentTimeMillis() - this.timeCheckpoint.getValue();
+    this.timeCheckpoint.setValue(System.currentTimeMillis());
     this.sendMetric(TASK_METRIC_ID, taskId, "schedulingOverhead",
-      SerializationUtils.serialize(executionStartTime - this.currentTime.getValue()));
-    this.currentTime.setValue(executionStartTime);
+      SerializationUtils.serialize(schedulingOverhead));
+    this.currentTime.add(schedulingOverhead);
+    final long executionStartTime = this.currentTime.getValue();
 
     // Prepare (constructor of TaskExecutor)
 
@@ -171,6 +176,7 @@ public final class SimulatedTaskExecutor {
 
     this.sendMetric(TASK_METRIC_ID, taskId, "taskDuration",
       SerializationUtils.serialize(this.currentTime.getValue() - executionStartTime));
+    this.timeCheckpoint.setValue(System.currentTimeMillis());
     if (idOfVertexPutOnHold == null) {
       this.onTaskStateChanged(taskId, attemptIdx, TaskState.State.COMPLETE,
         Optional.empty(), Optional.empty());
@@ -184,10 +190,10 @@ public final class SimulatedTaskExecutor {
 
   /**
    *
-   * @return the time of the construction of the class.
+   * @return the elapsed time for the executor.
    */
-  public Long getExecutorInitializationTime() {
-    return executorInitializationTime;
+  public Long getElapsedTime() {
+    return currentTime.getValue() - executorInitializationTime;
   }
 
   /**
