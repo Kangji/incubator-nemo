@@ -23,6 +23,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.utility.MessageAggregatorVertex;
 import org.apache.nemo.compiler.backend.nemo.prophet.ParallelismProphet;
 import org.apache.nemo.compiler.backend.nemo.prophet.Prophet;
@@ -140,6 +141,7 @@ public final class NemoPlanRewriter implements PlanRewriter {
     final List<Stage> newStages = newPhysicalPlan.getStageDAG().getTopologicalSort();
     for (int i = 0; i < currentStages.size(); i++) {
       final ExecutionPropertyMap<VertexExecutionProperty> newProperties = newStages.get(i).getExecutionProperties();
+      LOG.error("[HWARIM] parallelism property {}", newProperties.get(ParallelismProperty.class));
       currentStages.get(i).setExecutionProperties(newProperties);
     }
     return currentPhysicalPlan;
