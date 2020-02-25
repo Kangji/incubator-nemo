@@ -148,6 +148,8 @@ public final class NemoPlanRewriter implements PlanRewriter {
         currentStages.get(i).getTaskIndices().clear();
         currentStages.get(i).getTaskIndices().addAll(IntStream.range(0, newParallelism).boxed()
           .collect(Collectors.toList()));
+        IntStream.range(currentStages.get(i).getVertexIdToReadables().size(), newParallelism).forEach(newIdx ->
+          currentStages.get(i).getVertexIdToReadables().add(new HashMap<>()));
       });
     });
     return currentPhysicalPlan;
