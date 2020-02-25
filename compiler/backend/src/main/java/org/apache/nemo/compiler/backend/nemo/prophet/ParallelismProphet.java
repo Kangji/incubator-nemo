@@ -126,7 +126,7 @@ public final class ParallelismProphet implements Prophet {
         }
       }
     });
-    final IRDAG newDag = new IRDAG(dagBuilder.build());
+    final IRDAG newDag = new IRDAG(dagBuilder.buildWithoutSourceSinkCheck());
     final DAG<Stage, StageEdge> stageDag = physicalPlanGenerator.stagePartitionIrDAG(newDag);
     return new PhysicalPlan(currentPhysicalPlan.getPlanId().concat("-" + parallelism), stageDag);
   }
