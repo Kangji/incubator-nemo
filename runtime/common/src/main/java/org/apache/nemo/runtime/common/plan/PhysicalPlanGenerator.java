@@ -260,7 +260,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
     if (vertices.stream().map(v -> v instanceof SamplingVertex).collect(Collectors.toSet()).size() != 1) {
       throw new IllegalArgumentException("Must be either all sampling vertices, or none: " + vertices.toString());
     }
-
+    LOG.error("[HWARIM] parallelism {}", stageParallelism);
     final IRVertex representativeVertex = vertices.iterator().next();
     if (representativeVertex instanceof SamplingVertex) {
       // Use min of the desired sample rates

@@ -120,7 +120,6 @@ public final class SimulatedTaskExecutor {
       .collect(Collectors.toSet());
 
     final int simulationTaskParallelism = task.getPropertyValue(ParallelismProperty.class).orElse(1);
-    LOG.error("Stage id {} simulation parallelism {}", stageIdsToGatherMetricsFrom, simulationTaskParallelism);
     // Derive the average task duration from the stages.
     final OptionalDouble average = this.actualMetricStore.getMetricMap(TaskMetric.class).entrySet().stream()
       .filter(e -> stageIdsToGatherMetricsFrom.contains(RuntimeIdManager.getStageIdFromTaskId(e.getKey())))
@@ -128,8 +127,6 @@ public final class SimulatedTaskExecutor {
       .filter(tm -> ((TaskMetric) tm).getTaskSizeRatio() == simulationTaskParallelism)
       .mapToLong(tm -> ((TaskMetric) tm).getTaskDuration())
       .average();
-
-    LOG.error("average time to simulated task is {}", average.orElse(1));
     // convert to long and save.
     return (long) (average.orElse(0) + 0.5);  // 0 to indicate something went wrong
   }
