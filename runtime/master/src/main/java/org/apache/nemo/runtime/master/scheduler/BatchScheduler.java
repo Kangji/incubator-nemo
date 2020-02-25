@@ -319,6 +319,7 @@ public final class BatchScheduler implements Scheduler {
           .map(Task::getTaskId)
           .map(RuntimeIdManager::getStageIdFromTaskId)
           .collect(Collectors.toSet()));
+        LOG.error("Tasks: {}", tasksToSchedule);
 
         // Set the pointer to the schedulable tasks.
         pendingTaskCollectionPointer.setToOverwrite(tasksToSchedule);
