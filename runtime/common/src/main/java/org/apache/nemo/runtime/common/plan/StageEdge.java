@@ -167,7 +167,7 @@ public final class StageEdge extends RuntimeEdge<Stage> {
     }
     if (getDst().getEnableDynamicTaskSizing()) {
       keyRanges = getExecutionProperties()
-        .get(SubPartitionSetProperty.class).orElse(defaultPartitionSet);// orElseThrow?
+        .get(SubPartitionSetProperty.class).orElse(defaultPartitionSet); // orElseThrow?
       Collections.reverse(keyRanges);
     } else {
       keyRanges = getExecutionProperties()
