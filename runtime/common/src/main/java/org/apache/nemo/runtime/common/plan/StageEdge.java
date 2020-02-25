@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -166,7 +167,8 @@ public final class StageEdge extends RuntimeEdge<Stage> {
     }
     if (getDst().getEnableDynamicTaskSizing()) {
       keyRanges = getExecutionProperties()
-        .get(SubPartitionSetProperty.class).orElse(defaultPartitionSet); // orElseThrow?
+        .get(SubPartitionSetProperty.class).orElse(defaultPartitionSet);// orElseThrow?
+      Collections.reverse(keyRanges);
     } else {
       keyRanges = getExecutionProperties()
         .get(PartitionSetProperty.class).orElse(defaultPartitionSet);
