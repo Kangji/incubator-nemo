@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Rewrites the physical plan during execution, to enforce the optimizations of Nemo RunTimePasses.
@@ -139,11 +140,16 @@ public final class NemoPlanRewriter implements PlanRewriter {
     // Update the physical plan and return
     final List<Stage> currentStages = currentPhysicalPlan.getStageDAG().getTopologicalSort();
     final List<Stage> newStages = newPhysicalPlan.getStageDAG().getTopologicalSort();
-    for (int i = 0; i < currentStages.size(); i++) {
+    IntStream.range(0, currentStages.size()).forEachOrdered(i -> {
       final ExecutionPropertyMap<VertexExecutionProperty> newProperties = newStages.get(i).getExecutionProperties();
       LOG.error("[HWARIM] parallelism property {}", newProperties.get(ParallelismProperty.class));
       currentStages.get(i).setExecutionProperties(newProperties);
-    }
+      newProperties.get(ParallelismProperty.class).ifPresent(newParallelism -> {
+        currentStages.get(i).getTaskIndices().clear();
+        currentStages.get(i).getTaskIndices().addAll(IntStream.range(0, newParallelism).boxed()
+          .collect(Collectors.toList()));
+      });
+    });
     return currentPhysicalPlan;
   }
 
