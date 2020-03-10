@@ -178,6 +178,26 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     return dag;
   }
 
+  private boolean getEnableFromJobSize(final IRDAG dag) {
+    long jobSizeInBytes = dag.getInputSize();
+    return jobSizeInBytes >= 1024 * 1024 * 1024;
+  }
+  /**
+   * should be called after EnableDynamicTaskSizingProperty is declared as true.
+   * @param dag   IRDAG to get job input data size from
+   * @return      partitioner property regarding job size
+   */
+  private int setPartitionerProperty(final IRDAG dag) {
+    long jobSizeInBytes = dag.getInputSize();
+    long jobSizeInGB = jobSizeInBytes / (1024 * 1024 * 1024);
+    if (1 <= jobSizeInGB && jobSizeInGB < 10) {
+      return PARTITIONER_PROPERTY_FOR_SMALL_JOB;
+    } else if (10 <= jobSizeInGB && jobSizeInGB < 100) {
+      return PARTITIONER_PROPERTY_FOR_MEDIUM_JOB;
+    } else {
+      return PARTITIONER_PROPERTY_FOR_BIG_JOB;
+    }
+  }
   /**
    * Check if stage containing observing Vertex is appropriate for inserting splitter vertex.
    * @param dag               dag to observe
@@ -224,7 +244,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       }
     }
      */
-    // all cases passed: return true;
+    // all cases passed: return true
     return true;
   }
   /**
@@ -285,28 +305,6 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     return fromOutsideToSplitter;
   }
 
-  /**
-   * should be called after EnableDynamicTaskSizingProperty is declared as true.
-   * @param dag   IRDAG to get job input data size from
-   * @return      partitioner property regarding job size
-   */
-  private int setPartitionerProperty(final IRDAG dag) {
-    long jobSizeInBytes = dag.getInputSize();
-    long jobSizeInGB = jobSizeInBytes / (1024 * 1024 * 1024);
-    if (1 <= jobSizeInGB && jobSizeInGB < 10) {
-      return PARTITIONER_PROPERTY_FOR_SMALL_JOB;
-    } else if (10 <= jobSizeInGB && jobSizeInGB < 100) {
-      return PARTITIONER_PROPERTY_FOR_MEDIUM_JOB;
-    } else {
-      return PARTITIONER_PROPERTY_FOR_BIG_JOB;
-    }
-  }
-
-  private boolean getEnableFromJobSize(final IRDAG dag) {
-    long jobSizeInBytes = dag.getInputSize();
-    return jobSizeInBytes >= 1024 * 1024 * 1024;
-  }
-
   private int getNumberOfTotalExecutorCores(final IRDAG dag) {
     List<Pair<Integer, ResourceSpecification>> executorInfo = dag.getExecutorInfo();
     int numberOFTotalExecutorCores = 0;
@@ -357,6 +355,12 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       Collections.singleton(stageStartingVertex));
     final Set<IREdge> fromOriginalToOutside = new HashSet<>(outgoingEdgesOfOriginalVertices);
     fromOriginalToOutside.removeAll(edgesBetweenOriginalVertices);
+    fromOriginalToOutside.forEach(irEdge -> {
+      if (CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
+        irEdge.getPropertyValue(CommunicationPatternProperty.class).get())) {
+        irEdge.setProperty(CommunicationPatternProperty.of(CommunicationPatternProperty.Value.SHUFFLE));
+      }
+    });
 
     final TaskSizeSplitterVertex toInsert = new TaskSizeSplitterVertex(
       "Splitter" + stageStartingVertex.getId(), stageVertices, stageStartingVertex,
@@ -404,9 +408,9 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
 
     final SignalVertex signalVertex = new SignalVertex();
 
-    fromOutsideToOriginal.forEach(edge -> toInsert.addDagIncomingEdge(edge));
-    fromOutsideToOriginal.forEach(edge -> toInsert.addNonIterativeIncomingEdge(edge)); //
-    fromOriginalToOutside.forEach(edge -> toInsert.addDagOutgoingEdge(edge));
+    fromOutsideToOriginal.forEach(toInsert::addDagIncomingEdge);
+    fromOutsideToOriginal.forEach(toInsert::addNonIterativeIncomingEdge); //
+    fromOriginalToOutside.forEach(toInsert::addDagOutgoingEdge);
 
     toInsert.insertSignalVertex(signalVertex);
     // insert splitter vertex
