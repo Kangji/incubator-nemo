@@ -48,8 +48,12 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   // Information about original(before splitting) vertices
   private static final Logger LOG = LoggerFactory.getLogger(TaskSizeSplitterVertex.class.getName());
   private final Set<IRVertex> originalVertices;
-  private final IRVertex stageOpeningVertex;
-  private final IRVertex stageEndingVertex;
+  // Vertex which has incoming edge from other stages. Guaranteed to be only one in each stage by stage partitioner
+  private final IRVertex firstVertexInStage;
+  // vertices which has outgoing edge to other stages. Can be more than one in one stage
+  private final Set<IRVertex> verticesWithStageOutgoingEdges;
+  // vertices which does not have any outgoing edge to vertices in same stage
+  private final Set<IRVertex> lastVerticesInStage;
 
   // Information about partition sizes
   private final int partitionerProperty;
@@ -61,42 +65,43 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
    * Constructor of TaskSizeSplitterVertex class.
    * @param splitterVertexName   for now, this does not do anything. Inserted to enable extension from LoopVertex.
    * @param originalVertices     Set of vertices which form one stage and which splitter will wrap up.
-   * @param stageOpeningVertices The first vertex in stage. Although it is given as a form of Set, we assert that this
+   * @param firstVertexInStage   The first vertex in stage. Although it is given as a form of Set, we assert that this
    *                             set only has one element
-   * @param stageEndingVertex    The last vertex in stage.
+   * @param verticesWithStageOutgoingEdges  Vertices which has outgoing edges to other stage and (optional)
+   *                                        outgoing edges to vertex in same stage.
+   * @param lastVerticesInStage
    * @param partitionerProperty  partitionerProperty of incoming stage edge regarding to job data size.
    *                             for more information, check SamplingTaskSizingPass.java
    */
   public TaskSizeSplitterVertex(final String splitterVertexName,
                                 final Set<IRVertex> originalVertices,
-                                final Set<IRVertex> stageOpeningVertices,
-                                final IRVertex stageEndingVertex,
+                                final IRVertex firstVertexInStage,
+                                final Set<IRVertex> verticesWithStageOutgoingEdges,
+                                final Set<IRVertex> lastVerticesInStage,
                                 final int partitionerProperty) {
     super(splitterVertexName); // need to take care of here
     this.testingTrial = 0;
     this.originalVertices = originalVertices;
     this.partitionerProperty = partitionerProperty;
 
-    if (stageOpeningVertices.size() != 1) {
-      throw new IllegalArgumentException("stage opening vertex should exist only one.");
-    }
     for (IRVertex original : originalVertices) {
       mapOfOriginalVertexToClone.putIfAbsent(original, original.getClone());
     }
-    this.stageOpeningVertex = stageOpeningVertices.iterator().next();
-    this.stageEndingVertex = stageEndingVertex;
+    this.firstVertexInStage = firstVertexInStage;
+    this.verticesWithStageOutgoingEdges = verticesWithStageOutgoingEdges;
+    this.lastVerticesInStage = lastVerticesInStage;
   }
 
   public Set<IRVertex> getOriginalVertices() {
     return originalVertices;
   }
 
-  public IRVertex getStageOpeningVertex() {
-    return stageOpeningVertex;
+  public IRVertex getFirstVertexInStage() {
+    return firstVertexInStage;
   }
 
-  public IRVertex getStageEndingVertex() {
-    return stageEndingVertex;
+  public Set<IRVertex> getVerticesWithStageOutgoingEdges() {
+    return verticesWithStageOutgoingEdges;
   }
 
   public void increaseTestingTrial() {
@@ -121,10 +126,12 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
    */
   public void insertSignalVertex(final SignalVertex toInsert) {
     getBuilder().addVertex(toInsert);
-    IREdge edgesToSignal = EmptyComponents.newDummyShuffleEdge(stageEndingVertex, toInsert);
-    getBuilder().connectVertices(edgesToSignal);
-    IREdge controlEdgeToBeginning = Util.createControlEdge(toInsert, stageOpeningVertex);
-    addIterativeIncomingEdge(controlEdgeToBeginning);
+    for (IRVertex lastVertex : lastVerticesInStage) {
+      IREdge edgesToSignal = EmptyComponents.newDummyShuffleEdge(lastVertex, toInsert);
+      getBuilder().connectVertices(edgesToSignal);
+      IREdge controlEdgeToBeginning = Util.createControlEdge(toInsert, firstVertexInStage);
+      addIterativeIncomingEdge(controlEdgeToBeginning);
+    }
   }
   /**
    * Need to be careful about utility vertices, because they do not appear in the last iteration.
