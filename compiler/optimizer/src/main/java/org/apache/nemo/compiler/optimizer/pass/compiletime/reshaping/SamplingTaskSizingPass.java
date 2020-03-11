@@ -111,11 +111,43 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       }
       stageIdToStageVertices.get(stageId).add(vertex);
     });
+    LOG.error("[HWARIM]See stage information: {}", stageIdToStageVertices);
+
+    /* Step 2-1. Mark stages to insert splitter vertex */
+    Set<Integer> stageIdsToInsertSplitter = new HashSet<>();
+    Set<IREdge> shuffleEdgesForDTS = new HashSet<>();
+    dag.topologicalDo(v -> {
+      for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
+        if (checkForInsertingSplitterVertex(dag, v, edge, vertexToStageId, stageIdToStageVertices)) {
+          stageIdsToInsertSplitter.add(vertexToStageId.get(v));
+          shuffleEdgesForDTS.add(edge);
+        }
+      }
+    });
+    LOG.error("[HWARIM]Stages to insert splitter: {}", stageIdsToInsertSplitter);
+
+    /* Step 2-2. Change stage outgoing edges with communication property of 1-1 to shuffle edge */
+    IREdge referenceShuffleEdge = shuffleEdgesForDTS.iterator().next();
+    dag.topologicalDo(v -> {
+      if (stageIdsToInsertSplitter.contains(vertexToStageId.get(v))) {
+        Set<IRVertex> stageVertices = stageIdToStageVertices.get(vertexToStageId.get(v));
+
+        for (final IREdge edge : dag.getOutgoingEdgesOf(v)) {
+          // if this is a one-to-one stage edge
+          if (!vertexToStageId.get(edge.getDst()).equals(vertexToStageId.get(v))
+          && CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
+            edge.getPropertyValue(CommunicationPatternProperty.class).get())) {
+            changeOneToOneEdgeToShuffleEdge(edge, referenceShuffleEdge, partitionerProperty);
+          }
+        }
+      }
+    });
 
     /* Step 3. Insert Splitter Vertex */
     dag.topologicalDo(v -> {
       for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
-        if (checkForInsertingSplitterVertex(dag, v, edge, vertexToStageId, stageIdToStageVertices)) {
+        if (shuffleEdgesForDTS.contains(edge)) {
+          LOG.error("[HWARIM] This is edge {} with source {} and dest {}", edge, edge.getSrc(), edge.getDst());
           // edge is the incoming edge of observing stage, v is the first vertex of this stage
           Set<IRVertex> stageVertices = stageIdToStageVertices.get(vertexToStageId.get(v));
           Set<IRVertex> verticesWithStageOutgoingEdges = stageVertices.stream().filter(stageVertex ->
@@ -327,12 +359,13 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       Collections.singleton(stageStartingVertex));
     final Set<IREdge> fromOriginalToOutside = new HashSet<>(outgoingEdgesOfOriginalVertices);
     fromOriginalToOutside.removeAll(edgesBetweenOriginalVertices);
-    fromOriginalToOutside.forEach(irEdge -> {
-      if (CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
-        irEdge.getPropertyValue(CommunicationPatternProperty.class).get())) {
-        irEdge.setProperty(CommunicationPatternProperty.of(CommunicationPatternProperty.Value.SHUFFLE));
-      }
-    });
+    //fromOriginalToOutside.forEach(irEdge -> {
+    //  if (CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
+    //    irEdge.getPropertyValue(CommunicationPatternProperty.class).get())) {
+    //    irEdge.setProperty(CommunicationPatternProperty.of(CommunicationPatternProperty.Value.SHUFFLE));
+    //    //irEdge.setProperty()
+    //  }
+    //});
 
     final TaskSizeSplitterVertex toInsert = new TaskSizeSplitterVertex(
       "Splitter" + stageStartingVertex.getId(), stageVertices, stageStartingVertex,
@@ -390,6 +423,46 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       edgesWithSplitterVertex);
 
     toInsert.printLogs();
+  }
+
+  /**
+   * Changes stage outgoing edges' execution property from one-to-one to shuffle when stage incoming edge became the
+   * target of DTS.
+   * Need to be careful about referenceShuffleEdge because this code does not check whether it is a valid shuffle edge
+   * or not.
+   * @param edge    edge to change execution property.
+   * @param referenceShuffleEdge  reference shuffle edge to copy key related execution properties
+   * @param partitionerProperty   partitioner property of shuffle
+   */
+  private void changeOneToOneEdgeToShuffleEdge(final IREdge edge,
+                                               final IREdge referenceShuffleEdge,
+                                               final int partitionerProperty) {
+    //double check
+    if (!CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
+      edge.getPropertyValue(CommunicationPatternProperty.class).get())
+      || !CommunicationPatternProperty.Value.SHUFFLE.equals(
+        referenceShuffleEdge.getPropertyValue(CommunicationPatternProperty.class).get())) {
+      return;
+    }
+
+    // properties related to data
+    edge.setProperty(DataFlowProperty.of(DataFlowProperty.Value.PULL));
+    edge.setProperty(PartitionerProperty.of(PartitionerProperty.Type.HASH, partitionerProperty));
+    edge.setProperty(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE));
+
+    // properties related to key
+    if (edge.getPropertyValue(KeyExtractorProperty.class).isEmpty()) {
+      edge.setProperty(KeyExtractorProperty.of(
+        referenceShuffleEdge.getPropertyValue(KeyExtractorProperty.class).get()));
+    }
+    if (edge.getPropertyValue(KeyEncoderProperty.class).isEmpty()) {
+      edge.setProperty(KeyEncoderProperty.of(
+        referenceShuffleEdge.getPropertyValue(KeyEncoderProperty.class).get()));
+    }
+    if (edge.getPropertyValue(KeyDecoderProperty.class).isEmpty()) {
+      edge.setProperty(KeyDecoderProperty.of(
+        referenceShuffleEdge.getPropertyValue(KeyDecoderProperty.class).get()));
+    }
   }
 
   // unused member methods.
