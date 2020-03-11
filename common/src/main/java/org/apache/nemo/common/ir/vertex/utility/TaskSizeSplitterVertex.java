@@ -66,10 +66,10 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
    * @param splitterVertexName   for now, this does not do anything. Inserted to enable extension from LoopVertex.
    * @param originalVertices     Set of vertices which form one stage and which splitter will wrap up.
    * @param firstVertexInStage   The first vertex in stage. Although it is given as a form of Set, we assert that this
-   *                             set only has one element
-   * @param verticesWithStageOutgoingEdges  Vertices which has outgoing edges to other stage and (optional)
+   *                             set only has one element.
+   * @param verticesWithStageOutgoingEdges  vertices which has outgoing edges to other stage and (optional)
    *                                        outgoing edges to vertex in same stage.
-   * @param lastVerticesInStage
+   * @param lastVerticesInStage  vertices which has only outgoing edges to other stage.
    * @param partitionerProperty  partitionerProperty of incoming stage edge regarding to job data size.
    *                             for more information, check SamplingTaskSizingPass.java
    */

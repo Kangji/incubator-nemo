@@ -305,34 +305,6 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     return fromOutsideToSplitter;
   }
 
-  private int getNumberOfTotalExecutorCores(final IRDAG dag) {
-    List<Pair<Integer, ResourceSpecification>> executorInfo = dag.getExecutorInfo();
-    int numberOFTotalExecutorCores = 0;
-    Iterator<Pair<Integer, ResourceSpecification>> iterator = executorInfo.iterator();
-    while (iterator.hasNext()) {
-      numberOFTotalExecutorCores += iterator.next().right().getCapacity();
-    }
-    return numberOFTotalExecutorCores;
-  }
-
-  /**
-   * build partition of stage.
-   */
-  private Set<IRVertex> recursivelyBuildPartition(final IRVertex curVertex, final IRDAG dag) {
-    final Set<IRVertex> unionSet = new HashSet<>();
-    unionSet.add(curVertex);
-    for (final IREdge inEdge : dag.getIncomingEdgesOf(curVertex)) {
-      if (CommunicationPatternProperty.Value.ONE_TO_ONE
-        .equals(inEdge.getPropertyValue(CommunicationPatternProperty.class).orElseThrow(IllegalStateException::new))
-        && DataStoreProperty.Value.MEMORY_STORE
-        .equals(inEdge.getPropertyValue(DataStoreProperty.class).orElseThrow(IllegalStateException::new))
-        && dag.getIncomingEdgesOf(curVertex).size() == 1) {
-        unionSet.addAll(recursivelyBuildPartition(inEdge.getSrc(), dag));
-      }
-    }
-    return unionSet;
-  }
-
   private void makeAndInsertSplitterVertex(final IRDAG dag,
                                            final Set<IRVertex> stageVertices,
                                            final IRVertex stageStartingVertex,
@@ -418,5 +390,34 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       edgesWithSplitterVertex);
 
     toInsert.printLogs();
+  }
+
+  // unused member methods.
+  private int getNumberOfTotalExecutorCores(final IRDAG dag) {
+    List<Pair<Integer, ResourceSpecification>> executorInfo = dag.getExecutorInfo();
+    int numberOFTotalExecutorCores = 0;
+    Iterator<Pair<Integer, ResourceSpecification>> iterator = executorInfo.iterator();
+    while (iterator.hasNext()) {
+      numberOFTotalExecutorCores += iterator.next().right().getCapacity();
+    }
+    return numberOFTotalExecutorCores;
+  }
+
+  /**
+   * build partition of stage.
+   */
+  private Set<IRVertex> recursivelyBuildPartition(final IRVertex curVertex, final IRDAG dag) {
+    final Set<IRVertex> unionSet = new HashSet<>();
+    unionSet.add(curVertex);
+    for (final IREdge inEdge : dag.getIncomingEdgesOf(curVertex)) {
+      if (CommunicationPatternProperty.Value.ONE_TO_ONE
+        .equals(inEdge.getPropertyValue(CommunicationPatternProperty.class).orElseThrow(IllegalStateException::new))
+        && DataStoreProperty.Value.MEMORY_STORE
+        .equals(inEdge.getPropertyValue(DataStoreProperty.class).orElseThrow(IllegalStateException::new))
+        && dag.getIncomingEdgesOf(curVertex).size() == 1) {
+        unionSet.addAll(recursivelyBuildPartition(inEdge.getSrc(), dag));
+      }
+    }
+    return unionSet;
   }
 }
