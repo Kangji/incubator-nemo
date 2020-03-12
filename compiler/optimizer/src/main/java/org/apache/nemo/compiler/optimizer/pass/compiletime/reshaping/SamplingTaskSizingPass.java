@@ -451,7 +451,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       edge.getPropertyValue(CommunicationPatternProperty.class).get())
       || !CommunicationPatternProperty.Value.SHUFFLE.equals(
         referenceShuffleEdge.getPropertyValue(CommunicationPatternProperty.class).get())) {
-      return;
+      return edge;
     }
 
     // properties related to data
