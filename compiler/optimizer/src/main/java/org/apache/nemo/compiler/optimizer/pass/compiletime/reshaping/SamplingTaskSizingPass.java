@@ -131,16 +131,15 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     IREdge referenceShuffleEdge = shuffleEdgesForDTS.iterator().next();
     dag.topologicalDo(v -> {
       if (stageIdsToInsertSplitter.contains(vertexToStageId.get(v))) {
-        Set<IRVertex> stageVertices = stageIdToStageVertices.get(vertexToStageId.get(v));
-
-        for (final IREdge edge : dag.getOutgoingEdgesOf(v)) {
+        for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
           // if this is a one-to-one stage edge
-          if (!vertexToStageId.get(edge.getDst()).equals(vertexToStageId.get(v))
+          if (!vertexToStageId.get(edge.getDst()).equals(vertexToStageId.get(edge.getSrc()))
           && CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
             edge.getPropertyValue(CommunicationPatternProperty.class).get())) {
             LOG.error("[HWARIM] edge to change execution property: {}", edge);
             IREdge newEdge = changeOneToOneEdgeToShuffleEdge(edge, referenceShuffleEdge, partitionerProperty);
             newEdge.copyExecutionPropertiesTo(edge);
+            LOG.error("[HWARIM] change complete: {}", edge.getExecutionProperties());
           }
         }
       }
@@ -455,6 +454,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     }
 
     // properties related to data
+    edge.setProperty(CommunicationPatternProperty.of(CommunicationPatternProperty.Value.SHUFFLE));
     edge.setProperty(DataFlowProperty.of(DataFlowProperty.Value.PULL));
     edge.setProperty(PartitionerProperty.of(PartitionerProperty.Type.HASH, partitionerProperty));
     edge.setProperty(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE));
