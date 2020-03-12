@@ -159,9 +159,9 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
               .map(Edge::getDst).anyMatch(Predicate.not(stageVertices::contains)))
             .collect(Collectors.toSet());
           LOG.error("[HWARIM] vertices with stage outgoing edges : {}", verticesWithStageOutgoingEdges);
-          Set<IRVertex> stageEndingVertices = verticesWithStageOutgoingEdges.stream()
-            .filter(stageVertex -> !dag.getOutgoingEdgesOf(stageVertex).stream()
-              .map(Edge::getDst).anyMatch(stageVertices::contains))
+          Set<IRVertex> stageEndingVertices = stageVertices.stream()
+            .filter(stageVertex -> dag.getOutgoingEdgesOf(stageVertex).isEmpty()
+              || !dag.getOutgoingEdgesOf(stageVertex).stream().map(Edge::getDst).anyMatch(stageVertices::contains))
             .collect(Collectors.toSet());
           LOG.error("[HWARIM]stage ending vertices {}", stageEndingVertices);
           final boolean isSourcePartition = stageVertices.stream()
