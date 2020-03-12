@@ -396,23 +396,23 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     toInsert.insertWorkingVertices(stageVertices, edgesBetweenOriginalVertices);
 
     //map splitter vertex connection to corresponding internal vertex connection
-    for (IREdge splitterEdge : fromOutsideToSplitter) {
-      for (IREdge internalEdge : fromOutsideToOriginal) {
-        if (splitterEdge.getSrc() instanceof TaskSizeSplitterVertex) {
-          TaskSizeSplitterVertex prevSplitter = (TaskSizeSplitterVertex) splitterEdge.getSrc();
-          if (prevSplitter.getOriginalVertices().contains(internalEdge.getSrc())) {
+    for (IREdge splitterEdge : fromSplitterToOutside) {
+      for (IREdge internalEdge : fromOriginalToOutside) {
+        if (splitterEdge.getDst() instanceof TaskSizeSplitterVertex) {
+          TaskSizeSplitterVertex nextSplitter = (TaskSizeSplitterVertex) splitterEdge.getDst();
+          if (nextSplitter.getOriginalVertices().contains(internalEdge.getDst())) {
             toInsert.mapEdgeWithLoop(splitterEdge, internalEdge);
           }
         } else {
-          if (splitterEdge.getSrc().equals(internalEdge.getSrc())) {
+          if (splitterEdge.getDst().equals(internalEdge.getDst())) {
             toInsert.mapEdgeWithLoop(splitterEdge, internalEdge);
           }
         }
       }
     }
-    for (IREdge splitterEdge : fromSplitterToOutside) {
-      for (IREdge internalEdge : fromOriginalToOutside) {
-        if (splitterEdge.getDst().equals(internalEdge.getDst())) {
+    for (IREdge splitterEdge : fromOutsideToSplitter) {
+      for (IREdge internalEdge : fromOutsideToOriginal) {
+        if (splitterEdge.getSrc().equals(internalEdge.getSrc())) {
           toInsert.mapEdgeWithLoop(splitterEdge, internalEdge);
         }
       }
