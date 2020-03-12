@@ -304,13 +304,13 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     }
   }
   public void printLogs() {
-    LOG.info("[Vertex] this is splitter vertex {}", this.getId());
-    LOG.info("[Vertex] get dag incoming edges: {}", this.getDagIncomingEdges().entrySet());
-    LOG.info("[Vertex] get dag iterative incoming edges: {}", this.getIterativeIncomingEdges().entrySet());
-    LOG.info("[Vertex] get dag nonIterative incoming edges: {}", this.getNonIterativeIncomingEdges().entrySet());
-    LOG.info("[Vertex] get dag outgoing edges: {}", this.getDagOutgoingEdges().entrySet());
-    LOG.info("[Vertex] get edge map with loop {}", this.getEdgeWithLoopToEdgeWithInternalVertex().entrySet());
-    LOG.info("[Vertex] get edge map with internal vertex {}",
+    LOG.error("[Vertex] this is splitter vertex {}", this.getId());
+    LOG.error("[Vertex] get dag incoming edges: {}", this.getDagIncomingEdges().entrySet());
+    LOG.error("[Vertex] get dag iterative incoming edges: {}", this.getIterativeIncomingEdges().entrySet());
+    LOG.error("[Vertex] get dag nonIterative incoming edges: {}", this.getNonIterativeIncomingEdges().entrySet());
+    LOG.error("[Vertex] get dag outgoing edges: {}", this.getDagOutgoingEdges().entrySet());
+    LOG.error("[Vertex] get edge map with loop {}", this.getEdgeWithLoopToEdgeWithInternalVertex().entrySet());
+    LOG.error("[Vertex] get edge map with internal vertex {}",
       this.getEdgeWithInternalVertexToEdgeWithLoop().entrySet());
   }
 }
