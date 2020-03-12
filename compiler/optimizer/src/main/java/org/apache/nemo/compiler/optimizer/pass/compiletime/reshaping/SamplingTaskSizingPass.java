@@ -322,11 +322,12 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     Set<IREdge> fromOriginalToOutside = new HashSet<>();
     for (IRVertex vertex : verticesWithStageOutgoingEdges) {
       for (IREdge edge : dag.getOutgoingEdgesOf(vertex)) {
+        LOG.error("[URGENT] {} {} {}", edge.getId(), edge.getSrc().getId(), edge.getDst().getId());
         if (edge.getDst() instanceof TaskSizeSplitterVertex) {
           IRVertex originalInnerDst = ((TaskSizeSplitterVertex) edge.getDst()).getFirstVertexInStage();
           Set<IREdge> candidates = ((TaskSizeSplitterVertex) edge.getDst()).
             getDagIncomingEdges().get(originalInnerDst);
-          candidates.stream().filter(edge2 -> edge2.getDst().equals(vertex))
+          candidates.stream().filter(edge2 -> edge2.getSrc().equals(vertex))
             .forEach(fromOriginalToOutside::add);
         } else if (!stageVertices.contains(edge.getDst())) {
           fromOriginalToOutside.add(edge);
