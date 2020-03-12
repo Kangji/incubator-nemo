@@ -139,7 +139,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
           && CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
             edge.getPropertyValue(CommunicationPatternProperty.class).get())) {
             LOG.error("[HWARIM] edge to change execution property: {}", edge);
-            changeOneToOneEdgeToShuffleEdge(edge, referenceShuffleEdge, partitionerProperty);
+            IREdge newEdge = changeOneToOneEdgeToShuffleEdge(edge, referenceShuffleEdge, partitionerProperty);
+            newEdge.copyExecutionPropertiesTo(edge);
           }
         }
       }
@@ -442,7 +443,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
    * @param referenceShuffleEdge  reference shuffle edge to copy key related execution properties
    * @param partitionerProperty   partitioner property of shuffle
    */
-  private void changeOneToOneEdgeToShuffleEdge(final IREdge edge,
+  private IREdge changeOneToOneEdgeToShuffleEdge(final IREdge edge,
                                                final IREdge referenceShuffleEdge,
                                                final int partitionerProperty) {
     //double check
@@ -471,6 +472,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       edge.setProperty(KeyDecoderProperty.of(
         referenceShuffleEdge.getPropertyValue(KeyDecoderProperty.class).get()));
     }
+    LOG.error("[EDGE EXECUTION PROPERTY] {} {}", edge.getId(), edge.getExecutionProperties());
+    return edge;
   }
 
   // unused member methods.
