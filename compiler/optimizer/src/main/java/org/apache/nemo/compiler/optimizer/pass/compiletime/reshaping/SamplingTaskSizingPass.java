@@ -317,7 +317,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
   }
 
   private Set<IREdge> setEdgesFromOriginalToOutside(final IRDAG dag,
-                                                     final Set<IRVertex> verticesWithStageOutgoingEdges) {
+                                                    final Set<IRVertex> stageVertices,
+                                                    final Set<IRVertex> verticesWithStageOutgoingEdges) {
     Set<IREdge> fromOriginalToOutside = new HashSet<>();
     for (IRVertex vertex : verticesWithStageOutgoingEdges) {
       for (IREdge edge : dag.getOutgoingEdgesOf(vertex)) {
@@ -327,7 +328,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
             getDagIncomingEdges().get(originalInnerDst);
           candidates.stream().filter(edge2 -> edge2.getDst().equals(vertex))
             .forEach(fromOriginalToOutside::add);
-        } else {
+        } else if (!stageVertices.contains(edge.getDst())) {
           fromOriginalToOutside.add(edge);
         }
       }
@@ -405,7 +406,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       .collect(Collectors.toSet());
     final Set<IREdge> fromOutsideToOriginal = setEdgesFromOutsideToOriginal(dag,
       Collections.singleton(stageStartingVertex));
-    final Set<IREdge> fromOriginalToOutside = setEdgesFromOriginalToOutside(dag, verticesWithStageOutgoingEdges);
+    final Set<IREdge> fromOriginalToOutside = setEdgesFromOriginalToOutside(dag, stageVertices,
+      verticesWithStageOutgoingEdges);
     LOG.error("incoming edges: {}", incomingEdgesOfOriginalVertices);
     LOG.error("outgoing edges: {}", outgoingEdgesOfOriginalVertices);
     LOG.error("in between: {}", edgesBetweenOriginalVertices);
