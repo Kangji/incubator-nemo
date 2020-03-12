@@ -144,13 +144,15 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     });
 
     /* Step 3. Insert Splitter Vertex */
-    dag.topologicalDo(v -> {
+    List<IRVertex> reverseTopologicalOrder = dag.getTopologicalSort();
+    Collections.reverse(reverseTopologicalOrder);
+    for (IRVertex v : reverseTopologicalOrder) {
       LOG.error("[INSERT] This is vertex {}", v.getId());
-      for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
+      for (final IREdge edge : dag.getOutgoingEdgesOf(v)) {
         if (shuffleEdgesForDTS.contains(edge)) {
           LOG.error("[HWARIM] This is {} with source {} and dest {}", edge, edge.getSrc(), edge.getDst());
-          // edge is the incoming edge of observing stage, v is the first vertex of this stage
-          Set<IRVertex> stageVertices = stageIdToStageVertices.get(vertexToStageId.get(v));
+          // edge is the incoming edge of observing stage, v is the last vertex of previous stage
+          Set<IRVertex> stageVertices = stageIdToStageVertices.get(vertexToStageId.get(edge.getDst()));
           LOG.error("[HWARIM] stage vertices : {}", stageVertices);
           Set<IRVertex> verticesWithStageOutgoingEdges = stageVertices.stream().filter(stageVertex ->
             dag.getOutgoingEdgesOf(stageVertex).stream()
@@ -161,7 +163,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
             .filter(stageVertex -> !dag.getOutgoingEdgesOf(stageVertex).stream()
               .map(Edge::getDst).anyMatch(stageVertices::contains))
             .collect(Collectors.toSet());
-          LOG.error("stage ending vertices {}", stageEndingVertices);
+          LOG.error("[HWARIM]stage ending vertices {}", stageEndingVertices);
           final boolean isSourcePartition = stageVertices.stream()
             .flatMap(vertexInPartition -> dag.getIncomingEdgesOf(vertexInPartition).stream())
             .map(Edge::getSrc)
@@ -169,12 +171,11 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
           if (isSourcePartition) {
             break;
           }
-          makeAndInsertSplitterVertex(dag, stageVertices, v, verticesWithStageOutgoingEdges, stageEndingVertices,
-            partitionerProperty);
+          makeAndInsertSplitterVertex(dag, stageVertices, edge.getDst(), verticesWithStageOutgoingEdges,
+            stageEndingVertices, partitionerProperty);
         }
       }
-    });
-
+    }
     // this is old version
     /*
     dag.topologicalDo(v -> {
