@@ -316,7 +316,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     return fromOutsideToOriginal;
   }
 
-  private Set<IREdge> setEdgesFromOriginalToOutside (final IRDAG dag,
+  private Set<IREdge> setEdgesFromOriginalToOutside(final IRDAG dag,
                                                      final Set<IRVertex> verticesWithStageOutgoingEdges) {
     Set<IREdge> fromOriginalToOutside = new HashSet<>();
     for (IRVertex vertex : verticesWithStageOutgoingEdges) {
