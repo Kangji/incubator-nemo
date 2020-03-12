@@ -130,17 +130,16 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     /* Step 2-2. Change stage outgoing edges with communication property of 1-1 to shuffle edge */
     IREdge referenceShuffleEdge = shuffleEdgesForDTS.iterator().next();
     dag.topologicalDo(v -> {
-      if (stageIdsToInsertSplitter.contains(vertexToStageId.get(v))) {
-        for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
-          // if this is a one-to-one stage edge
-          if (!vertexToStageId.get(edge.getDst()).equals(vertexToStageId.get(edge.getSrc()))
+      for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
+        // if this is a one-to-one stage edge
+        if (stageIdsToInsertSplitter.contains(vertexToStageId.get(edge.getSrc()))
+          && !vertexToStageId.get(edge.getDst()).equals(vertexToStageId.get(edge.getSrc()))
           && CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
             edge.getPropertyValue(CommunicationPatternProperty.class).get())) {
-            LOG.error("[HWARIM] edge to change execution property: {}", edge);
-            IREdge newEdge = changeOneToOneEdgeToShuffleEdge(edge, referenceShuffleEdge, partitionerProperty);
-            newEdge.copyExecutionPropertiesTo(edge);
-            LOG.error("[HWARIM] change complete: {}", edge.getExecutionProperties());
-          }
+          LOG.error("[HWARIM] edge to change execution property: {}", edge);
+          IREdge newEdge = changeOneToOneEdgeToShuffleEdge(edge, referenceShuffleEdge, partitionerProperty);
+          newEdge.copyExecutionPropertiesTo(edge);
+          LOG.error("[HWARIM] change complete: {}", edge.getExecutionProperties());
         }
       }
     });
