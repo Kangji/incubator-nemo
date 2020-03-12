@@ -125,6 +125,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       }
     });
     LOG.error("[HWARIM]Stages to insert splitter: {}", stageIdsToInsertSplitter);
+    LOG.error("[HWARIM]Shuffle edge for DTS: {}", shuffleEdgesForDTS);
 
     /* Step 2-2. Change stage outgoing edges with communication property of 1-1 to shuffle edge */
     IREdge referenceShuffleEdge = shuffleEdgesForDTS.iterator().next();
@@ -137,6 +138,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
           if (!vertexToStageId.get(edge.getDst()).equals(vertexToStageId.get(v))
           && CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
             edge.getPropertyValue(CommunicationPatternProperty.class).get())) {
+            LOG.error("[HWARIM] edge to change execution property: {}", edge);
             changeOneToOneEdgeToShuffleEdge(edge, referenceShuffleEdge, partitionerProperty);
           }
         }
