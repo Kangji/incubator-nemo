@@ -359,7 +359,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     final Set<IREdge> edgesBetweenOriginalVertices = stageVertices
       .stream()
       .flatMap(ov -> dag.getIncomingEdgesOf(ov).stream())
-      .filter(edge -> stageVertices.contains(edge.getDst()))
+      .filter(edge -> stageVertices.contains(edge.getSrc()))
       .collect(Collectors.toSet());
     final Set<IREdge> fromOutsideToOriginal = setEdgesFromOutsideToOriginal(dag,
       Collections.singleton(stageStartingVertex));
