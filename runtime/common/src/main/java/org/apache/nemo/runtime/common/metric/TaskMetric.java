@@ -31,8 +31,8 @@ import java.util.List;
  */
 public class TaskMetric implements StateMetric<TaskState.State> {
   private String id;
-  private String taskContainerId = "";
-  private int taskScheduleAttempt = -1;
+  private String containerId = "";
+  private int scheduleAttempt = -1;
   private List<StateTransitionEvent<TaskState.State>> stateTransitionEvents = new ArrayList<>();
   private long taskDuration = -1;
   private long taskCPUTime = -1;
@@ -42,15 +42,13 @@ public class TaskMetric implements StateMetric<TaskState.State> {
   private long taskOutputBytes = -1;
   private long taskSerializationTime = -1;
   private long taskDeserializationTime = -1;
-  private long taskBoundedSourceReadTime = -1;;
-  private long taskSerializedReadBytes = -1;
-  private long taskEncodedReadBytes = -1;
-  private long taskPeakExecutionMemory = -1;
+  private long boundedSourceReadTime = -1;
+  private long peakExecutionMemory = -1;
   private int taskSizeRatio = -1;
-  private long taskShuffleReadBytes = -1;
-  private long taskShuffleReadTime = -1;
-  private long taskShuffleWriteBytes = -1;
-  private long taskShuffleWriteTime = -1;
+  private long shuffleReadBytes = -1;
+  private long shuffleReadTime = -1;
+  private long shuffleWriteBytes = -1;
+  private long shuffleWriteTime = -1;
 
   private static final Logger LOG = LoggerFactory.getLogger(TaskMetric.class.getName());
 
@@ -58,58 +56,31 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     this.id = id;
   }
 
-  @Override
-  public final String getId() {
-    return id;
-  }
-  public final long getTaskDuration() {
-    return taskDuration;
-  }
-
-  public final void setTaskDuration(final long taskDuration) {
-    this.taskDuration = taskDuration;
+  /**
+   * Method related to container Id.
+   */
+  public final String getContainerId() {
+    return this.containerId;
   }
 
-  public final long getSchedulingOverhead() {
-    return schedulingOverhead;
+  private void setContainerId(final String containerId) {
+    this.containerId = containerId;
   }
 
-  public final void setSchedulingOverhead(final long schedulingOverhead) {
-    this.schedulingOverhead = schedulingOverhead;
+  /**
+   * Method related to schedule attempt.
+   */
+  public final int getScheduleAttempt() {
+    return scheduleAttempt;
   }
 
-  public final long getSerializedReadBytes() {
-    return serializedReadBytes;
+  private void setScheduleAttempt(final int scheduleAttempt) {
+    this.scheduleAttempt = scheduleAttempt;
   }
 
-  private void setSerializedReadBytes(final long serializedReadBytes) {
-    this.serializedReadBytes = serializedReadBytes;
-  }
-
-  public final long getEncodedReadBytes() {
-    return encodedReadBytes;
-  }
-
-  private void setEncodedReadBytes(final long encodedReadBytes) {
-    this.encodedReadBytes = encodedReadBytes;
-  }
-
-  public final String getTaskContainerId() {
-    return taskContainerId;
-  }
-
-  private void setTaskContainerId(final String containerId) {
-    this.taskContainerId = containerId;
-  }
-
-  public final int getTaskScheduleAttempt() {
-    return taskScheduleAttempt;
-  }
-
-  private void setTaskScheduleAttempt(final int scheduleAttempt) {
-    this.taskScheduleAttempt = scheduleAttempt;
-  }
-
+  /**
+   * Method related to state transition events.
+   */
   @Override
   public final List<StateTransitionEvent<TaskState.State>> getStateTransitionEvents() {
     return stateTransitionEvents;
@@ -123,38 +94,66 @@ public class TaskMetric implements StateMetric<TaskState.State> {
   private void addEvent(final StateTransitionEvent<TaskState.State> event) {
     stateTransitionEvents.add(event);
   }
+
+  /**
+   * Method related to task duration.
+   */
+  public final long getTaskDuration() {
+    return this.taskDuration;
+  }
+
+  private void setTaskDuration(final long taskDuration) {
+    this.taskDuration = taskDuration;
+  }
+
+  /**
+   * Method related to task CPU time.
+   */
   public final long getTaskCPUTime() {
-    return taskCPUTime;
+    return this.taskCPUTime;
   }
 
   private void setTaskCPUTime(final long taskCPUTime) {
     this.taskCPUTime = taskCPUTime;
   }
 
-  public final long getTaskSerializationTime() {
-    return taskSerializationTime;
+  /**
+   * Method related to scheduling overhead.
+   */
+  public final long getSchedulingOverhead() {
+    return this.schedulingOverhead;
   }
 
-  public final void setTaskSerializationTime(final long taskSerializationTime) {
-    this.taskSerializationTime = taskSerializationTime;
+  private void setSchedulingOverhead(final long schedulingOverhead) {
+    this.schedulingOverhead = schedulingOverhead;
   }
 
-  public final long getTaskDeserializationTime() {
-    return taskDeserializationTime;
+  /**
+   * Method related to serialized read bytes.
+   * serialized = encoded + compressed
+   */
+  public final long getSerializedReadBytes() {
+    return serializedReadBytes;
   }
 
-  private void setTaskDeserializationTime(final long taskDeserializationTime) {
-    this.taskDeserializationTime = taskDeserializationTime;
+  private void setSerializedReadBytes(final long serializedReadBytes) {
+    this.serializedReadBytes = serializedReadBytes;
   }
 
-  public final long getTaskBoundedSourceReadTime() {
-    return taskBoundedSourceReadTime;
+  /**
+   * Method related to encoded read bytes.
+   */
+  public final long getEncodedReadBytes() {
+    return encodedReadBytes;
   }
 
-  private void setTaskBoundedSourceReadTime(final long taskBoundedSourceReadTime) {
-    this.taskBoundedSourceReadTime = taskBoundedSourceReadTime;
+  private void setEncodedReadBytes(final long encodedReadBytes) {
+    this.encodedReadBytes = encodedReadBytes;
   }
 
+  /**
+   * Method related to task output bytes.
+   */
   public final long getTaskOutputBytes() {
     return taskOutputBytes;
   }
@@ -163,67 +162,99 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     this.taskOutputBytes = taskOutputBytes;
   }
 
-  public final long getTaskSerializedReadBytes() {
-    return taskSerializedReadBytes;
+  /**
+   * Method related to task serialization time.
+   */
+  public final long getTaskSerializationTime() {
+    return taskSerializationTime;
   }
 
-  private void setTaskSerializedReadBytes(final long taskSerializedReadBytes) {
-    this.taskSerializedReadBytes = taskSerializedReadBytes;
+  private void setTaskSerializationTime(final long taskSerializationTime) {
+    this.taskSerializationTime = taskSerializationTime;
   }
 
-  public final long getTaskEncodedReadBytes() {
-    return taskEncodedReadBytes;
+  /**
+   * Method related to task deserialization time.
+   */
+  public final long getTaskDeserializationTime() {
+    return taskDeserializationTime;
   }
 
-  private void setTaskEncodedReadBytes(final long taskEncodedReadBytes) {
-    this.taskEncodedReadBytes = taskEncodedReadBytes;
+  private void setTaskDeserializationTime(final long taskDeserializationTime) {
+    this.taskDeserializationTime = taskDeserializationTime;
   }
 
-  public final long getTaskPeakExecutionMemory() {
-    return taskPeakExecutionMemory;
+  /**
+   * Method related to bounded source read time.
+   */
+  public final long getBoundedSourceReadTime() {
+    return boundedSourceReadTime;
   }
 
-  private void setTaskPeakExecutionMemory(final long taskPeakExecutionMemory) {
-    this.taskPeakExecutionMemory = taskPeakExecutionMemory;
+  private void setBoundedSourceReadTime(final long boundedSourceReadTime) {
+    this.boundedSourceReadTime = boundedSourceReadTime;
   }
 
+  /**
+   * Method related to peak execution memory.
+   */
+  public final long getPeakExecutionMemory() {
+    return this.peakExecutionMemory;
+  }
+
+  private void setPeakExecutionMemory(final long peakExecutionMemory) {
+    this.peakExecutionMemory = peakExecutionMemory;
+  }
+
+  /**
+   * Method related to task size ratio.
+   */
   public final int getTaskSizeRatio() {
-    return taskSizeRatio;
+    return this.taskSizeRatio;
   }
 
   private void setTaskSizeRatio(final int taskSizeRatio) {
     this.taskSizeRatio = taskSizeRatio;
   }
-  public final long getTaskShuffleReadBytes() {
-    return taskShuffleReadBytes;
+
+  /**
+   * Method related to shuffle.
+   */
+  public final long getShuffleReadBytes() {
+    return this.shuffleReadBytes;
   }
 
-  private void setTaskShuffleReadBytes(final long taskShuffleReadBytes) {
-    this.taskShuffleReadBytes = taskShuffleReadBytes;
+  private void setShuffleReadBytes(final long shuffleReadBytes) {
+    this.shuffleReadBytes = shuffleReadBytes;
   }
 
-  public final long getTaskShuffleReadTime() {
-    return taskShuffleReadTime;
+  public final long getShuffleReadTime() {
+    return this.shuffleReadTime;
   }
 
-  private void setTaskShuffleReadTime(final long taskShuffleReadTime) {
-    this.taskShuffleReadTime = taskShuffleReadTime;
+  private void setShuffleReadTime(final long shuffleReadTime) {
+    this.shuffleReadTime = shuffleReadTime;
   }
 
-  public final long getTaskShuffleWriteBytes() {
-    return taskShuffleWriteBytes;
+  public final long getShuffleWriteBytes() {
+    return this.shuffleWriteBytes;
   }
 
-  private void setTaskShuffleWriteBytes(final long taskShuffleWriteBytes) {
-    this.taskShuffleWriteBytes = taskShuffleWriteBytes;
+  private void setShuffleWriteBytes(final long shuffleWriteBytes) {
+    this.shuffleWriteBytes = shuffleWriteBytes;
   }
 
-  public final long getTaskShuffleWriteTime() {
-    return this.taskShuffleWriteTime;
+  public final long getShuffleWriteTime() {
+    return this.shuffleWriteTime;
   }
 
-  private void setTaskShuffleWriteTime(final long taskShuffleWriteTime) {
-    this.taskShuffleWriteTime = taskShuffleWriteTime;
+  private void setShuffleWriteTime(final long shuffleWriteTime) {
+    this.shuffleWriteTime = shuffleWriteTime;
+  }
+
+  @Override
+  public final String getId() {
+    return id;
   }
 
   @Override
@@ -239,13 +270,28 @@ public class TaskMetric implements StateMetric<TaskState.State> {
       case "serializedReadBytes":
         setSerializedReadBytes(SerializationUtils.deserialize(metricValue));
         break;
-      case "taskScheduleAttempt":
-        setTaskScheduleAttempt(SerializationUtils.deserialize(metricValue));
+      case "encodedReadBytes":
+        setEncodedReadBytes(SerializationUtils.deserialize(metricValue));
         break;
-      case "taskStateTransitionEvent":
+      case "boundedSourceReadTime":
+        setBoundedSourceReadTime(SerializationUtils.deserialize(metricValue));
+        break;
+      case "taskOutputBytes":
+        setTaskOutputBytes(SerializationUtils.deserialize(metricValue));
+        break;
+      case "taskDeserializationTime":
+        setTaskDeserializationTime(SerializationUtils.deserialize(metricValue));
+        break;
+      case "stateTransitionEvent":
         final StateTransitionEvent<TaskState.State> newStateTransitionEvent =
           SerializationUtils.deserialize(metricValue);
         addEvent(newStateTransitionEvent);
+        break;
+      case "scheduleAttempt":
+        setScheduleAttempt(SerializationUtils.deserialize(metricValue));
+        break;
+      case "containerId":
+        setContainerId(SerializationUtils.deserialize(metricValue));
         break;
       case "taskCPUTime":
         setTaskCPUTime(SerializationUtils.deserialize(metricValue));
@@ -253,71 +299,28 @@ public class TaskMetric implements StateMetric<TaskState.State> {
       case "taskSerializationTime":
         setTaskSerializationTime(SerializationUtils.deserialize(metricValue));
         break;
-      case "taskDeserializationTime":
-        setTaskDeserializationTime(SerializationUtils.deserialize(metricValue));
-        break;
-      case "taskBoundedSourceReadTime":
-        setTaskBoundedSourceReadTime(SerializationUtils.deserialize(metricValue));
-        break;
-      case "taskOutputBytes":
-        setTaskOutputBytes(SerializationUtils.deserialize(metricValue));
-        break;
-      case "taskSerializedReadBytes":
-        setTaskSerializedReadBytes(SerializationUtils.deserialize(metricValue));
-        break;
-      case "taskEncodedReadBytes":
-        setTaskEncodedReadBytes(SerializationUtils.deserialize(metricValue));
-        break;
-      case "taskPeakExecutionMemory":
-        setTaskPeakExecutionMemory(SerializationUtils.deserialize(metricValue));
+      case "peakExecutionMemory":
+        setPeakExecutionMemory(SerializationUtils.deserialize(metricValue));
         break;
       case "taskSizeRatio":
         setTaskSizeRatio(SerializationUtils.deserialize(metricValue));
         break;
-      case "taskShuffleReadBytes":
-        setTaskShuffleReadBytes(SerializationUtils.deserialize(metricValue));
+      case "shuffleReadBytes":
+        setShuffleReadBytes(SerializationUtils.deserialize(metricValue));
         break;
-      case "taskShuffleReadTime":
-        setTaskShuffleReadTime(SerializationUtils.deserialize(metricValue));
+      case "shuffleReadTime":
+        setShuffleReadTime(SerializationUtils.deserialize(metricValue));
         break;
-      case "taskShuffleWriteBytes":
-        setTaskShuffleWriteBytes(SerializationUtils.deserialize(metricValue));
+      case "shuffleWriteBytes":
+        setShuffleWriteBytes(SerializationUtils.deserialize(metricValue));
         break;
-      case "taskShuffleWriteTime":
-        setTaskShuffleWriteTime(SerializationUtils.deserialize(metricValue));
+      case "shuffleWriteTime":
+        setShuffleWriteTime(SerializationUtils.deserialize(metricValue));
         break;
       default:
         LOG.warn("metricField {} is not supported.", metricField);
         return false;
     }
     return true;
-  }
-
-  /**
-   *
-   */
-  public enum TaskMetrics {
-    TASK_CONTAINER_ID,
-    TASK_SCHEDULE_ATTEMPT,
-    TASK_STATE_TRANSITION_EVENT,
-
-    TASK_DURATION_TIME, //done
-    TASK_CPU_TIME, // done
-
-    TASK_SERIALIZATION_TIME,
-    TASK_DESERIALIZATION_TIME,
-    TASK_BOUNDED_SOURCE_READ_TIME,
-
-    TASK_OUTPUT_BYTES,
-    TASK_SERIALIZED_READ_BYTES,
-    TASK_ENCODED_READ_BYTES,
-
-    TASK_PEAK_EXECUTION_MEMORY,
-    TASK_SIZE_RATIO,
-
-    TASK_SHUFFLE_READ_BYTES,
-    TASK_SHUFFLE_READ_TIME,
-    TASK_SHUFFLE_WRITE_BYTES,
-    TASK_SHUFFLE_WRITE_TIME,
   }
 }

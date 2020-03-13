@@ -272,7 +272,7 @@ public final class TaskExecutor {
         .filter(inEdge -> inEdge.getDstIRVertex().getId().equals(irVertex.getId())) // edge to this vertex
         .map(incomingEdge ->
           Pair.of(incomingEdge, intermediateDataIOFactory
-            .createReader(task, incomingEdge.getSrcIRVertex(), incomingEdge)))
+            .createReader(task.getTaskId(), incomingEdge.getSrcIRVertex(), incomingEdge)))
         .forEach(pair -> {
           if (irVertex instanceof OperatorVertex) {
             final StageEdge edge = pair.left();
@@ -636,13 +636,13 @@ public final class TaskExecutor {
     }
   }
 
-  private List<InputReader> getParentTaskReaders(final Task task,
+  private List<InputReader> getParentTaskReaders(final String dstTaskId,
                                                  final List<StageEdge> inEdgesFromParentTasks,
                                                  final IntermediateDataIOFactory intermediateDataIOFactory) {
     return inEdgesFromParentTasks
       .stream()
       .map(inEdgeForThisVertex -> intermediateDataIOFactory
-        .createReader(task, inEdgeForThisVertex.getSrcIRVertex(), inEdgeForThisVertex))
+        .createReader(dstTaskId, inEdgeForThisVertex.getSrcIRVertex(), inEdgeForThisVertex))
       .collect(Collectors.toList());
   }
 
@@ -704,7 +704,8 @@ public final class TaskExecutor {
         outputWriter.close();
         final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
         writtenBytes.ifPresent(writtenBytesList::add);
-      }));
+      })
+    );
 
     long totalWrittenBytes = 0;
     for (final Long writtenBytes : writtenBytesList) {

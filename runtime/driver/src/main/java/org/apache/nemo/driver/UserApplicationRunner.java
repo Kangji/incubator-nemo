@@ -107,6 +107,7 @@ public final class UserApplicationRunner {
       } finally {
         planStateManager.storeJSON("final");
       }
+
       final long endTime = System.currentTimeMillis();
       LOG.info("{} is complete!", physicalPlan.getPlanId());
       MetricStore.getStore().getOrCreateMetric(JobMetric.class, physicalPlan.getPlanId())

@@ -35,7 +35,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -157,7 +156,12 @@ public final class StageEdge extends RuntimeEdge<Stage> {
   }
 
   /**
+   * Get keyRanges for shuffle edge.
+   * If the destination vertex is enabled for dynamic task sizing,
+   * @return {@link org.apache.nemo.common.ir.edge.executionproperty.SubPartitionSetProperty} value.
+   * Else,
    * @return {@link org.apache.nemo.common.ir.edge.executionproperty.PartitionSetProperty} value.
+   * If both doesn't exist, return default partition set made from parallelism.
    */
   public List<KeyRange> getKeyRanges() {
     final ArrayList<KeyRange> defaultPartitionSet = new ArrayList<>();
@@ -167,8 +171,7 @@ public final class StageEdge extends RuntimeEdge<Stage> {
     }
     if (getDst().getEnableDynamicTaskSizing()) {
       keyRanges = getExecutionProperties()
-        .get(SubPartitionSetProperty.class).orElse(defaultPartitionSet); // orElseThrow?
-      Collections.reverse(keyRanges);
+        .get(SubPartitionSetProperty.class).orElse(defaultPartitionSet);
     } else {
       keyRanges = getExecutionProperties()
         .get(PartitionSetProperty.class).orElse(defaultPartitionSet);

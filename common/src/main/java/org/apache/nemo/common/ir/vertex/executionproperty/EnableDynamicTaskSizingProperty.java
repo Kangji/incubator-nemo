@@ -25,7 +25,6 @@ import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
  * Property to enable dynamic task sizing policy.
  */
 public class EnableDynamicTaskSizingProperty extends VertexExecutionProperty<Boolean> {
-
   /**
    * Default constructor.
    *
@@ -35,7 +34,16 @@ public class EnableDynamicTaskSizingProperty extends VertexExecutionProperty<Boo
     super(value);
   }
 
+  /**
+   * Static method exposing the constructor.
+   *
+   * @param value value of the new execution property.
+   * @return the newly created execution property.
+   */
   public static EnableDynamicTaskSizingProperty of(final Boolean value) {
     return new EnableDynamicTaskSizingProperty(value);
   }
+
+
+
 }

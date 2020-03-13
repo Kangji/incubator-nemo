@@ -22,7 +22,6 @@ import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.runtime.common.plan.RuntimeEdge;
 import org.apache.nemo.runtime.common.plan.StageEdge;
-import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.executor.MetricManagerWorker;
 import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.data.BlockManagerWorker;
@@ -68,18 +67,18 @@ public final class IntermediateDataIOFactory {
   /**
    * Creates an {@link InputReader} between two stages.
    *
-   * @param dstTask  the destination task.
+   * @param dstTaskId   the id of the destination task.
    * @param srcIRVertex the {@link IRVertex} that output the data to be read.
    * @param runtimeEdge that connects the tasks belonging to srcIRVertex to dstTask.
    * @return the {@link InputReader} created.
    */
-  public InputReader createReader(final Task dstTask,
+  public InputReader createReader(final String dstTaskId,
                                   final IRVertex srcIRVertex,
                                   final RuntimeEdge runtimeEdge) {
     if (isPipe(runtimeEdge)) {
-      return new PipeInputReader(dstTask, srcIRVertex, runtimeEdge, pipeManagerWorker, metricMessageSender);
+      return new PipeInputReader(dstTaskId, srcIRVertex, runtimeEdge, pipeManagerWorker, metricMessageSender);
     } else {
-      return new BlockInputReader(dstTask, srcIRVertex, runtimeEdge, blockManagerWorker, metricMessageSender);
+      return new BlockInputReader(dstTaskId, srcIRVertex, runtimeEdge, blockManagerWorker, metricMessageSender);
     }
   }
 

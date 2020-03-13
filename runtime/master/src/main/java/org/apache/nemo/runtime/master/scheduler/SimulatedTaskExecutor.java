@@ -107,8 +107,8 @@ public final class SimulatedTaskExecutor {
       .filter(s -> s.get("properties").get("irDag").get("edges").size()
         == stageIRDAG.getEdges().size())  // same # of edges.
       .filter(s -> s.get("properties").get("executionProperties")
-          .get("org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty").asInt(1)
-          == 32) // sampling vertices have parallelism of 32
+        .get("org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty").asInt(1)
+        == 32) // sampling vertices have parallelism of 32
       .filter(s -> s.get("properties").get("executionProperties")
         .get("org.apache.nemo.common.ir.vertex.executionproperty.EnableDynamicTaskSizingProperty").asBoolean())
       .map(s -> s.get("id").asText())
@@ -169,27 +169,16 @@ public final class SimulatedTaskExecutor {
     final long executionStartTime = this.currentTime.getAndAdd(schedulingOverhead);
 
     // Prepare (constructor of TaskExecutor)
-
     // Deserialize task
-
     // Connect incoming / outgoing edges.
 
     // Execute
     LOG.debug("{} started", taskId);
 
     // Fetch external data (Read) and process them
-    // this.sendMetric(TASK_METRIC_ID, taskId,
-    //   "boundedSourceReadTime", SerializationUtils.serialize(boundedSourceReadTime));
-    // this.sendMetric(TASK_METRIC_ID, taskId,
-    //   "serializedReadBytes", SerializationUtils.serialize(serializedReadBytes));
-    // this.sendMetric(TASK_METRIC_ID, taskId,
-    //   "encodedReadBytes", SerializationUtils.serialize(encodedReadBytes));
-
     // Finalize vertex and write
-    // this.sendMetric(TASK_METRIC_ID, taskId,
-    //   "writtenBytes", SerializationUtils.serialize(totalWrittenBytes));
 
-    final Long expectedTaskDuration = this.calculateExpectedTaskDuration(task);
+    final long expectedTaskDuration = this.calculateExpectedTaskDuration(task);
     this.currentTime.getAndAdd(expectedTaskDuration);
 
     this.sendMetric(TASK_METRIC_ID, taskId, "taskDuration",
