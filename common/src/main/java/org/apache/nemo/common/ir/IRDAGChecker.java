@@ -22,6 +22,7 @@ import org.apache.commons.lang.mutable.MutableObject;
 import org.apache.nemo.common.KeyRange;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
+import org.apache.nemo.common.coder.DecoderFactory;
 import org.apache.nemo.common.coder.EncoderFactory;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.dag.DAGInterface;
@@ -450,9 +451,14 @@ public final class IRDAGChecker {
               return failure("Incompatible encoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
             }
           }
+          Set<? extends Class<? extends DecoderFactory>> decoderProperties = nonStreamVertexEdge.stream().map(e
+            -> e.getPropertyValue(DecoderProperty.class).get().getClass()).collect(Collectors.toSet());
           if (1 != nonStreamVertexEdge.stream()
             .map(e -> e.getPropertyValue(DecoderProperty.class).get().getClass()).distinct().count()) {
-            return failure("Incompatible decoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
+            if (!decoderProperties.contains(DecoderFactory.DummyDecoderFactory.class)
+              || encoderProperties.size() != 2) {
+              return failure("Incompatible decoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
+            }
           }
         }
       }
