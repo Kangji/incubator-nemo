@@ -184,7 +184,7 @@ public final class SimulatedTaskExecutor {
     this.sendMetric(TASK_METRIC_ID, taskId, "taskDuration",
       SerializationUtils.serialize(this.currentTime.get() - executionStartTime));
     LOG.warn("[HWARIM] elapsed time for {} is {}, with task duration {}",
-      task.getPlanId().split("-")[1], this.getElapsedTime(), expectedTaskDuration);
+      task.getPlanId(), this.getElapsedTime(), expectedTaskDuration);
     this.timeCheckpoint = System.currentTimeMillis();
     if (idOfVertexPutOnHold == null) {
       this.onTaskStateChanged(taskId, attemptIdx, TaskState.State.COMPLETE,

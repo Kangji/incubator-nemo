@@ -22,7 +22,6 @@ import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
-import org.apache.nemo.compiler.optimizer.pass.runtime.DynamicTaskSizingRunTimePass;
 import org.apache.nemo.compiler.optimizer.policy.DynamicTaskSizingPolicy;
 import org.apache.nemo.compiler.optimizer.policy.TransientResourcePolicy;
 import org.apache.nemo.examples.beam.policy.DefaultPolicyParallelismFive;

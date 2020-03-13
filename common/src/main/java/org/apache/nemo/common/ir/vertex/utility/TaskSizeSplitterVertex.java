@@ -26,7 +26,9 @@ import org.apache.nemo.common.Util;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.ir.edge.IREdge;
-import org.apache.nemo.common.ir.edge.executionproperty.*;
+import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.SubPartitionSetProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.LoopVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
@@ -138,6 +140,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
       addIterativeIncomingEdge(controlEdgeToBeginning);
     }
   }
+
   /**
    * Need to be careful about utility vertices, because they do not appear in the last iteration.
    * @param dagBuilder DAGBuilder to add the unrolled iteration to.

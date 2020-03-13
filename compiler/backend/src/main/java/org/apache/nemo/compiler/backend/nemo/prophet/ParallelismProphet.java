@@ -63,7 +63,7 @@ public final class ParallelismProphet implements Prophet {
     calculatePartitionerProperty(edgesToOptimize);
   }
   //task size ratio is same as parallelism
-  private Pair<Integer, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
+  private synchronized Pair<Integer, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
     this.simulationScheduler.schedulePlan(physicalPlan, 1);
     final MetricStore resultingMetricStore = this.simulationScheduler.collectMetricStore();
     final List<Pair<Integer, Long>> taskSizeRatioToDuration = new ArrayList<>();
@@ -94,7 +94,6 @@ public final class ParallelismProphet implements Prophet {
     final Pair<Integer, Long> pairWithMinDuration =
         Collections.min(listOfParallelismToDurationPair, Comparator.comparing(p -> p.right()));
     LOG.error("optimal pair {}", pairWithMinDuration);
-    this.simulationScheduler.terminate();
 
     result.put("opt.parallelism", pairWithMinDuration.left().longValue());
     return result;

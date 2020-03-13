@@ -266,11 +266,11 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     // return false.
     // (corner case) if this stage is a sink, return true
     // for now, don't do this we will try to change o2o edges to shuffle, but not insert splitter
-    /*
     Set<IRVertex> stageVertices = stageIdToStageVertices.get(vertexToStageId.get(observingVertex));
     Set<IREdge> stageOutgoingEdges = stageVertices
       .stream()
       .flatMap(vertex -> dag.getOutgoingEdgesOf(vertex).stream())
+      .filter(edge -> !stageVertices.contains(edge.getDst()))
       .collect(Collectors.toSet());
     if (stageOutgoingEdges.isEmpty()) {
       return true;
@@ -281,7 +281,6 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
         return false;
       }
     }
-     */
     // all cases passed: return true
     return true;
   }
