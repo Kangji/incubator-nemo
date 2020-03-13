@@ -202,6 +202,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
                   edgeFromOriginal.getPropertyValue(CommunicationPatternProperty.class).get(),
                   originalToNewIRVertex.get(srcVertex),
                   edgeFromOriginal.getDst());
+                edgeToDst.copyExecutionPropertiesTo(newIrEdge);
                 edgesToDelete.add(edgeToDst);
                 edgesToAdd.add(newIrEdge);
                 final IREdge newLoopEdge = Util.cloneEdge(
