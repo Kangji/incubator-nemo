@@ -462,8 +462,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     fromOutsideToOriginal.forEach(toInsert::addDagIncomingEdge);
     fromOutsideToOriginal.forEach(toInsert::addNonIterativeIncomingEdge); //
     fromOriginalToOutside.forEach(toInsert::addDagOutgoingEdge);
-
-    toInsert.insertSignalVertex(signalVertex);
+    toInsert.insertSignalVertex(signalVertex, fromOriginalToOutside);
     // insert splitter vertex
     dag.insert(toInsert, incomingEdgesOfOriginalVertices, outgoingEdgesOfOriginalVertices,
       edgesWithSplitterVertex);

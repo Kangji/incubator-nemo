@@ -124,19 +124,15 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
    * Last iteration does not contain any signal vertex.
    * @param toInsert : SignalVertex to insert.
    */
-  public void insertSignalVertex(final SignalVertex toInsert) {
+  public void insertSignalVertex(final SignalVertex toInsert, final Set<IREdge> referenceCandidates) {
     getBuilder().addVertex(toInsert);
     for (IRVertex lastVertex : lastVerticesInStage) {
-      IREdge edgeToSignal = EmptyComponents.newDummyShuffleEdge(lastVertex, toInsert);
-      if (!getDagOutgoingEdges().isEmpty()) {
-        for (IREdge outgoingEdge : getDagOutgoingEdges().get(lastVertex)) {
-          if (CommunicationPatternProperty.Value.SHUFFLE.equals(
-            outgoingEdge.getPropertyValue(CommunicationPatternProperty.class).get())) {
-            outgoingEdge.copyExecutionPropertiesTo(edgeToSignal);
-            break;
-          }
-        }
-      }
+      IREdge referenceEdge = referenceCandidates.stream()
+        .filter(edge -> CommunicationPatternProperty.Value.SHUFFLE.equals(
+          edge.getPropertyValue(CommunicationPatternProperty.class).get()))
+        .findFirst().orElse(EmptyComponents.newDummyShuffleEdge(lastVertex, toInsert));
+      IREdge edgeToSignal = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, lastVertex, toInsert);
+      referenceEdge.copyExecutionPropertiesTo(edgeToSignal);
       getBuilder().connectVertices(edgeToSignal);
       IREdge controlEdgeToBeginning = Util.createControlEdge(toInsert, firstVertexInStage);
       addIterativeIncomingEdge(controlEdgeToBeginning);
