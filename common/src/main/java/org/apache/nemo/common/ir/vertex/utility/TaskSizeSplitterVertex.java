@@ -127,8 +127,15 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   public void insertSignalVertex(final SignalVertex toInsert) {
     getBuilder().addVertex(toInsert);
     for (IRVertex lastVertex : lastVerticesInStage) {
-      IREdge edgesToSignal = EmptyComponents.newDummyShuffleEdge(lastVertex, toInsert);
-      getBuilder().connectVertices(edgesToSignal);
+      IREdge edgeToSignal = EmptyComponents.newDummyShuffleEdge(lastVertex, toInsert);
+      for (IREdge outgoingEdge : getDagOutgoingEdges().get(lastVertex)) {
+        if (CommunicationPatternProperty.Value.SHUFFLE.equals(
+          outgoingEdge.getPropertyValue(CommunicationPatternProperty.class).get())) {
+          outgoingEdge.copyExecutionPropertiesTo(edgeToSignal);
+         break;
+        }
+      }
+      getBuilder().connectVertices(edgeToSignal);
       IREdge controlEdgeToBeginning = Util.createControlEdge(toInsert, firstVertexInStage);
       addIterativeIncomingEdge(controlEdgeToBeginning);
     }
