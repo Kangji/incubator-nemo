@@ -445,7 +445,10 @@ public final class IRDAGChecker {
           LOG.error("encoder properties: {}", encoderProperties);
           if (1 != nonStreamVertexEdge.stream()
             .map(e -> e.getPropertyValue(EncoderProperty.class).get().getClass()).distinct().count()) {
-            return failure("Incompatible encoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
+            if (!encoderProperties.contains(EncoderFactory.DummyEncoderFactory.class)
+              || encoderProperties.size() != 2) {
+              return failure("Incompatible encoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
+            }
           }
           if (1 != nonStreamVertexEdge.stream()
             .map(e -> e.getPropertyValue(DecoderProperty.class).get().getClass()).distinct().count()) {
