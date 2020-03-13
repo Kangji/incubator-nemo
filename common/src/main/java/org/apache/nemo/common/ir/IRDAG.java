@@ -579,6 +579,8 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
                      final Set<IREdge> edgesWithSplitterVertex) {
     final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
     //insert vertex and edges irrelevant to splitter vertex
+    LOG.error("[DAG.INSERT]IncomingEdgesOfOriginalVertices: {}", incomingEdgesOfOriginalVertices);
+    LOG.error("[DAG.INSERT]OutgoingEdgesOfOriginalVertices: {}", outgoingEdgesOfOriginalVertices);
     modifiedDAG.topologicalDo(v -> {
       if (!toInsert.getOriginalVertices().contains(v)) {
         builder.addVertex(v);

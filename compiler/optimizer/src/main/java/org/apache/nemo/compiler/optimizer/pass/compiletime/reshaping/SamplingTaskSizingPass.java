@@ -315,7 +315,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     }
     return fromOutsideToOriginal;
   }
-
+  // need to debug here vertex d38 and d33
   private Set<IREdge> setEdgesFromOriginalToOutside(final IRDAG dag,
                                                     final Set<IRVertex> stageVertices,
                                                     final Set<IRVertex> verticesWithStageOutgoingEdges) {
@@ -325,6 +325,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
         LOG.error("[URGENT] {} {} {}", edge.getId(), edge.getSrc().getId(), edge.getDst().getId());
         if (edge.getDst() instanceof TaskSizeSplitterVertex) {
           IRVertex originalInnerDst = ((TaskSizeSplitterVertex) edge.getDst()).getFirstVertexInStage();
+          LOG.error("[URGENT] {}", originalInnerDst); // should be vertex 11
           Set<IREdge> candidates = ((TaskSizeSplitterVertex) edge.getDst()).
             getDagIncomingEdges().get(originalInnerDst);
           candidates.stream().filter(edge2 -> edge2.getSrc().equals(vertex))
@@ -376,7 +377,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
           IREdge newIrEdge = Util.cloneEdge(outgoingEdge, toInsert, outgoingEdge.getDst());
           nextSplitter.mapEdgeWithLoop(newIrEdge, internalEdge);
           fromSplitterToOutside.add(newIrEdge);
-        } else {
+        } else if (!toInsert.getOriginalVertices().contains(outgoingEdge.getDst())) {
           IREdge cloneOfOutgoingEdge = Util.cloneEdge(outgoingEdge, toInsert, outgoingEdge.getDst());
           fromSplitterToOutside.add(cloneOfOutgoingEdge);
         }
