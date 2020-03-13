@@ -441,6 +441,8 @@ public final class IRDAGChecker {
         if (!nonStreamVertexEdge.isEmpty()) {
           if (1 != nonStreamVertexEdge.stream()
             .map(e -> e.getPropertyValue(EncoderProperty.class).get().getClass()).distinct().count()) {
+            LOG.error("Encoder Properties this edges have: {}", nonStreamVertexEdge.stream()
+              .map(e -> e.getPropertyValue(EncoderProperty.class).get().getClass()).distinct());
             return failure("Incompatible encoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
           }
           if (1 != nonStreamVertexEdge.stream()
