@@ -93,9 +93,6 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     if (enableDynamicTaskSizing) {
       dag.topologicalDo(v -> {
         v.setProperty(EnableDynamicTaskSizingProperty.of(enableDynamicTaskSizing));
-        //for (IREdge e : dag.getIncomingEdgesOf(v)) {
-        //  if (!CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
-        //    e.getPropertyValue(CommunicationPatternProperty.class).get())) {
       });
     }
     final int partitionerProperty = setPartitionerProperty(dag);
@@ -126,7 +123,9 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     dag.topologicalDo(v -> {
       for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
         if (shuffleEdgesForDTS.contains(edge)) {
+          shuffleEdgesForDTS.remove(edge);
           edge.setProperty(PartitionerProperty.of(PartitionerProperty.Type.HASH, partitionerProperty));
+          shuffleEdgesForDTS.add(edge);
         }
       }
     });
