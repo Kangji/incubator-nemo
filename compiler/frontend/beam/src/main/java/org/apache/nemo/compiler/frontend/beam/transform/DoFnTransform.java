@@ -78,6 +78,9 @@ public final class DoFnTransform<InputT, OutputT> extends AbstractDoFnTransform<
 
   @Override
   public void onData(final WindowedValue<InputT> data) {
+    LOG.error("[HWARIM][ONDATA] {}", data);
+    System.out.println("ONDATA: " + data);
+    //print(getId(), data)
     // Do not need any push-back logic.
     checkAndInvokeBundle();
     getDoFnRunner().processElement(data);

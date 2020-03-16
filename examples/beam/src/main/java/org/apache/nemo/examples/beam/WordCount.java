@@ -55,6 +55,7 @@ public final class WordCount {
           final String[] words = line.split(" +");
           final String documentId = words[0] + "#" + words[1];
           final Long count = Long.parseLong(words[2]);
+          System.out.println(words);
           return KV.of(documentId, count);
         }
       }))
@@ -62,6 +63,7 @@ public final class WordCount {
       .apply(MapElements.<KV<String, Long>, String>via(new SimpleFunction<KV<String, Long>, String>() {
         @Override
         public String apply(final KV<String, Long> kv) {
+          System.out.println(kv);
           return kv.getKey() + ": " + kv.getValue();
         }
       }));
