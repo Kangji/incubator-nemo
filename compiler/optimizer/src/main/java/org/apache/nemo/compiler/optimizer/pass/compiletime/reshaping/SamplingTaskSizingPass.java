@@ -90,6 +90,11 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     }
 
     //set partitionerProperty by job data size
+    if (enableDynamicTaskSizing) {
+      dag.topologicalDo(v -> {
+        v.setProperty(EnableDynamicTaskSizingProperty.of(enableDynamicTaskSizing));
+      });
+    }
     final int partitionerProperty = setPartitionerProperty(dag);
 
     /* Step 2. Group vertices using stage merging logic */
