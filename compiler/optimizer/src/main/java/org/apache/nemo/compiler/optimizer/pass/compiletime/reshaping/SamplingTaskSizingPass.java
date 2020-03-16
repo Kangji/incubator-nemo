@@ -91,16 +91,6 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
 
     //set partitionerProperty by job data size
     final int partitionerProperty = setPartitionerProperty(dag);
-    dag.topologicalDo(v -> {
-     v.setProperty(EnableDynamicTaskSizingProperty.of(enableDynamicTaskSizing));
-      for (IREdge e : dag.getIncomingEdgesOf(v)) {
-        if (!CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
-          e.getPropertyValue(CommunicationPatternProperty.class).get())) {
-          e.setPropertyPermanently(PartitionerProperty.of(
-            e.getPropertyValue(PartitionerProperty.class).get().left(), partitionerProperty));
-        }
-      }
-    });
 
     /* Step 2. Group vertices using stage merging logic */
     final Map<IRVertex, Integer> vertexToStageId = stagePartitioner.apply(dag);
@@ -124,6 +114,15 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
         }
       }
     });
+    //change partitioner property for DTS target edges
+    dag.topologicalDo(v -> {
+      for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
+        if (shuffleEdgesForDTS.contains(edge)) {
+          edge.setProperty(PartitionerProperty.of(PartitionerProperty.Type.HASH, partitionerProperty));
+        }
+      }
+    });
+
     LOG.error("[HWARIM]Stages to insert splitter: {}", stageIdsToInsertSplitter);
     LOG.error("[HWARIM]Shuffle edge for DTS: {}", shuffleEdgesForDTS);
 

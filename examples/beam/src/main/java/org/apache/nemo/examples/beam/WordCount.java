@@ -55,7 +55,7 @@ public final class WordCount {
           final String[] words = line.split(" +");
           final String documentId = words[0] + "#" + words[1];
           final Long count = Long.parseLong(words[2]);
-          System.out.println("[WORDCOUNT APP] words: " + words);
+          System.out.println("[WORDCOUNT APP] words: " + words.toString());
           return KV.of(documentId, count);
         }
       }))
