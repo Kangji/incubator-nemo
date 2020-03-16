@@ -140,7 +140,7 @@ public final class SimulatedTaskExecutor {
       .filter(l -> l > 0)
       .max();
 
-    LOG.error("[HWARIM] average: {}, min {}, max {}", average.orElse(-1), min.orElse(-1), max.orElse(-1));
+    //LOG.error("[HWARIM] average: {}, min {}, max {}", average.orElse(-1), min.orElse(-1), max.orElse(-1));
     // CUT.
 
     // convert to long and save.

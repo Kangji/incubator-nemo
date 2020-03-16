@@ -83,7 +83,7 @@ public final class AlternatingLeastSquareITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  @Test(timeout = 2400000)
   public void testTransient() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(noPoisonResources)
