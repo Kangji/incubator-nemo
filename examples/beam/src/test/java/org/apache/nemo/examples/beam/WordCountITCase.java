@@ -83,7 +83,7 @@ public final class WordCountITCase {
   }
 
   @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
-  public void testTaskResizing() throws Exception {
+  public void testDTSEasy() throws Exception {
     JobLauncher.main(new ArgBuilder()
       .addUserMain(WordCount.class.getCanonicalName())
       .addUserArgs(inputFilePath, "file:///" + outputFilePath)
@@ -94,6 +94,15 @@ public final class WordCountITCase {
     );
   }
 
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
+  public void testDTSComplex() throws Exception {
+    JobLauncher.main(builder
+      .addResourceJson(executorResourceFileName)
+      .addJobId(WordCountITCase.class.getSimpleName() + "_taskResizingComplex")
+      .addOptimizationPolicy(DynamicTaskSizingPolicy.class.getCanonicalName())
+      .build()
+    );
+  }
   @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testLargeShuffleInOneExecutor() throws Exception {
     JobLauncher.main(builder
