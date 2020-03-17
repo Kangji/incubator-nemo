@@ -51,7 +51,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   private static final Logger LOG = LoggerFactory.getLogger(TaskSizeSplitterVertex.class.getName());
   private final Set<IRVertex> originalVertices;
   // Vertex which has incoming edge from other stages. Guaranteed to be only one in each stage by stage partitioner
-  private final IRVertex firstVertexInStage;
+  private final Set<IRVertex> firstVerticesInStage;
   // vertices which has outgoing edge to other stages. Can be more than one in one stage
   private final Set<IRVertex> verticesWithStageOutgoingEdges;
   // vertices which does not have any outgoing edge to vertices in same stage
@@ -67,7 +67,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
    * Constructor of TaskSizeSplitterVertex class.
    * @param splitterVertexName   for now, this does not do anything. Inserted to enable extension from LoopVertex.
    * @param originalVertices     Set of vertices which form one stage and which splitter will wrap up.
-   * @param firstVertexInStage   The first vertex in stage. Although it is given as a form of Set, we assert that this
+   * @param firstVerticesInStage   The first vertex in stage. Although it is given as a form of Set, we assert that this
    *                             set only has one element.
    * @param verticesWithStageOutgoingEdges  vertices which has outgoing edges to other stage and (optional)
    *                                        outgoing edges to vertex in same stage.
@@ -77,7 +77,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
    */
   public TaskSizeSplitterVertex(final String splitterVertexName,
                                 final Set<IRVertex> originalVertices,
-                                final IRVertex firstVertexInStage,
+                                final Set<IRVertex> firstVerticesInStage,
                                 final Set<IRVertex> verticesWithStageOutgoingEdges,
                                 final Set<IRVertex> lastVerticesInStage,
                                 final int partitionerProperty) {
@@ -89,7 +89,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     for (IRVertex original : originalVertices) {
       mapOfOriginalVertexToClone.putIfAbsent(original, original.getClone());
     }
-    this.firstVertexInStage = firstVertexInStage;
+    this.firstVerticesInStage = firstVerticesInStage;
     this.verticesWithStageOutgoingEdges = verticesWithStageOutgoingEdges;
     this.lastVerticesInStage = lastVerticesInStage;
   }
@@ -98,8 +98,8 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     return originalVertices;
   }
 
-  public IRVertex getFirstVertexInStage() {
-    return firstVertexInStage;
+  public Set<IRVertex> getFirstVerticesInStage() {
+    return firstVerticesInStage;
   }
 
   public Set<IRVertex> getVerticesWithStageOutgoingEdges() {
@@ -129,15 +129,12 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   public void insertSignalVertex(final SignalVertex toInsert, final Set<IREdge> referenceCandidates) {
     getBuilder().addVertex(toInsert);
     for (IRVertex lastVertex : lastVerticesInStage) {
-      //IREdge referenceEdge = referenceCandidates.stream()
-      //  .filter(edge -> edge.getPropertyValue(EncoderProperty.class).isPresent())
-      //  .findFirst().orElse(EmptyComponents.newDummyShuffleEdge(lastVertex, toInsert));
-      //IREdge edgeToSignal = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, lastVertex, toInsert);
-      //referenceEdge.copyExecutionPropertiesTo(edgeToSignal);
       IREdge edgeToSignal = EmptyComponents.newDummyShuffleEdge(lastVertex, toInsert);
       getBuilder().connectVertices(edgeToSignal);
-      IREdge controlEdgeToBeginning = Util.createControlEdge(toInsert, firstVertexInStage);
-      addIterativeIncomingEdge(controlEdgeToBeginning);
+      for (IRVertex firstVertex : firstVerticesInStage) {
+        IREdge controlEdgeToBeginning = Util.createControlEdge(toInsert, firstVertex);
+        addIterativeIncomingEdge(controlEdgeToBeginning);
+      }
     }
   }
 
@@ -313,7 +310,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     }
   }
   public void printLogs() {
-    LOG.error("[Vertex] this is splitter vertex {}", this.getId());
+    LOG.error("[Vertex] this is splitter {}", this.getId());
     LOG.error("[Vertex] get dag incoming edges: {}", this.getDagIncomingEdges().entrySet());
     LOG.error("[Vertex] get dag iterative incoming edges: {}", this.getIterativeIncomingEdges().entrySet());
     LOG.error("[Vertex] get dag nonIterative incoming edges: {}", this.getNonIterativeIncomingEdges().entrySet());

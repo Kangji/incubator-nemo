@@ -72,8 +72,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
 
   @Override
   public IRDAG apply(final IRDAG dag) {
-    //boolean enableDynamicTaskSizing = getEnableFromJobSize(dag);
-    boolean enableDynamicTaskSizing = true;
+    /* Step 1. check DTS launch by job size */
+    boolean enableDynamicTaskSizing = getEnableFromJobSize(dag);
     if (!enableDynamicTaskSizing) {
       dag.topologicalDo(v -> {
         v.setProperty(EnableDynamicTaskSizingProperty.of(enableDynamicTaskSizing));
@@ -87,17 +87,16 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
         }
       });
       return dag;
-    }
-
-    //set partitionerProperty by job data size
-    if (enableDynamicTaskSizing) {
+    } else {
+      //set partitionerProperty by job data size
       dag.topologicalDo(v -> {
         v.setProperty(EnableDynamicTaskSizingProperty.of(enableDynamicTaskSizing));
       });
     }
+
     final int partitionerProperty = setPartitionerProperty(dag);
 
-    /* Step 2. Group vertices using stage merging logic */
+    /* Step 2-1. Group vertices by stage using stage merging logic */
     final Map<IRVertex, Integer> vertexToStageId = stagePartitioner.apply(dag);
     final Map<Integer, Set<IRVertex>> stageIdToStageVertices = new HashMap<>();
     vertexToStageId.forEach((vertex, stageId) -> {
@@ -106,9 +105,9 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       }
       stageIdToStageVertices.get(stageId).add(vertex);
     });
-    LOG.error("[HWARIM]See stage information: {}", stageIdToStageVertices);
+    //LOG.error("[HWARIM]See stage information: {}", stageIdToStageVertices);
 
-    /* Step 2-1. Mark stages to insert splitter vertex */
+    /* Step 2-2. Mark stages to insert splitter vertex */
     Set<Integer> stageIdsToInsertSplitter = new HashSet<>();
     Set<IREdge> shuffleEdgesForDTS = new HashSet<>();
     dag.topologicalDo(v -> {
@@ -178,8 +177,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
           if (isSourcePartition) {
             break;
           }
-          makeAndInsertSplitterVertex(dag, stageVertices, edge.getDst(), verticesWithStageOutgoingEdges,
-            stageEndingVertices, partitionerProperty);
+          makeAndInsertSplitterVertex(dag, stageVertices, Collections.singleton(edge.getDst()),
+            verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty);
         }
       }
     }
@@ -244,10 +243,12 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
   }
   /**
    * Check if stage containing observing Vertex is appropriate for inserting splitter vertex.
-   * @param dag               dag to observe
-   * @param observingVertex   observing vertex
-   * @param observingEdge     incoming edge of observing vertex
-   * @return                  enable value
+   * @param dag                     dag to observe
+   * @param observingVertex         observing vertex
+   * @param observingEdge           incoming edge of observing vertex
+   * @param vertexToStageId         maps vertex to its corresponding stage id
+   * @param stageIdToStageVertices  maps stage id to its vertices
+   * @return                        true if we can wrap this stage with splitter vertex (i.e. appropriate for DTS)
    */
   private boolean checkForInsertingSplitterVertex(final IRDAG dag,
                                                   final IRVertex observingVertex,
@@ -271,7 +272,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     // if one of the outgoing edges of stage which contains observing Vertex has communication property of one-to-one,
     // return false.
     // (corner case) if this stage is a sink, return true
-    // for now, don't do this we will try to change o2o edges to shuffle, but not insert splitter
+    // insert to do: accumulate DTS result by changing o2o stage edge into shuffle
     Set<IRVertex> stageVertices = stageIdToStageVertices.get(vertexToStageId.get(observingVertex));
     Set<IREdge> stageOutgoingEdges = stageVertices
       .stream()
@@ -280,21 +281,22 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       .collect(Collectors.toSet());
     if (stageOutgoingEdges.isEmpty()) {
       return true;
-    }
-    for (IREdge edge : stageOutgoingEdges) {
-      if (CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
-        edge.getPropertyValue(CommunicationPatternProperty.class).get())) {
-        return false;
+    } else {
+      for (IREdge edge : stageOutgoingEdges) {
+        if (CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
+          edge.getPropertyValue(CommunicationPatternProperty.class).get())) {
+          return false;
+        }
       }
     }
     // all cases passed: return true
     return true;
   }
   /**
-   * get and set edges which come to stage vertices from outer sources by observing the dag. This wil be the
+   * get and set edges which come to stage vertices from outer sources by observing the dag. This will be the
    * 'dagIncomingEdges' in Splitter vertex.
-   * Edge case: When previous vertex(i.e. outer source) is also a splitter vertex. In this case, we need to get
-   *            original(invisible) edges by hacking in to previous splitter vertex.
+   * Edge case: Happens when previous vertex(i.e. outer source) is also a splitter vertex. In this case, we need to get
+   *            original edges which is invisible from the dag by hacking into previous splitter vertex.
    * @param dag                    dag to observe
    * @param stageStartingVertices  stage starting vertices (assumed to be always in size 1)
    * @return                       edges from outside to stage vertices
@@ -327,14 +329,16 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     Set<IREdge> fromOriginalToOutside = new HashSet<>();
     for (IRVertex vertex : verticesWithStageOutgoingEdges) {
       for (IREdge edge : dag.getOutgoingEdgesOf(vertex)) {
-        LOG.error("[URGENT] {} {} {}", edge.getId(), edge.getSrc().getId(), edge.getDst().getId());
+        //LOG.error("[URGENT] {} {} {}", edge.getId(), edge.getSrc().getId(), edge.getDst().getId());
         if (edge.getDst() instanceof TaskSizeSplitterVertex) {
-          IRVertex originalInnerDst = ((TaskSizeSplitterVertex) edge.getDst()).getFirstVertexInStage();
-          LOG.error("[URGENT] {}", originalInnerDst); // should be vertex 11
-          Set<IREdge> candidates = ((TaskSizeSplitterVertex) edge.getDst()).
-            getDagIncomingEdges().get(originalInnerDst);
-          candidates.stream().filter(edge2 -> edge2.getSrc().equals(vertex))
-            .forEach(fromOriginalToOutside::add);
+          Set<IRVertex> originalInnerDstVertices = ((TaskSizeSplitterVertex) edge.getDst()).getFirstVerticesInStage();
+          //LOG.error("[URGENT] {}", originalInnerDstVertices); // should be vertex 11
+          for (IRVertex innerVertex : originalInnerDstVertices) {
+            Set<IREdge> candidates = ((TaskSizeSplitterVertex) edge.getDst()).
+              getDagIncomingEdges().get(innerVertex);
+            candidates.stream().filter(edge2 -> edge2.getSrc().equals(vertex))
+              .forEach(fromOriginalToOutside::add);
+          }
         } else if (!stageVertices.contains(edge.getDst())) {
           fromOriginalToOutside.add(edge);
         }
@@ -348,23 +352,25 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
    * edgesFromOutsideToOriginal.
    * @param dag                   dag to observe
    * @param toInsert              splitter vertex to insert
-   * @param stageOpeningVertex    stage opening vertex
+   * @param stageOpeningVertices  stage opening vertices
    * @return                      set of edges pointing at splitter vertex
    */
   private Set<IREdge> setEdgesFromOutsideToSplitter(final IRDAG dag,
                                                     final TaskSizeSplitterVertex toInsert,
-                                                    final IRVertex stageOpeningVertex) {
+                                                    final Set<IRVertex> stageOpeningVertices) {
     HashSet<IREdge> fromOutsideToSplitter = new HashSet<>();
-    for (IREdge incomingEdge : dag.getIncomingEdgesOf(stageOpeningVertex)) {
-      if (incomingEdge.getSrc() instanceof TaskSizeSplitterVertex) {
-        TaskSizeSplitterVertex prevSplitter = (TaskSizeSplitterVertex) incomingEdge.getSrc();
-        IREdge internalEdge = prevSplitter.getEdgeWithInternalVertex(incomingEdge);
-        IREdge newIrEdge = Util.cloneEdge(incomingEdge, incomingEdge.getSrc(), toInsert);
-        prevSplitter.mapEdgeWithLoop(newIrEdge, internalEdge);
-        fromOutsideToSplitter.add(newIrEdge);
-      } else {
-        IREdge cloneOfIncomingEdge = Util.cloneEdge(incomingEdge, incomingEdge.getSrc(), toInsert);
-        fromOutsideToSplitter.add(cloneOfIncomingEdge);
+    for (IRVertex stageOpeningVertex : stageOpeningVertices) {
+      for (IREdge incomingEdge : dag.getIncomingEdgesOf(stageOpeningVertex)) {
+        if (incomingEdge.getSrc() instanceof TaskSizeSplitterVertex) {
+          TaskSizeSplitterVertex prevSplitter = (TaskSizeSplitterVertex) incomingEdge.getSrc();
+          IREdge internalEdge = prevSplitter.getEdgeWithInternalVertex(incomingEdge);
+          IREdge newIrEdge = Util.cloneEdge(incomingEdge, incomingEdge.getSrc(), toInsert);
+          prevSplitter.mapEdgeWithLoop(newIrEdge, internalEdge);
+          fromOutsideToSplitter.add(newIrEdge);
+        } else {
+          IREdge cloneOfIncomingEdge = Util.cloneEdge(incomingEdge, incomingEdge.getSrc(), toInsert);
+          fromOutsideToSplitter.add(cloneOfIncomingEdge);
+        }
       }
     }
     return fromOutsideToSplitter;
@@ -393,7 +399,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
 
   private void makeAndInsertSplitterVertex(final IRDAG dag,
                                            final Set<IRVertex> stageVertices,
-                                           final IRVertex stageStartingVertex,
+                                           final Set<IRVertex> stageStartingVertices,
                                            final Set<IRVertex> verticesWithStageOutgoingEdges,
                                            final Set<IRVertex> stageEndingVertices,
                                            final int partitionerProperty) {
@@ -411,8 +417,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       .flatMap(ov -> dag.getIncomingEdgesOf(ov).stream())
       .filter(edge -> stageVertices.contains(edge.getSrc()))
       .collect(Collectors.toSet());
-    final Set<IREdge> fromOutsideToOriginal = setEdgesFromOutsideToOriginal(dag,
-      Collections.singleton(stageStartingVertex));
+    final Set<IREdge> fromOutsideToOriginal = setEdgesFromOutsideToOriginal(dag, stageStartingVertices);
     final Set<IREdge> fromOriginalToOutside = setEdgesFromOriginalToOutside(dag, stageVertices,
       verticesWithStageOutgoingEdges);
     LOG.error("incoming edges: {}", incomingEdgesOfOriginalVertices);
@@ -422,13 +427,13 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     LOG.error("from original to outside: {}", fromOriginalToOutside);
 
     final TaskSizeSplitterVertex toInsert = new TaskSizeSplitterVertex(
-      "Splitter" + stageStartingVertex.getId(), stageVertices, stageStartingVertex,
-      verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty);
+      "Splitter" + stageStartingVertices.iterator().next().getId(), stageVertices,
+      stageStartingVertices, verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty);
     LOG.error("Inserting Splitter {}", toInsert.getId());
     // By default, set the number of iterations as 2
     toInsert.setMaxNumberOfIterations(2);
     // make edges connected to splitter vertex
-    final Set<IREdge> fromOutsideToSplitter = setEdgesFromOutsideToSplitter(dag, toInsert, stageStartingVertex);
+    final Set<IREdge> fromOutsideToSplitter = setEdgesFromOutsideToSplitter(dag, toInsert, stageStartingVertices);
     final Set<IREdge> fromSplitterToOutside = setEdgesFromSplitterToOutside(dag, toInsert,
       verticesWithStageOutgoingEdges);
     LOG.error("from outside to splitter: {}", fromOutsideToSplitter);

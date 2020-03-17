@@ -70,9 +70,6 @@ public final class OperatorVertexOutputCollector<O> implements OutputCollector<O
   }
 
   private void emit(final OperatorVertex vertex, final O output) {
-    System.out.println("[FindDoFnTransform] vertex id: " + vertex.getId());
-    System.out.println("[FindDoFnTransform] vertex transform: " + vertex.getTransform().getClass().getSimpleName());
-    System.out.println("[FindDoFnTransform] data: " + output.toString());
     vertex.getTransform().onData(output);
   }
 
