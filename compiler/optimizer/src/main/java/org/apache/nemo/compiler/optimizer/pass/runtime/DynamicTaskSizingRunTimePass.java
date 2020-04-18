@@ -66,13 +66,13 @@ public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, 
     LOG.info("messageValue {}", messageValue);
     final int optimizedTaskSizeRatio = messageValue.get(mapKey).intValue();
     final int partitionerProperty = getPartitionerProperty(irdag);
-    for (IREdge edge : edgesToOptimize) {
-      if (edge.getPropertyValue(CommunicationPatternProperty.class).get()
-        .equals(CommunicationPatternProperty.Value.SHUFFLE)
-        && !edge.getPropertyValue(PartitionerProperty.class).get().right().equals(partitionerProperty)) {
-        throw new IllegalArgumentException();
-      }
-    }
+    //for (IREdge edge : edgesToOptimize) {
+    //  if (edge.getPropertyValue(CommunicationPatternProperty.class).get()
+    //    .equals(CommunicationPatternProperty.Value.SHUFFLE)
+    //    && !edge.getPropertyValue(PartitionerProperty.class).get().right().equals(partitionerProperty)) {
+    //    throw new IllegalArgumentException();
+    //  }
+    //}
     final int partitionUnit = partitionerProperty / optimizedTaskSizeRatio;
     edgesToOptimize.forEach(irEdge -> setSubPartitionProperty(irEdge, partitionUnit, partitionerProperty));
     edgesToOptimize.forEach(irEdge -> setDstVertexParallelismProperty(irEdge, partitionUnit, partitionerProperty));
@@ -82,7 +82,7 @@ public final class DynamicTaskSizingRunTimePass extends RunTimePass<Map<String, 
   private int getPartitionerProperty(final IRDAG dag) {
     long jobSizeInBytes = dag.getInputSize();
     long jobSizeInGB = jobSizeInBytes / (1024 * 1024 * 1024);
-    if (1 <= jobSizeInGB && jobSizeInGB < 10) {
+    if (jobSizeInGB < 10) {
       return 1024;
     } else if (10 <= jobSizeInGB && jobSizeInGB < 100) {
       return 2048;

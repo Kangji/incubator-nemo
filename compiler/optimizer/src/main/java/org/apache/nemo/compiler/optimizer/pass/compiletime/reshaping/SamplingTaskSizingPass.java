@@ -34,7 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -72,7 +71,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
   @Override
   public IRDAG apply(final IRDAG dag) {
     /* Step 1. check DTS launch by job size */
-    boolean enableDynamicTaskSizing = getEnableFromJobSize(dag);
+    boolean enableDynamicTaskSizing = true; //getEnableFromJobSize(dag);
     if (!enableDynamicTaskSizing) {
       dag.topologicalDo(v -> {
         v.setProperty(EnableDynamicTaskSizingProperty.of(enableDynamicTaskSizing));
@@ -139,10 +138,20 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
         if (shuffleEdgesForDTS.contains(edge)) {
           // edge is the incoming edge of observing stage, v is the last vertex of previous stage
           Set<IRVertex> stageVertices = stageIdToStageVertices.get(vertexToStageId.get(edge.getDst()));
-          Set<IRVertex> verticesWithStageOutgoingEdges = stageVertices.stream().filter(stageVertex ->
-            dag.getOutgoingEdgesOf(stageVertex).stream()
-              .map(Edge::getDst).anyMatch(Predicate.not(stageVertices::contains)))
-            .collect(Collectors.toSet());
+          Set<IRVertex> verticesWithStageOutgoingEdges = new HashSet<>();
+          for (IRVertex v2 : stageVertices) {
+            Set<IRVertex> nextVertices = dag.getOutgoingEdgesOf(v2).stream().map(Edge::getDst)
+              .collect(Collectors.toSet());
+            for (IRVertex v3 : nextVertices) {
+              if (!stageVertices.contains(v3)) {
+                verticesWithStageOutgoingEdges.add(v2);
+              }
+            }
+          }
+          //Set<IRVertex> verticesWithStageOutgoingEdges = stageVertices.stream().filter(stageVertex ->
+          //  dag.getOutgoingEdgesOf(stageVertex).stream()
+          //    .map(Edge::getDst).anyMatch(Predicate.not(stageVertices::contains)))
+          //  .collect(Collectors.toSet());
           Set<IRVertex> stageEndingVertices = stageVertices.stream()
             .filter(stageVertex -> dag.getOutgoingEdgesOf(stageVertex).isEmpty()
               || !dag.getOutgoingEdgesOf(stageVertex).stream().map(Edge::getDst).anyMatch(stageVertices::contains))
