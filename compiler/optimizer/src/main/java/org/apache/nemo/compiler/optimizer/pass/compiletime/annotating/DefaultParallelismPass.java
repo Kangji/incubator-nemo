@@ -84,12 +84,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
               .equals(edge.getPropertyValue(CommunicationPatternProperty.class).get()))
             .mapToInt(edge -> edge.getSrc().getPropertyValue(ParallelismProperty.class).get())
             .max().orElse(1);
-          final Integer shuffleParallelism = inEdges.stream()
-            .filter(edge -> CommunicationPatternProperty.Value.SHUFFLE
-              .equals(edge.getPropertyValue(CommunicationPatternProperty.class).get()))
-            .mapToInt(edge -> edge.getSrc().getPropertyValue(ParallelismProperty.class).get())
-            .map(i -> i / shuffleDecreaseFactor)
-            .max().orElse(1);
+          final Integer shuffleParallelism = desiredSourceParallelism;
           // We set the greater value as the parallelism.
           final Integer parallelism = o2oParallelism > shuffleParallelism ? o2oParallelism : shuffleParallelism;
           vertex.setProperty(ParallelismProperty.of(parallelism));
