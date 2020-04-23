@@ -40,7 +40,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
   private final int desiredSourceParallelism;
   // we decrease the number of parallelism by this number on each shuffle boundary.
   private final int shuffleDecreaseFactor;
-  private final Logger LOG = LoggerFactory.getLogger(DefaultParallelismPass.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultParallelismPass.class.getName());
 
   /**
    * Default constructor with desired number of source parallelism 1, shuffle decreasing factor 2.
