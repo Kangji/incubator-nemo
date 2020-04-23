@@ -100,7 +100,7 @@ public final class WordCountITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
+  @Test(timeout = 2400000, expected = Test.None.class)
   public void testDTS() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
