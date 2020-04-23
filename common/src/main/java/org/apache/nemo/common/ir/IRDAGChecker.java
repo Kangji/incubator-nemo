@@ -70,7 +70,7 @@ public final class IRDAGChecker {
     this.neighborCheckerList = new ArrayList<>();
     this.globalDAGCheckerList = new ArrayList<>();
 
-    addParallelismCheckers();
+    //addParallelismCheckers();
     addShuffleEdgeCheckers();
     addPartitioningCheckers();
     addEncodingCompressionCheckers();

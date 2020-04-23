@@ -25,6 +25,8 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,12 +40,13 @@ public final class DefaultParallelismPass extends AnnotatingPass {
   private final int desiredSourceParallelism;
   // we decrease the number of parallelism by this number on each shuffle boundary.
   private final int shuffleDecreaseFactor;
+  private final Logger LOG = LoggerFactory.getLogger(DefaultParallelismPass.class.getName());
 
   /**
    * Default constructor with desired number of source parallelism 1, shuffle decreasing factor 2.
    */
   public DefaultParallelismPass() {
-    this(2048, 1);
+    this(1, 2);
   }
 
   /**
@@ -71,10 +74,12 @@ public final class DefaultParallelismPass extends AnnotatingPass {
           // (It can be more/less than the desired value.)
           final SourceVertex sourceVertex = (SourceVertex) vertex;
           final Optional<Integer> originalParallelism = vertex.getPropertyValue(ParallelismProperty.class);
+          LOG.error("original parallelism {}", originalParallelism);
           // We manipulate them if it is set as default value of 1.
           if (!originalParallelism.isPresent()) {
             vertex.setProperty(ParallelismProperty.of(
               sourceVertex.getReadables(desiredSourceParallelism).size()));
+            LOG.error("readables number {}", sourceVertex.getReadables(desiredSourceParallelism).size());
           }
         } else if (!inEdges.isEmpty()) {
           // No reason to propagate via Broadcast edges, as the data streams that will use the broadcasted data
@@ -84,7 +89,13 @@ public final class DefaultParallelismPass extends AnnotatingPass {
               .equals(edge.getPropertyValue(CommunicationPatternProperty.class).get()))
             .mapToInt(edge -> edge.getSrc().getPropertyValue(ParallelismProperty.class).get())
             .max().orElse(1);
-          final Integer shuffleParallelism = desiredSourceParallelism;
+          Integer shuffleParallelism;
+          if (inEdges.stream().noneMatch(edge -> CommunicationPatternProperty.Value.SHUFFLE
+            .equals(edge.getPropertyValue(CommunicationPatternProperty.class).get()))) {
+            shuffleParallelism = 1;
+          } else {
+            shuffleParallelism = desiredSourceParallelism;
+          }
           // We set the greater value as the parallelism.
           final Integer parallelism = o2oParallelism > shuffleParallelism ? o2oParallelism : shuffleParallelism;
           vertex.setProperty(ParallelismProperty.of(parallelism));
