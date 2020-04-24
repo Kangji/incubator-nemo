@@ -364,9 +364,9 @@ public final class TaskExecutor {
     for (final VertexHarness vertexHarness : sortedHarnesses) {
       finalizeVertex(vertexHarness);
     }
-
+    final long executionFinishTime = System.currentTimeMillis();
     metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDuration",
-      SerializationUtils.serialize(System.currentTimeMillis() - executionStartTime));
+      SerializationUtils.serialize(executionFinishTime - executionStartTime));
     this.timeSinceLastExecution = System.currentTimeMillis();
     if (idOfVertexPutOnHold == null) {
       taskStateManager.onTaskStateChanged(TaskState.State.COMPLETE, Optional.empty(), Optional.empty());
