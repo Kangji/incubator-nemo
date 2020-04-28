@@ -156,6 +156,7 @@ public final class MetricStore {
   public <T extends Metric> T getOrCreateMetric(final Class<T> metricClass, final String id) {
     T metric = (T) metricMap.computeIfAbsent(metricClass, k -> new HashMap<>()).get(id);
     if (metric == null) {
+      LOG.warn("This is new metric for {}", id);
       try {
         metric = metricClass.getConstructor(String.class).newInstance(id);
         putMetric(metric);

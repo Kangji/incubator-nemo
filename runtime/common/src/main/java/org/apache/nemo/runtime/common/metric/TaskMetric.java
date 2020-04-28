@@ -262,6 +262,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     LOG.debug("metric {} has just arrived!", metricField);
     switch (metricField) {
       case "taskDuration":
+        LOG.warn("TaskId: {}, duration: {}", id, SerializationUtils.deserialize(metricValue));
         setTaskDuration(SerializationUtils.deserialize(metricValue));
         break;
       case "schedulingOverhead":

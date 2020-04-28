@@ -18,6 +18,8 @@
  */
 package org.apache.nemo.runtime.master.metric;
 
+import org.apache.beam.sdk.metrics.MetricFiltering;
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
@@ -66,6 +68,9 @@ public final class MetricManagerMaster implements MetricMessageHandler {
       final Class<Metric> metricClass = metricStore.getMetricClassByName(metricType);
       // process metric message
       try {
+        if (metricField.equals("taskDuration")) {
+          LOG.warn("TaskId: {}, Duration: {}", metricId, SerializationUtils.deserialize(metricValue));
+        }
         if (metricStore.getOrCreateMetric(metricClass, metricId).processMetricMessage(metricField, metricValue)) {
           metricStore.triggerBroadcast(metricClass, metricId);
         }
