@@ -366,7 +366,7 @@ public final class TaskExecutor {
       finalizeVertex(vertexHarness);
     }
     final long executionFinishTime = System.currentTimeMillis();
-    LOG.warn("Task {} finished at {}, duration: {}", taskId, executionStartTime,
+    LOG.warn("Task {} finished at {}, duration: {}", taskId, executionFinishTime,
       executionFinishTime - executionStartTime);
     metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDuration",
       SerializationUtils.serialize(executionFinishTime - executionStartTime));
