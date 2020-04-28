@@ -18,7 +18,6 @@
  */
 package org.apache.nemo.runtime.master.metric;
 
-import org.apache.beam.sdk.metrics.MetricFiltering;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
