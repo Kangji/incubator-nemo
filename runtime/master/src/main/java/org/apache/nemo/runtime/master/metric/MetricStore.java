@@ -180,6 +180,20 @@ public final class MetricStore {
     jsonGenerator.writeEndObject();
   }
 
+  private void generatePreprocessedJsonFromMetricEntryWithLog(final Map.Entry<String, Object> idToMetricEntry,
+                                                           final JsonGenerator jsonGenerator,
+                                                           final ObjectMapper objectMapper) throws IOException {
+    final JsonNode jsonNode = objectMapper.valueToTree(idToMetricEntry.getValue());
+    LOG.warn("Task Id: {}, task Duration: {}", jsonNode.get("id"), jsonNode.get("taskDuration"));
+    jsonGenerator.writeFieldName(idToMetricEntry.getKey());
+    jsonGenerator.writeStartObject();
+    jsonGenerator.writeFieldName("id");
+    jsonGenerator.writeString(idToMetricEntry.getKey());
+    jsonGenerator.writeFieldName("data");
+    jsonGenerator.writeTree(jsonNode);
+    jsonGenerator.writeEndObject();
+  }
+
   /**
    * Dumps JSON-serialized string of specific metric.
    *
@@ -226,8 +240,14 @@ public final class MetricStore {
       for (final Map.Entry<Class<? extends Metric>, Map<String, Object>> metricMapEntry : metricMap.entrySet()) {
         jsonGenerator.writeFieldName(metricMapEntry.getKey().getSimpleName());
         jsonGenerator.writeStartObject();
-        for (final Map.Entry<String, Object> idToMetricEntry : metricMapEntry.getValue().entrySet()) {
-          generatePreprocessedJsonFromMetricEntry(idToMetricEntry, jsonGenerator, objectMapper);
+        if (metricMapEntry.getKey().getSimpleName().equals("TaskMetric")) {
+          for (final Map.Entry<String, Object> idToMetricEntry : metricMapEntry.getValue().entrySet()) {
+            generatePreprocessedJsonFromMetricEntryWithLog(idToMetricEntry, jsonGenerator, objectMapper);
+          }
+        } else {
+          for (final Map.Entry<String, Object> idToMetricEntry : metricMapEntry.getValue().entrySet()) {
+            generatePreprocessedJsonFromMetricEntry(idToMetricEntry, jsonGenerator, objectMapper);
+          }
         }
         jsonGenerator.writeEndObject();
       }
