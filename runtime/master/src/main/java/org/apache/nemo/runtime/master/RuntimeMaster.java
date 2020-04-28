@@ -222,6 +222,16 @@ public final class RuntimeMaster {
     // send metric flush request to all executors
     metricManagerMaster.sendMetricFlushRequest();
 
+    try {
+      // wait for metric flush
+      if (!metricCountDownLatch.await(METRIC_ARRIVE_TIMEOUT, TimeUnit.MILLISECONDS)) {
+        LOG.warn("Terminating master before all executor terminated messages arrived.");
+      }
+    } catch (final InterruptedException e) {
+      LOG.warn("Waiting executor terminating process interrupted: ", e);
+      // clean up state...
+      Thread.currentThread().interrupt();
+    }
     metricStore.dumpAllMetricToFile(Paths.get(dagDirectory,
       "Metric_" + jobId + "_" + System.currentTimeMillis() + ".json").toString());
     if (this.dbEnabled) {
@@ -262,17 +272,6 @@ public final class RuntimeMaster {
   public void terminate() {
     // No need to speculate anymore
     speculativeTaskCloningThread.shutdown();
-
-    try {
-      // wait for metric flush
-      if (!metricCountDownLatch.await(METRIC_ARRIVE_TIMEOUT, TimeUnit.MILLISECONDS)) {
-        LOG.warn("Terminating master before all executor terminated messages arrived.");
-      }
-    } catch (final InterruptedException e) {
-      LOG.warn("Waiting executor terminating process interrupted: ", e);
-      // clean up state...
-      Thread.currentThread().interrupt();
-    }
 
     runtimeMasterThread.execute(() -> {
       scheduler.terminate();
