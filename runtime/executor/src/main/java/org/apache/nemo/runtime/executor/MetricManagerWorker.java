@@ -19,6 +19,7 @@
 package org.apache.nemo.runtime.executor;
 
 import com.google.protobuf.ByteString;
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
@@ -91,6 +92,10 @@ public final class MetricManagerWorker implements MetricMessageSender {
   @Override
   public void send(final String metricType, final String metricId,
                    final String metricField, final byte[] metricValue) {
+    if (metricField.equals("taskDuration")) {
+      LOG.warn("Task id: {}, duration: {}", metricId, SerializationUtils.deserialize(metricValue));
+    }
+
     metricMessageQueue.add(
       ControlMessage.Metric.newBuilder()
         .setMetricType(metricType)

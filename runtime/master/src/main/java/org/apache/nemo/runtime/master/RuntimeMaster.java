@@ -451,9 +451,15 @@ public final class RuntimeMaster {
         break;
       case MetricMessageReceived:
         final List<ControlMessage.Metric> metricList = message.getMetricMsg().getMetricList();
-        metricList.forEach(metric -> metricMessageHandler.onMetricMessageReceived(
+        metricList.forEach(metric -> {
+          metricMessageHandler.onMetricMessageReceived(
             metric.getMetricType(), metric.getMetricId(),
-            metric.getMetricField(), metric.getMetricValue().toByteArray()));
+            metric.getMetricField(), metric.getMetricValue().toByteArray());
+          if (metric.getMetricField().equals("taskDuration")) {
+            LOG.warn("TaskId: {}, duration: {}", metric.getMetricId(),
+              SerializationUtils.deserialize(metric.getMetricValue().toByteArray()));
+          }
+        });
         break;
       case ExecutorDataCollected:
         final String serializedData = message.getDataCollected().getData();
