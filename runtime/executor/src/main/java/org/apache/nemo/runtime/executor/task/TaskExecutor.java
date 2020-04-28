@@ -345,7 +345,7 @@ public final class TaskExecutor {
     LOG.info("{} started", taskId);
     taskStateManager.onTaskStateChanged(TaskState.State.EXECUTING, Optional.empty(), Optional.empty());
     final long executionStartTime = System.currentTimeMillis();
-    LOG.debug("Task {} started at {}", taskId, executionStartTime);
+    LOG.warn("Task {} started at {}", taskId, executionStartTime);
     metricMessageSender.send(TASK_METRIC_ID, taskId, "schedulingOverhead",
       SerializationUtils.serialize(executionStartTime - timeSinceLastExecution));
 
@@ -366,7 +366,7 @@ public final class TaskExecutor {
       finalizeVertex(vertexHarness);
     }
     final long executionFinishTime = System.currentTimeMillis();
-    LOG.debug("Task {} finished at {}, duration: {}", taskId, executionStartTime,
+    LOG.warn("Task {} finished at {}, duration: {}", taskId, executionStartTime,
       executionFinishTime - executionStartTime);
     metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDuration",
       SerializationUtils.serialize(executionFinishTime - executionStartTime));
