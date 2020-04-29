@@ -176,6 +176,7 @@ public final class StageEdge extends RuntimeEdge<Stage> {
       keyRanges = getExecutionProperties()
         .get(PartitionSetProperty.class).orElse(defaultPartitionSet);
     }
+    LOG.warn("keyRange: {}", keyRanges);
     return keyRanges;
   }
 }
