@@ -167,14 +167,9 @@ public final class StageEdge extends RuntimeEdge<Stage> {
     final ArrayList<KeyRange> defaultPartitionSet = new ArrayList<>();
     final List<KeyRange> keyRanges;
 
-    // Test
     for (int taskIndex = 0; taskIndex < getDst().getParallelism(); taskIndex++) {
-      defaultPartitionSet.add(taskIndex * 32,
-        HashRange.of(taskIndex * 32, (taskIndex + 1) * 32));
+      defaultPartitionSet.add(taskIndex, HashRange.of(taskIndex, taskIndex + 1));
     }
-    //for (int taskIndex = 0; taskIndex < getDst().getParallelism(); taskIndex++) {
-    //  defaultPartitionSet.add(taskIndex, HashRange.of(taskIndex, taskIndex + 1));
-    //}
     if (getDst().getEnableDynamicTaskSizing()) {
       keyRanges = getExecutionProperties()
         .get(SubPartitionSetProperty.class).orElse(defaultPartitionSet);
