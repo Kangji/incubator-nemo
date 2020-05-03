@@ -18,11 +18,9 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
-import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
-import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
@@ -101,12 +99,6 @@ public final class DefaultParallelismPass extends AnnotatingPass {
           // We set the greater value as the parallelism.
           final Integer parallelism = o2oParallelism > shuffleParallelism ? o2oParallelism : shuffleParallelism;
           vertex.setProperty(ParallelismProperty.of(parallelism));
-          for (IREdge edge : inEdges) {
-            if (CommunicationPatternProperty.Value.SHUFFLE
-              .equals(edge.getPropertyValue(CommunicationPatternProperty.class).get())) {
-              edge.setProperty(PartitionerProperty.of(Pair.of(PartitionerProperty.Type.HASH, 1024)));
-            }
-          }
           // synchronize one-to-one edges parallelism
           recursivelySynchronizeO2OParallelism(dag, vertex, parallelism);
         } else if (!vertex.getPropertyValue(ParallelismProperty.class).isPresent()) {

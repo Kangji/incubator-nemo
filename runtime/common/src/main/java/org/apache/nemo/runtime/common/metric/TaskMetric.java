@@ -49,6 +49,8 @@ public class TaskMetric implements StateMetric<TaskState.State> {
   private long shuffleReadTime = -1;
   private long shuffleWriteBytes = -1;
   private long shuffleWriteTime = -1;
+  private long taskDurationPhase1 = -1;
+  private long taskDurationPhase2 = -1;
 
   private static final Logger LOG = LoggerFactory.getLogger(TaskMetric.class.getName());
 
@@ -252,6 +254,22 @@ public class TaskMetric implements StateMetric<TaskState.State> {
     this.shuffleWriteTime = shuffleWriteTime;
   }
 
+  public final long getTaskDurationPhase1() {
+    return this.taskDurationPhase1;
+  }
+
+  private void setTaskDurationPhase1(final long taskDurationPhase1) {
+    this.taskDurationPhase1 = taskDurationPhase1;
+  }
+
+  public final long getTaskDurationPhase2() {
+    return this.taskDurationPhase2;
+  }
+
+  private void setTaskDurationPhase2(final long taskDurationPhase2) {
+    this.taskDurationPhase2 = taskDurationPhase2;
+  }
+
   @Override
   public final String getId() {
     return id;
@@ -317,6 +335,12 @@ public class TaskMetric implements StateMetric<TaskState.State> {
         break;
       case "shuffleWriteTime":
         setShuffleWriteTime(SerializationUtils.deserialize(metricValue));
+        break;
+      case "taskDurationPhase1":
+        setTaskDurationPhase1(SerializationUtils.deserialize(metricValue));
+        break;
+      case "taskDurationPhase2":
+        setTaskDurationPhase2(SerializationUtils.deserialize(metricValue));
         break;
       default:
         LOG.warn("metricField {} is not supported.", metricField);

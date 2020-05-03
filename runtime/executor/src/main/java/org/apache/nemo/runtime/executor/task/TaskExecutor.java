@@ -349,11 +349,15 @@ public final class TaskExecutor {
     metricMessageSender.send(TASK_METRIC_ID, taskId, "schedulingOverhead",
       SerializationUtils.serialize(executionStartTime - timeSinceLastExecution));
 
+    final long handleDataFetcherStartTime = System.currentTimeMillis();
     // Phase 1: Consume task-external input data.
     if (!handleDataFetchers(dataFetchers)) {
       return;
     }
+    final long handleDataFetchersFinishTime = System.currentTimeMillis();
 
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDurationPhase1",
+      SerializationUtils.serialize(handleDataFetchersFinishTime - handleDataFetcherStartTime));
     metricMessageSender.send(TASK_METRIC_ID, taskId, "boundedSourceReadTime",
       SerializationUtils.serialize(boundedSourceReadTime));
     metricMessageSender.send(TASK_METRIC_ID, taskId, "serializedReadBytes",
@@ -362,12 +366,15 @@ public final class TaskExecutor {
       SerializationUtils.serialize(encodedReadBytes));
 
     // Phase 2: Finalize task-internal states and elements
+    final long finalizeVertexStartTime = System.currentTimeMillis();
     for (final VertexHarness vertexHarness : sortedHarnesses) {
       finalizeVertex(vertexHarness);
     }
     final long executionFinishTime = System.currentTimeMillis();
     LOG.warn("Task {} finished at {}, duration: {}", taskId, executionFinishTime,
       executionFinishTime - executionStartTime);
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDurationPhase1",
+      SerializationUtils.serialize(executionFinishTime - finalizeVertexStartTime));
     metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDuration",
       SerializationUtils.serialize(executionFinishTime - executionStartTime));
     this.timeSinceLastExecution = System.currentTimeMillis();
