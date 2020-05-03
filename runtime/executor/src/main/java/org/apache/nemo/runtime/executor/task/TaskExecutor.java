@@ -373,7 +373,7 @@ public final class TaskExecutor {
     final long executionFinishTime = System.currentTimeMillis();
     LOG.warn("Task {} finished at {}, duration: {}", taskId, executionFinishTime,
       executionFinishTime - executionStartTime);
-    metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDurationPhase1",
+    metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDurationPhase2",
       SerializationUtils.serialize(executionFinishTime - finalizeVertexStartTime));
     metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDuration",
       SerializationUtils.serialize(executionFinishTime - executionStartTime));
