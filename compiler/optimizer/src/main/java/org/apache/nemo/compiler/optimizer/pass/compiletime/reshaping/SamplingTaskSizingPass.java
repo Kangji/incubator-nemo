@@ -27,7 +27,6 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.EnableDynamicTaskSizingProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.utility.TaskSizeSplitterVertex;
-import org.apache.nemo.common.ir.vertex.utility.runtimepasstriggervertex.SignalVertex;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.Annotates;
 import org.apache.nemo.runtime.common.plan.StagePartitioner;
 import org.slf4j.Logger;
@@ -60,12 +59,13 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
   private static final int PARTITIONER_PROPERTY_FOR_MEDIUM_JOB = 2048;
   private static final int PARTITIONER_PROPERTY_FOR_BIG_JOB = 4096;
   private final StagePartitioner stagePartitioner = new StagePartitioner();
-
+  private final int taskSizeRatio;
   /**
    * Default constructor.
    */
-  public SamplingTaskSizingPass() {
+  public SamplingTaskSizingPass(final int taskSizeRatio) {
     super(SamplingTaskSizingPass.class);
+    this.taskSizeRatio = taskSizeRatio;
   }
 
   @Override
@@ -389,7 +389,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       verticesWithStageOutgoingEdges);
     final TaskSizeSplitterVertex toInsert = new TaskSizeSplitterVertex(
       "Splitter" + stageStartingVertices.iterator().next().getId(), stageVertices,
-      stageStartingVertices, verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty);
+      stageStartingVertices, verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty, taskSizeRatio);
     // By default, set the number of iterations as 2
     toInsert.setMaxNumberOfIterations(2);
     // make edges connected to splitter vertex
@@ -425,11 +425,17 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       }
     }
 
-    final SignalVertex signalVertex = new SignalVertex();
+    //final SignalVertex signalVertex = new SignalVertex();
+    for (IRVertex startingVertex : stageStartingVertices) {
+      for (IRVertex endingVertex : stageEndingVertices) {
+        IREdge iter = Util.createControlEdge(endingVertex, startingVertex);
+        toInsert.addIterativeIncomingEdge(iter);
+      }
+    }
     fromOutsideToOriginal.forEach(toInsert::addDagIncomingEdge);
     fromOutsideToOriginal.forEach(toInsert::addNonIterativeIncomingEdge); //
     fromOriginalToOutside.forEach(toInsert::addDagOutgoingEdge);
-    toInsert.insertSignalVertex(signalVertex);
+    //toInsert.insertSignalVertex(signalVertex);
 
     // insert splitter vertex
     dag.insert(toInsert, incomingEdgesOfOriginalVertices, outgoingEdgesOfOriginalVertices,

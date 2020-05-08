@@ -32,7 +32,7 @@ public final class DynamicTaskSizingPolicy implements Policy {
   public static final PolicyBuilder BUILDER =
     new PolicyBuilder()
       .registerCompileTimePass(new DefaultParallelismPass())
-      .registerRunTimePass(new DynamicTaskSizingRunTimePass(), new SamplingTaskSizingPass())
+      .registerRunTimePass(new DynamicTaskSizingRunTimePass(), new SamplingTaskSizingPass(32))
       .registerCompileTimePass(new LoopUnrollingPass())
       .registerCompileTimePass(new DefaultEdgeEncoderPass())
       .registerCompileTimePass(new DefaultEdgeDecoderPass())

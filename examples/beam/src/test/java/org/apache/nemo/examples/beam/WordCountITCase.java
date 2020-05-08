@@ -103,7 +103,9 @@ public final class WordCountITCase {
 
   @Test(timeout = 2400000, expected = Test.None.class)
   public void testDTS() throws Exception {
-    JobLauncher.main(builder
+    JobLauncher.main(new ArgBuilder()
+      .addUserMain(WordCount.class.getCanonicalName())
+      .addUserArgs(inputFilePath, "file:///" + outputFilePath)
       .addResourceJson(executorResourceFileName)
       .addJobId(WordCountITCase.class.getSimpleName() + "_dts")
       .addOptimizationPolicy(DynamicTaskSizingPolicy.class.getCanonicalName())

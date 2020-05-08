@@ -57,6 +57,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
 
   // Information about partition sizes
   private final int partitionerProperty;
+  private final int taskSizeRatio;
 
   // Information about splitter vertex's iteration
   private int testingTrial;
@@ -80,7 +81,8 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
                                 final Set<IRVertex> firstVerticesInStage,
                                 final Set<IRVertex> verticesWithStageOutgoingEdges,
                                 final Set<IRVertex> lastVerticesInStage,
-                                final int partitionerProperty) {
+                                final int partitionerProperty,
+                                final int taskSizeRatio) {
     super(splitterVertexName); // need to take care of here
     this.testingTrial = 0;
     this.originalVertices = originalVertices;
@@ -91,6 +93,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     this.firstVerticesInStage = firstVerticesInStage;
     this.verticesWithStageOutgoingEdges = verticesWithStageOutgoingEdges;
     this.lastVerticesInStage = lastVerticesInStage;
+    this.taskSizeRatio = taskSizeRatio;
   }
 
   // Getters of attributes
@@ -148,7 +151,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   public TaskSizeSplitterVertex unRollIteration(final DAGBuilder<IRVertex, IREdge> dagBuilder) {
     final HashMap<IRVertex, IRVertex> originalToNewIRVertex = new HashMap<>();
     final HashSet<IRVertex> originalUtilityVertices = new HashSet<>();
-    final HashSet<IREdge> edgesToOptimize = new HashSet<>();
+    //final HashSet<IREdge> edgesToOptimize = new HashSet<>();
 
     final List<OperatorVertex> previousSignalVertex = new ArrayList<>(1);
     final DAG<IRVertex, IREdge> dagToAdd = getDAG();
@@ -168,7 +171,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
             new IREdge(edge.getPropertyValue(CommunicationPatternProperty.class).get(), newSrc, newIrVertex);
           edge.copyExecutionPropertiesTo(newIrEdge);
           setSubPartitionSetPropertyByTestingTrial(newIrEdge);
-          edgesToOptimize.add(newIrEdge);
+          //edgesToOptimize.add(newIrEdge);
           dagBuilder.connectVertices(newIrEdge);
         });
       } else {
@@ -185,9 +188,9 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
       if (edge.getSrc() instanceof OperatorVertex
         && ((OperatorVertex) edge.getSrc()).getTransform() instanceof SignalTransform) {
         previousSignalVertex.add((OperatorVertex) edge.getSrc());
-      } else {
-        edgesToOptimize.add(newIrEdge);
-      }
+      } //else {
+        //edgesToOptimize.add(newIrEdge);
+      //}
       dagBuilder.connectVertices(newIrEdge);
     }));
 
@@ -236,6 +239,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     }));
 
     // if loop termination condition is false, add signal vertex
+    /*
     if (!loopTerminationConditionMet()) {
       for (IRVertex helper : originalUtilityVertices) {
         final IRVertex newHelper = helper.getClone();
@@ -251,9 +255,10 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
         });
       }
     }
+     */
 
     // assign signal vertex of n-th iteration with nonIterativeIncomingEdges of (n+1)th iteration
-    markEdgesToOptimize(previousSignalVertex, edgesToOptimize);
+    // markEdgesToOptimize(previousSignalVertex, edgesToOptimize);
 
     // process next iteration's DAG incoming edges, and add them as the next loop's incoming edges:
     // clear, as we're done with the current loop and need to prepare it for the next one.
@@ -294,6 +299,32 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   private void setSubPartitionSetPropertyByTestingTrial(final IREdge edge) {
     final ArrayList<KeyRange> partitionSet = new ArrayList<>();
     int taskIndex = 0;
+    final int regex = partitionerProperty / taskSizeRatio;
+    //this is new code for testing the correctness of sampling
+    if (testingTrial == 0) {
+      //sampling for [0, partitioner/8)
+      for (int index = 0; index < partitionerProperty / 8; index += regex) {
+        partitionSet.add(taskIndex, HashRange.of(index, index + regex));
+        taskIndex++;
+      }
+    } else if (testingTrial == 1) {
+      for (int index = partitionerProperty / 8; index < partitionerProperty / 4; index += regex) {
+        partitionSet.add(taskIndex, HashRange.of(index, index + regex));
+        taskIndex++;
+      }
+    } else if (testingTrial == 2) {
+      for (int index = partitionerProperty / 4; index < partitionerProperty / 2; index += regex) {
+        partitionSet.add(taskIndex, HashRange.of(index, index + regex));
+        taskIndex++;
+      }
+    } else { // testingTrial == 3
+      for (int index = partitionerProperty / 2; index < partitionerProperty; index += regex) {
+        partitionSet.add(taskIndex, HashRange.of(index, index + regex));
+        taskIndex++;
+      }
+    }
+    edge.setProperty(SubPartitionSetProperty.of(partitionSet));
+    /*
     if (testingTrial == 0) {
       for (int i = 0; i < 4; i++) {
         partitionSet.add(taskIndex, HashRange.of(i, i + 1));
@@ -311,6 +342,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
       partitionSet.add(0, HashRange.of(512, partitionerProperty)); // 31+testingTrial
       edge.setProperty(SubPartitionSetProperty.of(partitionSet));
     }
+     */
   }
 
   /**
