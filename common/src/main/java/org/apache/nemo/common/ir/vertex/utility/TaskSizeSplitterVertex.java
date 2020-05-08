@@ -286,12 +286,12 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   private void setParallelismPropertyByTestingTrial(final IRVertex irVertex) {
     if (testingTrial < 2 && !(irVertex instanceof OperatorVertex
       && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform)) {
-      irVertex.setPropertyPermanently(ParallelismProperty.of(8));
+      irVertex.setPropertyPermanently(ParallelismProperty.of(16));
     } else if (testingTrial == 2 && !(irVertex instanceof OperatorVertex
       && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform)) {
-      irVertex.setPropertyPermanently(ParallelismProperty.of(16));
-    } else {
       irVertex.setPropertyPermanently(ParallelismProperty.of(32));
+    } else {
+      irVertex.setPropertyPermanently(ParallelismProperty.of(64));
     }
   }
 
