@@ -391,7 +391,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       "Splitter" + stageStartingVertices.iterator().next().getId(), stageVertices,
       stageStartingVertices, verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty, taskSizeRatio);
     // By default, set the number of iterations as 2
-    toInsert.setMaxNumberOfIterations(2);
+    toInsert.setMaxNumberOfIterations(4);
     // make edges connected to splitter vertex
     final Set<IREdge> fromOutsideToSplitter = setEdgesFromOutsideToSplitter(dag, toInsert, stageStartingVertices);
     final Set<IREdge> fromSplitterToOutside = setEdgesFromSplitterToOutside(dag, toInsert,
