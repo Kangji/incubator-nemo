@@ -90,6 +90,11 @@ public final class SparkDatasetBoundedSourceVertex<T> extends SourceVertex<T> {
   }
 
   @Override
+  public List<Readable<T>> getCoalescedReadables(int desiredNumOfSplits) throws Exception {
+    return readables;
+  }
+
+  @Override
   public long getEstimatedSizeBytes() {
     return this.estimatedByteSize;
   }

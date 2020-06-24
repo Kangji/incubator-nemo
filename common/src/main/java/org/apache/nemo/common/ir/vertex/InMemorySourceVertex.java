@@ -88,6 +88,11 @@ public final class InMemorySourceVertex<T> extends SourceVertex<T> {
   }
 
   @Override
+  public List<Readable<T>> getCoalescedReadables(int desiredNumOfSplits) throws Exception {
+    return getReadables(desiredNumOfSplits);
+  }
+
+  @Override
   public long getEstimatedSizeBytes() {
     final ArrayList<Long> list = new ArrayList<>();
     initializedSourceData.spliterator().forEachRemaining(obj -> list.add(Util.getObjectSize(obj)));

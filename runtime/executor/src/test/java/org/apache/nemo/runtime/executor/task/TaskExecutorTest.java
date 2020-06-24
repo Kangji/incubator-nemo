@@ -668,6 +668,11 @@ public final class TaskExecutorTest {
     }
 
     @Override
+    public List<Readable> getCoalescedReadables(int desiredNumOfSplits) throws Exception {
+      return null;
+    }
+
+    @Override
     public long getEstimatedSizeBytes() {
       return 0L;
     }

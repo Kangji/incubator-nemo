@@ -91,6 +91,11 @@ public final class SparkTextFileBoundedSourceVertex extends SourceVertex<String>
   }
 
   @Override
+  public List<Readable<String>> getCoalescedReadables(int desiredNumOfSplits) throws Exception {
+    return readables;
+  }
+
+  @Override
   public long getEstimatedSizeBytes() {
     return this.estimatedSizeBytes;
   }

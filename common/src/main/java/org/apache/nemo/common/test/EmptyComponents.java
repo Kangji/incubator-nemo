@@ -249,6 +249,11 @@ public final class EmptyComponents {
     }
 
     @Override
+    public List<Readable<T>> getCoalescedReadables(int desiredNumOfSplits) throws Exception {
+      return getReadables(desiredNumOfSplits);
+    }
+
+    @Override
     public long getEstimatedSizeBytes() {
       return 0L;
     }

@@ -108,6 +108,11 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
   }
 
   @Override
+  public List<Readable<WindowedValue<O>>> getCoalescedReadables(int desiredNumOfSplits) throws Exception {
+    return null;
+  }
+
+  @Override
   public long getEstimatedSizeBytes() {
     return this.estimatedSizeBytes;
   }
@@ -198,6 +203,133 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
     public void close() throws IOException {
       finished = true;
       reader.close();
+    }
+  }
+
+
+  private static final class CoalescedBoundedSourceReadable<T> implements Readable<WindowedValue<T>> {
+    private final List<BoundedSource<T>> boundedSourceList;
+    private boolean allFinished = false;
+    private final List<Boolean> finishedList;
+    private final List<BoundedSource.BoundedReader<T>> readerList;
+
+    CoalescedBoundedSourceReadable(List<BoundedSource<T>> boundedSourceList) {
+      this.boundedSourceList = boundedSourceList;
+      this.readerList = new ArrayList<>(boundedSourceList.size());
+      this.finishedList = new ArrayList<>(boundedSourceList.size());
+    }
+
+    /**
+     * Prepare reading data.
+     */
+    @Override
+    public void prepare() {
+      try {
+        // if at least one of the reader has started: allFinished should be false
+        // if every reader has not started: allFinished should be true
+        for (int i = 0; i < boundedSourceList.size(); i++) {
+          BoundedSource.BoundedReader<T> reader = boundedSourceList.get(i).createReader(null);
+          readerList.set(i, reader);
+          finishedList.set(i, !reader.start());
+        }
+        allFinished = finishedList.stream().allMatch(entry -> entry);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+
+      /**
+     * Method to read current data from the source.
+     * The caller should check whether the Readable is finished or not by using isFinished() method
+     * before calling this method.
+     *
+     * @return a data read by the readable.
+     */
+
+    //TODO: Is there a way to clean up this code?
+    @Override
+    public WindowedValue<T> readCurrent() {
+      if (allFinished) {
+        throw new IllegalStateException("Bounded reader read all elements");
+      }
+
+      int currentReaderIndex = -1;
+      for (int i = 0; i < readerList.size(); i++) {
+        if (finishedList.get(i)) {
+          continue;
+        }
+        currentReaderIndex = i;
+      }
+
+      if (currentReaderIndex < 0) {
+        throw new IllegalStateException("Bounded reader read all elements");
+      } else {
+        BoundedSource.BoundedReader<T> reader = readerList.get(currentReaderIndex);
+        T elem = reader.getCurrent();
+        try {
+          finishedList.set(currentReaderIndex, !reader.advance());
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+        allFinished = finishedList.stream().allMatch(entry -> entry);
+        return WindowedValue.valueInGlobalWindow(elem);
+      }
+    }
+
+    /**
+     * Read watermark.
+     *
+     * @return watermark
+     */
+    @Override
+    public long readWatermark() {
+      throw new UnsupportedOperationException("No watermark");
+    }
+
+    /**
+     * @return true if it reads all data.
+     */
+    @Override
+    public boolean isFinished() {
+      return allFinished;
+    }
+
+    /**
+     * Returns the list of locations where this readable resides.
+     * Each location has a complete copy of the readable.
+     *
+     * @return List of locations where this readable resides
+     * @throws UnsupportedOperationException when this operation is not supported
+     * @throws Exception                     any other exceptions on the way
+     */
+    @Override
+    public List<String> getLocations() throws Exception {
+      final List<String> inputSplitLocationList = new ArrayList<>();
+      for (BoundedSource<T> boundedSource : boundedSourceList) {
+        if (boundedSource instanceof HadoopFormatIO.HadoopInputFormatBoundedSource) {
+          final Field inputSplitField = boundedSource.getClass().getDeclaredField("inputSplit");
+          inputSplitField.setAccessible(true);
+          final InputSplit inputSplit = ((HadoopFormatIO.SerializableSplit) inputSplitField
+            .get(boundedSource)).getSplit();
+          inputSplitLocationList.addAll(Arrays.asList(inputSplit.getLocations()));
+        } else {
+          throw new UnsupportedOperationException();
+        }
+      }
+      return inputSplitLocationList;
+    }
+
+    /**
+     * Close.
+     *
+     * @throws IOException if file-based reader throws any.
+     */
+    @Override
+    public void close() throws IOException {
+      allFinished = true;
+      for (BoundedSource.BoundedReader<T> reader : readerList) {
+        reader.close();
+      }
     }
   }
 }

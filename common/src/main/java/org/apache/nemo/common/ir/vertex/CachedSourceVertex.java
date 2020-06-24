@@ -73,6 +73,11 @@ public final class CachedSourceVertex<T> extends SourceVertex<T> {
   }
 
   @Override
+  public List<Readable<T>> getCoalescedReadables(int desiredNumOfSplits) throws Exception {
+    return readables;
+  }
+
+  @Override
   public long getEstimatedSizeBytes() {
     return 0L;
   }

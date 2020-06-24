@@ -98,6 +98,11 @@ public final class BeamUnboundedSourceVertex<O, M extends UnboundedSource.Checkp
   }
 
   @Override
+  public List<Readable<Object>> getCoalescedReadables(int desiredNumOfSplits) throws Exception {
+    return getReadables(desiredNumOfSplits);
+  }
+
+  @Override
   public long getEstimatedSizeBytes() {
     return 0L;
   }
