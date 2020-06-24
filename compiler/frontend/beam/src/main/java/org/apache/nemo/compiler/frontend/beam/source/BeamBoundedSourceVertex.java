@@ -108,7 +108,22 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
   }
 
   @Override
-  public List<Readable<WindowedValue<O>>> getCoalescedReadables(int desiredNumOfSplits) throws Exception {
+  // need to add execution order here?
+  public List<Readable<WindowedValue<O>>> getCoalescedReadables(int desiredNumOfSplits,
+                                                                int stageParallelism) throws Exception {
+    final List<Readable<WindowedValue<O>>> readables = new ArrayList<>();
+
+    if (source != null) {
+      LOG.info("estimate: {}", source.getEstimatedSizeBytes(null));
+      LOG.info("desired: {}", desiredNumOfSplits);
+      final List<? extends BoundedSource> boundedSourceList = source
+        .split(this.estimatedSizeBytes / desiredNumOfSplits, null);
+    } else {
+      // TODO #333: Remove SourceVertex#clearInternalStates
+      final SourceVertex emptySourceVertex = new EmptyComponents.EmptySourceVertex("EMPTY");
+      return emptySourceVertex.getReadables(desiredNumOfSplits);
+    }
+
     return null;
   }
 
