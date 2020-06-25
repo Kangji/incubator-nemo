@@ -91,7 +91,9 @@ public final class SparkTextFileBoundedSourceVertex extends SourceVertex<String>
   }
 
   @Override
-  public List<Readable<String>> getCoalescedReadables(int desiredNumOfSplits, int stageParallelism, boolean isInSamplingStage) throws Exception {
+  public List<Readable<String>> getCoalescedReadables(final int desiredNumOfSplits,
+                                                      final int stageParallelism,
+                                                      final boolean isInSamplingStage) throws Exception {
     return readables;
   }
 

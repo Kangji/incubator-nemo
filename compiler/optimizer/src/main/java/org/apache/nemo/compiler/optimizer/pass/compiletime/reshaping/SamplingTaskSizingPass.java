@@ -152,6 +152,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
             .map(Edge::getSrc)
             .allMatch(stageVertices::contains);
           if (isSourcePartition) {
+            // need to modify here for source vertx
+
             break;
           }
           makeAndInsertSplitterVertex(dag, stageVertices, Collections.singleton(edge.getDst()),
@@ -423,8 +425,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     toInsert.insertSignalVertex(signalVertex);
 
     // insert splitter vertex
-    dag.insert(toInsert, incomingEdgesOfOriginalVertices, outgoingEdgesOfOriginalVertices,
-      edgesWithSplitterVertex);
+    dag.insert(toInsert, incomingEdgesOfOriginalVertices, outgoingEdgesOfOriginalVertices, edgesWithSplitterVertex);
 
     toInsert.printLogs();
   }

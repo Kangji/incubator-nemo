@@ -668,7 +668,9 @@ public final class TaskExecutorTest {
     }
 
     @Override
-    public List<Readable> getCoalescedReadables(int desiredNumOfSplits, int stageParallelism, boolean isInSamplingStage) throws Exception {
+    public List<Readable> getCoalescedReadables(int desiredNumOfSplits,
+                                                int stageParallelism,
+                                                boolean isInSamplingStage) throws Exception {
       return null;
     }
 

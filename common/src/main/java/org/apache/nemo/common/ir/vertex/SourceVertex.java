@@ -55,10 +55,19 @@ public abstract class SourceVertex<O> extends IRVertex {
    *
    * @param desiredNumOfSplits number of splits desired.
    * @return the list of readables.
-   * @throws Exception if fail to get.
+   * @throws Exception if failed to get.
    */
   public abstract List<Readable<O>> getReadables(int desiredNumOfSplits) throws Exception;
 
+  /**
+   * Gets readables with diverse size. Currently, this is implemented in BeamBoundedSourceVertex, and exponentially
+   * groups readables
+   * @param desiredNumOfSplits  number of splits desired.
+   * @param stageParallelism    number of parallelism.
+   * @param isInSamplingStage   true if in sampling stage, false if not.
+   * @return                    the list of readables.
+   * @throws Exception          if failed to get.
+   */
   public abstract List<Readable<O>> getCoalescedReadables(int desiredNumOfSplits,
                                                           int stageParallelism,
                                                           boolean isInSamplingStage) throws Exception;

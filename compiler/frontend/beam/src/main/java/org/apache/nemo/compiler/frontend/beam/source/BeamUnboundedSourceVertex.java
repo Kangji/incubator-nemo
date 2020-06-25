@@ -98,9 +98,9 @@ public final class BeamUnboundedSourceVertex<O, M extends UnboundedSource.Checkp
   }
 
   @Override
-  public List<Readable<Object>> getCoalescedReadables(int desiredNumOfSplits,
-                                                      int stageParallelism,
-                                                      boolean isInSamplingStage) throws Exception {
+  public List<Readable<Object>> getCoalescedReadables(final int desiredNumOfSplits,
+                                                      final int stageParallelism,
+                                                      final boolean isInSamplingStage) throws Exception {
     return getReadables(desiredNumOfSplits);
   }
 

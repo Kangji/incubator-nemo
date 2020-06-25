@@ -90,7 +90,9 @@ public final class SparkDatasetBoundedSourceVertex<T> extends SourceVertex<T> {
   }
 
   @Override
-  public List<Readable<T>> getCoalescedReadables(int desiredNumOfSplits, int stageParallelism, boolean isInSamplingStage) throws Exception {
+  public List<Readable<T>> getCoalescedReadables(final int desiredNumOfSplits,
+                                                 final int stageParallelism,
+                                                 final boolean isInSamplingStage) throws Exception {
     return readables;
   }
 

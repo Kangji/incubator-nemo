@@ -24,7 +24,6 @@ import org.apache.beam.sdk.io.hadoop.format.HadoopFormatIO;
 import org.apache.beam.sdk.transforms.display.DisplayData;
 import org.apache.beam.sdk.util.WindowedValue;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.nemo.common.HashRange;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.Readable;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
@@ -111,9 +110,9 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
 
   @Override
   // need to add execution order here?
-  public List<Readable<WindowedValue<O>>> getCoalescedReadables(int desiredNumOfSplits,
-                                                                int stageParallelism,
-                                                                boolean isInSamplingStage) throws Exception {
+  public List<Readable<WindowedValue<O>>> getCoalescedReadables(final int desiredNumOfSplits,
+                                                                final int stageParallelism,
+                                                                final boolean isInSamplingStage) throws Exception {
     final List<Readable<WindowedValue<O>>> readables = new ArrayList<>();
 
     if (source != null) {
@@ -247,14 +246,24 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
     }
   }
 
-
+  /**
+   * CoalescedBoundedSourceReadable class.
+   *
+   * This class manages multiple sources in one readable.
+   * @param <T> type.
+   */
   private static final class CoalescedBoundedSourceReadable<T> implements Readable<WindowedValue<T>> {
     private final List<BoundedSource<T>> boundedSourceList;
     private boolean allFinished = false;
     private final List<Boolean> finishedList;
     private final List<BoundedSource.BoundedReader<T>> readerList;
 
-    CoalescedBoundedSourceReadable(List<BoundedSource<T>> boundedSourceList) {
+    /**
+     * Constructor of CoalescedBoundedSourceReadable.
+     *
+     * @param boundedSourceList   list of bounded Source to read.
+     */
+    CoalescedBoundedSourceReadable(final List<BoundedSource<T>> boundedSourceList) {
       this.boundedSourceList = boundedSourceList;
       this.readerList = new ArrayList<>(boundedSourceList.size());
       this.finishedList = new ArrayList<>(boundedSourceList.size());
@@ -287,7 +296,7 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
      * @return a data read by the readable.
      */
 
-    //TODO: Is there a way to clean up this code?
+    //TO DO: Is there a way to clean up this code?
     @Override
     public WindowedValue<T> readCurrent() {
       if (allFinished) {
