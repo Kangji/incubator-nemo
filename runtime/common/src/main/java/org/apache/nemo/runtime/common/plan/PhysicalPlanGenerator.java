@@ -54,6 +54,10 @@ import java.util.stream.IntStream;
  */
 public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, StageEdge>> {
   private static final Logger LOG = LoggerFactory.getLogger(PhysicalPlanGenerator.class.getName());
+  private static final int PARTITIONER_PROPERTY_FOR_SMALL_JOB = 1024;
+  private static final int PARTITIONER_PROPERTY_FOR_MEDIUM_JOB = 2048;
+  private static final int PARTITIONER_PROPERTY_FOR_BIG_JOB = 4096;
+
 
   private final String dagDirectory;
 
@@ -184,11 +188,9 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
             }
           }
           else {
-            //get
-            // check DAG modification with ww
-            irDAG.getInputSize();
             try {
-              readables = sourceVertex.getCoalescedReadables(stageParallelism, stageParallelism);
+              readables = sourceVertex.getCoalescedReadables(getPartitionerPropertyByJobSize(irDAG),
+                stageParallelism, irDAG.getIncomingEdgesOf(sourceVertex).isEmpty());
             } catch (final Exception e) {
               throw new PhysicalPlanGenerationException(e);
             }
@@ -315,5 +317,17 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
         throw new UnsupportedOperationException(irVertex.toString());
       }
     });
+  }
+
+  private int getPartitionerPropertyByJobSize(final IRDAG dag) {
+    long jobSizeInBytes = dag.getInputSize();
+    long jobSizeInGB = jobSizeInBytes / (1024 * 1024 * 1024);
+    if (jobSizeInGB < 10) {
+      return PARTITIONER_PROPERTY_FOR_SMALL_JOB;
+    } else if (10 <= jobSizeInGB && jobSizeInGB < 100) {
+      return PARTITIONER_PROPERTY_FOR_MEDIUM_JOB;
+    } else {
+      return PARTITIONER_PROPERTY_FOR_BIG_JOB;
+    }
   }
 }

@@ -73,7 +73,9 @@ public final class CachedSourceVertex<T> extends SourceVertex<T> {
   }
 
   @Override
-  public List<Readable<T>> getCoalescedReadables(int desiredNumOfSplits, int stageParallelism) throws Exception {
+  public List<Readable<T>> getCoalescedReadables(int desiredNumOfSplits,
+                                                 int stageParallelism,
+                                                 boolean isInSamplingStage) throws Exception {
     return readables;
   }
 

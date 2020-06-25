@@ -24,6 +24,7 @@ import org.apache.beam.sdk.io.hadoop.format.HadoopFormatIO;
 import org.apache.beam.sdk.transforms.display.DisplayData;
 import org.apache.beam.sdk.util.WindowedValue;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.nemo.common.HashRange;
 import org.apache.nemo.common.exception.MetricException;
 import org.apache.nemo.common.ir.Readable;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
@@ -35,6 +36,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -110,21 +112,45 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
   @Override
   // need to add execution order here?
   public List<Readable<WindowedValue<O>>> getCoalescedReadables(int desiredNumOfSplits,
-                                                                int stageParallelism) throws Exception {
+                                                                int stageParallelism,
+                                                                boolean isInSamplingStage) throws Exception {
     final List<Readable<WindowedValue<O>>> readables = new ArrayList<>();
 
     if (source != null) {
       LOG.info("estimate: {}", source.getEstimatedSizeBytes(null));
       LOG.info("desired: {}", desiredNumOfSplits);
-      final List<? extends BoundedSource> boundedSourceList = source
+      final List<BoundedSource<O>> boundedSourceList = (List<BoundedSource<O>>) source
         .split(this.estimatedSizeBytes / desiredNumOfSplits, null);
+
+      if (isInSamplingStage) {
+        // for now, let's stick with the current ad-hoc method
+        //index 0-511 are for sampling
+        for (int i = 0; i < 4; i++) {
+          readables.add(new CoalescedBoundedSourceReadable<>(Collections.singletonList(boundedSourceList.get(i))));
+        }
+        for (int groupStartingIndex = 4; groupStartingIndex < 512; groupStartingIndex *= 2) {
+          int sublistLength = groupStartingIndex / 4;
+          for (int startIndex = groupStartingIndex; startIndex < groupStartingIndex * 2; startIndex += sublistLength) {
+            readables.add(new CoalescedBoundedSourceReadable<>(
+              boundedSourceList.subList(startIndex, startIndex + sublistLength)));
+          }
+        }
+      } else {
+        final int numberOfSplitsToBindTogether = (desiredNumOfSplits - 512) / stageParallelism;
+        for (int i = 0; i < stageParallelism - 1; i++) {
+          readables.add(new CoalescedBoundedSourceReadable<>(boundedSourceList.subList(
+            512 + i * numberOfSplitsToBindTogether, 512 + (i + 1) * numberOfSplitsToBindTogether)));
+        }
+        // for handling possible exception
+        readables.add(new CoalescedBoundedSourceReadable<>(boundedSourceList.subList(
+          512 + (stageParallelism - 1) * numberOfSplitsToBindTogether, boundedSourceList.size())));
+      }
     } else {
       // TODO #333: Remove SourceVertex#clearInternalStates
       final SourceVertex emptySourceVertex = new EmptyComponents.EmptySourceVertex("EMPTY");
       return emptySourceVertex.getReadables(desiredNumOfSplits);
     }
-
-    return null;
+    return readables;
   }
 
   @Override

@@ -60,7 +60,8 @@ public abstract class SourceVertex<O> extends IRVertex {
   public abstract List<Readable<O>> getReadables(int desiredNumOfSplits) throws Exception;
 
   public abstract List<Readable<O>> getCoalescedReadables(int desiredNumOfSplits,
-                                                          int stageParallelism) throws Exception;
+                                                          int stageParallelism,
+                                                          boolean isInSamplingStage) throws Exception;
   /**
    * Gets the estimated size of bytes. Returns 0L if not applicable.
    *
