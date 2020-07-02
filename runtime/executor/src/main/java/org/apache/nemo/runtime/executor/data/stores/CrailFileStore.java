@@ -33,8 +33,6 @@ import org.apache.nemo.runtime.executor.data.block.FileBlock;
 import org.apache.nemo.runtime.executor.data.metadata.CrailFileMetadata;
 import org.apache.nemo.runtime.executor.data.streamchainer.Serializer;
 import org.apache.reef.tang.annotations.Parameter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
