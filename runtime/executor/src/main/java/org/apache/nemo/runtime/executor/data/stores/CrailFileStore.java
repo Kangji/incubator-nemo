@@ -21,6 +21,7 @@ package org.apache.nemo.runtime.executor.data.stores;
 
 import org.apache.crail.CrailStore;
 import org.apache.crail.conf.CrailConfiguration;
+import org.apache.crail.utils.CrailUtils;
 import org.apache.nemo.common.exception.BlockFetchException;
 import org.apache.nemo.common.exception.BlockWriteException;
 import org.apache.nemo.conf.JobConf;
@@ -32,12 +33,16 @@ import org.apache.nemo.runtime.executor.data.block.FileBlock;
 import org.apache.nemo.runtime.executor.data.metadata.CrailFileMetadata;
 import org.apache.nemo.runtime.executor.data.streamchainer.Serializer;
 import org.apache.reef.tang.annotations.Parameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.InetSocketAddress;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Stores blocks in CrailStore.
@@ -48,6 +53,8 @@ import java.util.Optional;
  */
 @ThreadSafe
 public final class CrailFileStore extends AbstractBlockStore implements RemoteFileStore {
+  private static final Logger LOG = LoggerFactory.getLogger(CrailFileStore.class.getName());
+
   private final String fileDirectory;
   private final CrailConfiguration conf;
   private final CrailStore fs;
@@ -65,6 +72,9 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
                          final MemoryPoolAssigner memoryPoolAssigner) throws Exception {
     super(serializerManager, memoryPoolAssigner);
     this.conf = CrailConfiguration.createEmptyConfiguration();
+    ConcurrentLinkedQueue<InetSocketAddress> namenodeList = CrailUtils.getNameNodeList();
+    InetSocketAddress address = namenodeList.poll();
+    LOG.error("ERRORING ADDRESS: {}", address);
     this.fs = CrailStore.newInstance(conf);
     this.fileDirectory = "nemo-crail";
   }
