@@ -53,8 +53,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 @ThreadSafe
 public final class CrailFileStore extends AbstractBlockStore implements RemoteFileStore {
-  private static final Logger LOG = LoggerFactory.getLogger(CrailFileStore.class.getName());
-
   private final String fileDirectory;
   private final CrailConfiguration conf;
   private final CrailStore fs;
@@ -71,12 +69,12 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
                          final SerializerManager serializerManager,
                          final MemoryPoolAssigner memoryPoolAssigner) throws Exception {
     super(serializerManager, memoryPoolAssigner);
-    this.conf = CrailConfiguration.createEmptyConfiguration();
     ConcurrentLinkedQueue<InetSocketAddress> namenodeList = CrailUtils.getNameNodeList();
     InetSocketAddress address = namenodeList.poll();
-    LOG.error("ERRORING ADDRESS: {}", address);
-    this.fs = CrailStore.newInstance(conf);
-    this.fileDirectory = "nemo-crail";
+    throw new RuntimeException("ERRORRING ADDDRESS: " + address);
+    // this.conf = CrailConfiguration.createEmptyConfiguration();
+    // this.fs = CrailStore.newInstance(conf);
+    // this.fileDirectory = "nemo-crail";
   }
 
   @Override
