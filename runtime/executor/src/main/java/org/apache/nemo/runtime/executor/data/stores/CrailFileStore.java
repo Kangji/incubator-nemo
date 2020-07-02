@@ -67,7 +67,7 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
     // Distribute $CRAIL_HOME/conf/crail-site.conf to workers, specifying hostname
     this.conf = CrailConfiguration.createConfigurationFromFile();
     this.fs = CrailStore.newInstance(conf);
-    this.fileDirectory = "nemo-crail";
+    this.fileDirectory = "";
   }
 
   @Override
