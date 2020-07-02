@@ -303,7 +303,8 @@ public final class BlockManagerWorker {
         .setBlockId(blockId)
         .setState(ControlMessage.BlockStateFromExecutor.AVAILABLE);
 
-    if (DataStoreProperty.Value.GLUSTER_FILE_STORE.equals(blockStore)) {
+    if (DataStoreProperty.Value.GLUSTER_FILE_STORE.equals(blockStore)
+      || DataStoreProperty.Value.CRAIL_FILE_STORE.equals(blockStore)) {
       blockStateChangedMsgBuilder.setLocation(REMOTE_FILE_STORE);
     } else {
       blockStateChangedMsgBuilder.setLocation(executorId);
@@ -337,7 +338,8 @@ public final class BlockManagerWorker {
           .setBlockId(blockId)
           .setState(ControlMessage.BlockStateFromExecutor.NOT_AVAILABLE);
 
-      if (DataStoreProperty.Value.GLUSTER_FILE_STORE.equals(blockStore)) {
+      if (DataStoreProperty.Value.GLUSTER_FILE_STORE.equals(blockStore)
+        || DataStoreProperty.Value.CRAIL_FILE_STORE.equals(blockStore)) {
         blockStateChangedMsgBuilder.setLocation(REMOTE_FILE_STORE);
       } else {
         blockStateChangedMsgBuilder.setLocation(executorId);
@@ -380,7 +382,8 @@ public final class BlockManagerWorker {
           final Optional<Block> optionalBlock = getBlockStore(blockStore).readBlock(blockId);
           if (optionalBlock.isPresent()) {
             if (DataStoreProperty.Value.LOCAL_FILE_STORE.equals(blockStore)
-              || DataStoreProperty.Value.GLUSTER_FILE_STORE.equals(blockStore)) {
+              || DataStoreProperty.Value.GLUSTER_FILE_STORE.equals(blockStore)
+              || DataStoreProperty.Value.CRAIL_FILE_STORE.equals(blockStore)) {
               final List<FileArea> fileAreas = ((FileBlock) optionalBlock.get()).asFileAreas(keyRange);
               for (final FileArea fileArea : fileAreas) {
                 try (ByteOutputContext.ByteOutputStream os = outputContext.newOutputStream()) {
@@ -517,6 +520,7 @@ public final class BlockManagerWorker {
       case LOCAL_FILE_STORE:
         return localFileStore;
       case GLUSTER_FILE_STORE:
+      case CRAIL_FILE_STORE:
         return remoteFileStore;
       default:
         throw new UnsupportedBlockStoreException(new Exception(blockStore + " is not supported."));
@@ -540,7 +544,9 @@ public final class BlockManagerWorker {
       case LOCAL_FILE_STORE:
         return ControlMessage.BlockStore.LOCAL_FILE;
       case GLUSTER_FILE_STORE:
-        return ControlMessage.BlockStore.REMOTE_FILE;
+        return ControlMessage.BlockStore.GLUSTER_FILE;
+      case CRAIL_FILE_STORE:
+        return ControlMessage.BlockStore.CRAIL_FILE;
       default:
         throw new UnsupportedBlockStoreException(new Exception(blockStore + " is not supported."));
     }
@@ -562,8 +568,10 @@ public final class BlockManagerWorker {
         return DataStoreProperty.Value.SERIALIZED_MEMORY_STORE;
       case LOCAL_FILE:
         return DataStoreProperty.Value.LOCAL_FILE_STORE;
-      case REMOTE_FILE:
+      case GLUSTER_FILE:
         return DataStoreProperty.Value.GLUSTER_FILE_STORE;
+      case CRAIL_FILE:
+        return DataStoreProperty.Value.CRAIL_FILE_STORE;
       default:
         throw new UnsupportedBlockStoreException(new Exception("This block store is not yet supported"));
     }

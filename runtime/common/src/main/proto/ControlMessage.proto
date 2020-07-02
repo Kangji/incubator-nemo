@@ -219,7 +219,8 @@ enum BlockStore {
     MEMORY = 0;
     SER_MEMORY = 1;
     LOCAL_FILE = 2;
-    REMOTE_FILE = 3;
+    GLUSTER_FILE = 3;
+    CRAIL_FILE = 4;
 }
 
 // Common messages

@@ -51,6 +51,7 @@ public final class DataStoreProperty extends EdgeExecutionProperty<DataStoreProp
     MEMORY_STORE,
     SERIALIZED_MEMORY_STORE,
     LOCAL_FILE_STORE,
-    GLUSTER_FILE_STORE
+    GLUSTER_FILE_STORE,
+    CRAIL_FILE_STORE
   }
 }

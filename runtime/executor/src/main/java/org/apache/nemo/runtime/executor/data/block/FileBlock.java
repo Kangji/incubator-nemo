@@ -18,38 +18,31 @@
  */
 package org.apache.nemo.runtime.executor.data.block;
 
+import org.apache.crail.*;
 import org.apache.nemo.common.KeyRange;
-import org.apache.nemo.runtime.executor.data.MemoryAllocationException;
-import org.apache.nemo.runtime.executor.data.MemoryPoolAssigner;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.BlockFetchException;
 import org.apache.nemo.common.exception.BlockWriteException;
 import org.apache.nemo.runtime.executor.data.DataUtil;
 import org.apache.nemo.runtime.executor.data.FileArea;
+import org.apache.nemo.runtime.executor.data.MemoryAllocationException;
+import org.apache.nemo.runtime.executor.data.MemoryPoolAssigner;
 import org.apache.nemo.runtime.executor.data.metadata.FileMetadata;
 import org.apache.nemo.runtime.executor.data.metadata.PartitionMetadata;
 import org.apache.nemo.runtime.executor.data.partition.NonSerializedPartition;
 import org.apache.nemo.runtime.executor.data.partition.SerializedPartition;
 import org.apache.nemo.runtime.executor.data.streamchainer.Serializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * This class represents a block which is stored in (local or remote) file.
@@ -59,6 +52,7 @@ import java.util.Optional;
  */
 @NotThreadSafe
 public final class FileBlock<K extends Serializable> implements Block<K> {
+  private static final Logger LOG = LoggerFactory.getLogger(FileBlock.class.getName());
   private final String id;
   private final Map<K, SerializedPartition<K>> nonCommittedPartitionsMap;
   private final Serializer serializer;
@@ -67,6 +61,11 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
   private final MemoryPoolAssigner memoryPoolAssigner;
   private static final String ALREADY_COMMITED = "The partition is already committed!";
   private static final String CANNOT_RETRIEVE_BEFORE_COMMITED = "Cannot retrieve elements before a block is committed!";
+
+  private final Boolean crail;
+  @Nullable
+  private final CrailStore fs;
+  private CrailFile file; // not final since fetching the File might fail.
 
   /**
    * Constructor.
@@ -88,11 +87,47 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
     this.filePath = filePath;
     this.metadata = metadata;
     this.memoryPoolAssigner = memoryPoolAssigner;
+    this.crail = false;
+    this.fs = null;
+    this.file = null;
+  }
+
+  /**
+   * Constructor for FileBlock that is being written in CrailFileStore.
+   *
+   * @param fs  the {@link CrailStore} object created from {@link org.apache.crail.conf.CrailConfiguration}
+   */
+  public FileBlock(final String blockId,
+                   final Serializer serializer,
+                   final String filePath,
+                   final FileMetadata<K> metadata,
+                   final MemoryPoolAssigner memoryPoolAssigner,
+                   final CrailStore fs) {
+    this.id = blockId;
+    this.nonCommittedPartitionsMap = new HashMap<>();
+    this.serializer = serializer;
+    this.filePath = filePath;
+    this.metadata = metadata;
+    this.memoryPoolAssigner = memoryPoolAssigner;
+    this.crail = true;
+    this.fs = fs;
+    try {
+      this.file = fs.create(filePath, CrailNodeType.DATAFILE, CrailStorageClass.DEFAULT,
+        CrailLocationClass.DEFAULT, true).get().asFile();
+      file.syncDir();
+    } catch (Exception e1) {
+      try {
+        this.file = fs.lookup(filePath).get().asFile();
+      } catch (Exception e2) {
+        LOG.info("{} fetch failed", blockId);
+        throw new RuntimeException();
+      }
+    }
   }
 
   /**
    * Writes the serialized data of this block having a specific key value as a partition to the file
-   * where this block resides.
+   * where this block resides. Supports both writing either in local file system or CrailFileSystem.
    * Invariant: This method does not support concurrent write.
    *
    * @param serializedPartitions the iterable of the serialized partitions to write.
@@ -100,15 +135,31 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
    */
   private void writeToFile(final Iterable<SerializedPartition<K>> serializedPartitions)
     throws IOException {
-    try (FileChannel fileOutputChannel = new FileOutputStream(filePath, true).getChannel()) {
-      for (final SerializedPartition<K> serializedPartition : serializedPartitions) {
-        // Reserve a partition write and get the metadata.
-        metadata.writePartitionMetadata(serializedPartition.getKey(), serializedPartition.getLength());
-        for (final ByteBuffer buffer: serializedPartition.getDirectBufferList()) {
-          fileOutputChannel.write(buffer);
+    if (crail) {
+      try (CrailBufferedOutputStream fileOutputStream = file.getBufferedOutputStream(0)) {
+        for (final SerializedPartition<K> serializedPartition : serializedPartitions) {
+          // Reserve a partition write and get the metadata.
+          metadata.writePartitionMetadata(serializedPartition.getKey(), serializedPartition.getLength());
+          for (final ByteBuffer buffer: serializedPartition.getDirectBufferList()) {
+            fileOutputStream.write(buffer);
+          }
+          // after the writing to disk, data in memory is released.
+          serializedPartition.release();
         }
-        // after the writing to disk, data in memory is released.
-        serializedPartition.release();
+      } catch (final Exception e) {
+        throw new RuntimeException(e);
+      }
+    } else {
+      try (FileChannel fileOutputChannel = new FileOutputStream(filePath, true).getChannel()) {
+        for (final SerializedPartition<K> serializedPartition : serializedPartitions) {
+          // Reserve a partition write and get the metadata.
+          metadata.writePartitionMetadata(serializedPartition.getKey(), serializedPartition.getLength());
+          for (final ByteBuffer buffer: serializedPartition.getDirectBufferList()) {
+            fileOutputChannel.write(buffer);
+          }
+          // after the writing to disk, data in memory is released.
+          serializedPartition.release();
+        }
       }
     }
   }
@@ -199,7 +250,8 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
       final List<NonSerializedPartition<K>> deserializedPartitions = new ArrayList<>();
       try {
         final List<Pair<K, byte[]>> partitionKeyBytesPairs = new ArrayList<>();
-        try (FileInputStream fileStream = new FileInputStream(filePath)) {
+        try (InputStream fileStream = crail
+          ? file.getBufferedInputStream(file.getCapacity()) : new FileInputStream(filePath)) {
           for (final PartitionMetadata<K> partitionMetadata : metadata.getPartitionMetadataList()) {
             final K key = partitionMetadata.getKey();
             if (keyRange.includes(key)) {
@@ -222,6 +274,8 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
         }
       } catch (final IOException e) {
         throw new BlockFetchException(e);
+      } catch (final Exception e) {
+        throw new RuntimeException(e);
       }
 
       return deserializedPartitions;
@@ -244,7 +298,8 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
       // Deserialize the data
       final List<SerializedPartition<K>> partitionsInRange = new ArrayList<>();
       try {
-        try (FileInputStream fileStream = new FileInputStream(filePath)) {
+        try (InputStream fileStream = crail
+          ? file.getBufferedInputStream(file.getCapacity()) : new FileInputStream(filePath)) {
           for (final PartitionMetadata<K> partitionmetadata : metadata.getPartitionMetadataList()) {
             final K key = partitionmetadata.getKey();
             if (keyRange.includes(key)) {
@@ -264,6 +319,8 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
         }
       } catch (final IOException e) {
         throw new BlockFetchException(e);
+      } catch (final Exception e) {
+        throw new RuntimeException(e);
       }
 
       return partitionsInRange;
@@ -318,8 +375,21 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
    */
   public void deleteFile() throws IOException {
     metadata.deleteMetadata();
-    if (new File(filePath).exists()) {
-      Files.delete(Paths.get(filePath));
+    if (!crail) {
+      if (new File(filePath).exists()) {
+        Files.delete(Paths.get(filePath));
+      }
+    } else {
+      try {
+        if (fs.lookup(filePath).get() != null) {
+          fs.delete(filePath, true);
+        }
+      } catch (IOException e) {
+        e.printStackTrace();
+      } catch (Exception e) {
+        LOG.info("Failed to delete file");
+        e.printStackTrace();
+      }
     }
   }
 

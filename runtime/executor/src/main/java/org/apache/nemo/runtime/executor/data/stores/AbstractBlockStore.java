@@ -38,7 +38,7 @@ public abstract class AbstractBlockStore implements BlockStore {
    * @param memoryPoolAssigner the memory pool assigner.
    */
   AbstractBlockStore(final SerializerManager serializerManager,
-                               final MemoryPoolAssigner memoryPoolAssigner) {
+                     final MemoryPoolAssigner memoryPoolAssigner) {
     this.serializerManager = serializerManager;
     this.memoryPoolAssigner = memoryPoolAssigner;
   }
