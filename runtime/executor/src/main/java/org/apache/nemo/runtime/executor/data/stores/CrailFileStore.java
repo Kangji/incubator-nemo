@@ -67,8 +67,6 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
                          final SerializerManager serializerManager,
                          final MemoryPoolAssigner memoryPoolAssigner) throws Exception {
     super(serializerManager, memoryPoolAssigner);
-    ConcurrentLinkedQueue<InetSocketAddress> namenodeList = CrailUtils.getNameNodeList();
-    InetSocketAddress address = namenodeList.poll();
     this.conf = CrailConfiguration.createConfigurationFromFile();
     this.fs = CrailStore.newInstance(conf);
     this.fileDirectory = "nemo-crail";
