@@ -69,10 +69,9 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
     super(serializerManager, memoryPoolAssigner);
     ConcurrentLinkedQueue<InetSocketAddress> namenodeList = CrailUtils.getNameNodeList();
     InetSocketAddress address = namenodeList.poll();
-    throw new RuntimeException("ERRORRING ADDDRESS: " + address);
-    // this.conf = CrailConfiguration.createEmptyConfiguration();
-    // this.fs = CrailStore.newInstance(conf);
-    // this.fileDirectory = "nemo-crail";
+    this.conf = CrailConfiguration.createConfigurationFromFile();
+    this.fs = CrailStore.newInstance(conf);
+    this.fileDirectory = "nemo-crail";
   }
 
   @Override
