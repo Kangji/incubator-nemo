@@ -66,7 +66,7 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
     super(serializerManager, memoryPoolAssigner);
     this.conf = CrailConfiguration.createEmptyConfiguration();
     this.fs = CrailStore.newInstance(conf);
-    this.fileDirectory = "";
+    this.fileDirectory = "nemo-crail";
   }
 
   @Override
