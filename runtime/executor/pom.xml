@@ -78,51 +78,6 @@ under the License.
     <!-- crail-->
     <dependency>
       <groupId>org.apache.crail</groupId>
-      <artifactId>crail-storage</artifactId>
-      <version>${crail.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.crail</groupId>
-      <artifactId>crail-storage-narpc</artifactId>
-      <version>${crail.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.crail</groupId>
-      <artifactId>crail-storage-rdma</artifactId>
-      <version>${crail.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.crail</groupId>
-      <artifactId>crail-storage-nvmf</artifactId>
-      <version>${crail.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.crail</groupId>
-      <artifactId>crail-rpc</artifactId>
-      <version>${crail.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.crail</groupId>
-      <artifactId>crail-rpc-narpc</artifactId>
-      <version>${crail.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.crail</groupId>
-      <artifactId>crail-hdfs</artifactId>
-      <version>${crail.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.crail</groupId>
-      <artifactId>crail-namenode</artifactId>
-      <version>${crail.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.crail</groupId>
-      <artifactId>crail-rpc</artifactId>
-      <version>${crail.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.crail</groupId>
       <artifactId>crail-client</artifactId>
       <version>${crail.version}</version>
     </dependency>
