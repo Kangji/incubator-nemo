@@ -69,7 +69,7 @@ under the License.
     <sqlite-jdbc.version>3.30.1</sqlite-jdbc.version>
     <postgresql.version>42.2.9</postgresql.version>
     <slf4j.version>1.7.30</slf4j.version>
-    <crail.version>1.2-incubating</crail.version>
+    <crail.version>1.1-incubating</crail.version>
     <!-- Tests -->
     <mockito.version>3.2.4</mockito.version>
     <powermock.version>2.0.4</powermock.version>

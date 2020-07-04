@@ -65,7 +65,7 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
                          final MemoryPoolAssigner memoryPoolAssigner) throws Exception {
     super(serializerManager, memoryPoolAssigner);
     // Distribute $CRAIL_HOME/conf/crail-site.conf to workers, specifying hostname
-    this.conf = CrailConfiguration.createConfigurationFromFile();
+    this.conf = new CrailConfiguration();
     this.fs = CrailStore.newInstance(conf);
     this.fileDirectory = "";
   }
