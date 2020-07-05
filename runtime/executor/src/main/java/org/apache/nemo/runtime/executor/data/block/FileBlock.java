@@ -142,7 +142,6 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
           // Reserve a partition write and get the metadata.
           metadata.writePartitionMetadata(serializedPartition.getKey(), serializedPartition.getLength());
           for (final ByteBuffer buffer: serializedPartition.getDirectBufferList()) {
-            LOG.info("Writing to crail file outputstream {}", fileOutputStream);
             fileOutputStream.write(buffer);
           }
           // after the writing to disk, data in memory is released?
