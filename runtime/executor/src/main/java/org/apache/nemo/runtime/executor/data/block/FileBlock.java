@@ -126,7 +126,7 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
   private void writeToFile(final Iterable<SerializedPartition<K>> serializedPartitions)
     throws IOException {
     if (crail) {
-      LOG.info("Writing to crail file");
+      LOG.debug("Writing file with fd {} to crail filesystem", file.getFd());
       try (CrailBufferedOutputStream fileOutputStream = file.getBufferedOutputStream(0)) {
         for (final SerializedPartition<K> serializedPartition : serializedPartitions) {
           // Reserve a partition write and get the metadata.
@@ -246,15 +246,13 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
           for (final PartitionMetadata<K> partitionMetadata : metadata.getPartitionMetadataList()) {
             final K key = partitionMetadata.getKey();
             if (keyRange.includes(key)) {
-              LOG.info("Reading partition of size: {}, as keyrange {} includes key {}",
-                partitionMetadata.getPartitionSize(), keyRange, key);
+              LOG.debug("Reading partition of size {} from fd {}, as keyrange {} includes key {}",
+                partitionMetadata.getPartitionSize(), file.getFd(), keyRange, key);
               // The key value of this partition is in the range.
               final byte[] partitionBytes = new byte[partitionMetadata.getPartitionSize()];
-              final int readbytes = fileStream.read(partitionBytes, 0, partitionMetadata.getPartitionSize());
-              LOG.info("Read complete with length {} into bytes of length {}", readbytes, partitionBytes.length);
+              fileStream.read(partitionBytes, 0, partitionMetadata.getPartitionSize());
               partitionKeyBytesPairs.add(Pair.of(key, partitionBytes));
             } else {
-              LOG.info("Skipping partition..");
               // Have to skip this partition.
               skipBytes(fileStream, partitionMetadata.getPartitionSize());
             }
@@ -333,10 +331,8 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
                          final long bytesToSkip) throws IOException {
     long remainingBytesToSkip = bytesToSkip;
     while (remainingBytesToSkip > 0) {
-      LOG.info("Skipping {} bytes out of {}", bytesToSkip, remainingBytesToSkip);
       final long skippedBytes = inputStream.skip(bytesToSkip);
       remainingBytesToSkip -= skippedBytes;
-      LOG.info("Skipped {} bytes and {} to go", skippedBytes, remainingBytesToSkip);
       if (skippedBytes <= 0) {
         break;
         // throw new IOException("The file stream failed to skip to the next block.");
