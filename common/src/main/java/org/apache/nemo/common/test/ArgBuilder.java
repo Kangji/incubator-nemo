@@ -102,6 +102,26 @@ public final class ArgBuilder {
   }
 
   /**
+   * aa.
+   * @param parallelism a.
+   * @return a.
+   */
+  public ArgBuilder addParallelism(final int parallelism) {
+    args.add(Arrays.asList("-parallelism", String.valueOf(parallelism)));
+    return this;
+  }
+
+  /**
+   * a.
+   * @param samplingRateInverse a.
+   * @return a.
+   */
+  public ArgBuilder addSamplingRate(final int samplingRateInverse) {
+    args.add(Arrays.asList("-sampling_rate", String.valueOf(samplingRateInverse)));
+    return this;
+  }
+
+  /**
    * @param schedulerName scheduler.
    * @return builder with the scheduler.
    */

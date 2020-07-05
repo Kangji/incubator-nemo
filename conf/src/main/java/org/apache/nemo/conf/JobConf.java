@@ -250,10 +250,16 @@ public final class JobConf extends ConfigurationModuleBuilder {
   public final class ExecutorJSONContents implements Name<String> {
   }
 
+  /**
+   * aa.
+   */
   @NamedParameter(doc = "desired number of parallelism", short_name = "parallelism")
   public final class Parallelism implements Name<Integer> {
   }
 
+  /**
+   * aa.
+   */
   @NamedParameter(doc = "inverse of desired sampling rate", short_name = "sampling_rate", default_value = "1")
   public final class SamplingRate implements Name<Integer> {
   }

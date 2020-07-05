@@ -107,8 +107,10 @@ public final class WordCountITCase {
       .addUserMain(WordCount.class.getCanonicalName())
       .addUserArgs(inputFilePath, "file:///" + outputFilePath)
       .addResourceJson(executorResourceFileName)
-      .addJobId(WordCountITCase.class.getSimpleName() + "_dts")
+      .addJobId(WordCountITCase.class.getSimpleName() + "_dtsSampling")
       .addOptimizationPolicy(DynamicTaskSizingPolicy.class.getCanonicalName())
+      .addParallelism(32)
+      .addSamplingRate(8)
       .build());
   }
 
