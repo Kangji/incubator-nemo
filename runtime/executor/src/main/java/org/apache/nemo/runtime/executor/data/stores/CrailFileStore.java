@@ -32,6 +32,8 @@ import org.apache.nemo.runtime.executor.data.block.FileBlock;
 import org.apache.nemo.runtime.executor.data.metadata.CrailFileMetadata;
 import org.apache.nemo.runtime.executor.data.streamchainer.Serializer;
 import org.apache.reef.tang.annotations.Parameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
@@ -48,6 +50,8 @@ import java.util.Optional;
  */
 @ThreadSafe
 public final class CrailFileStore extends AbstractBlockStore implements RemoteFileStore {
+  private static final Logger LOG = LoggerFactory.getLogger(CrailFileStore.class.getName());
+
   private final String fileDirectory;
   private final CrailConfiguration conf;
   private final CrailStore fs;
@@ -83,7 +87,7 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
       file.syncDir();
       return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner(), fs, file);
     } catch (final Exception e) {
-      throw new RuntimeException(e);
+      throw new BlockWriteException(e);
     }
   }
 
@@ -168,6 +172,7 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
     final CrailFileMetadata<K> metadata =
       CrailFileMetadata.open(DataUtil.blockIdToMetaFilePath(blockId, fileDirectory), fs);
     final CrailFile file = fs.lookup(filePath).get().asFile();
+    LOG.info("Got block from file: {}", file);
     return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner(), fs, file);
   }
 }
