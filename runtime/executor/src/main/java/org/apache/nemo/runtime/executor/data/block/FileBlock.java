@@ -259,7 +259,8 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
                 partitionMetadata.getPartitionSize(), keyRange, key);
               // The key value of this partition is in the range.
               final byte[] partitionBytes = new byte[partitionMetadata.getPartitionSize()];
-              fileStream.read(partitionBytes, 0, partitionMetadata.getPartitionSize());
+              final int readbytes = fileStream.read(partitionBytes, 0, partitionMetadata.getPartitionSize());
+              LOG.info("Read complete with length {} into bytes of length {}", readbytes, partitionBytes.length);
               partitionKeyBytesPairs.add(Pair.of(key, partitionBytes));
             } else {
               LOG.info("Skipping partition..");
@@ -341,9 +342,10 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
                          final long bytesToSkip) throws IOException {
     long remainingBytesToSkip = bytesToSkip;
     while (remainingBytesToSkip > 0) {
-      LOG.info("Skipping {} bytes", bytesToSkip);
+      LOG.info("Skipping {} bytes out of {}", bytesToSkip, remainingBytesToSkip);
       final long skippedBytes = inputStream.skip(bytesToSkip);
       remainingBytesToSkip -= skippedBytes;
+      LOG.info("Skipped {} bytes and {} to go", skippedBytes, remainingBytesToSkip);
       if (skippedBytes <= 0) {
         throw new IOException("The file stream failed to skip to the next block.");
       }
