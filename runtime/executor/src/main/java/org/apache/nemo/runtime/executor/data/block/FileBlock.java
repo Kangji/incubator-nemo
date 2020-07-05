@@ -136,15 +136,17 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
   private void writeToFile(final Iterable<SerializedPartition<K>> serializedPartitions)
     throws IOException {
     if (crail) {
+      LOG.info("Writing to crail file");
       try (CrailBufferedOutputStream fileOutputStream = file.getBufferedOutputStream(0)) {
         for (final SerializedPartition<K> serializedPartition : serializedPartitions) {
           // Reserve a partition write and get the metadata.
           metadata.writePartitionMetadata(serializedPartition.getKey(), serializedPartition.getLength());
           for (final ByteBuffer buffer: serializedPartition.getDirectBufferList()) {
+            LOG.info("Writing to crail file outputstream {}", fileOutputStream);
             fileOutputStream.write(buffer);
           }
-          // after the writing to disk, data in memory is released.
-          serializedPartition.release();
+          // after the writing to disk, data in memory is released?
+          // serializedPartition.release();
         }
       } catch (final Exception e) {
         throw new RuntimeException(e);
