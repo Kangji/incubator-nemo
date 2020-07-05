@@ -347,9 +347,9 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
       final long skippedBytes = inputStream.skip(bytesToSkip);
       remainingBytesToSkip -= skippedBytes;
       LOG.info("Skipped {} bytes and {} to go", skippedBytes, remainingBytesToSkip);
-      if (skippedBytes <= 0) {
-        throw new IOException("The file stream failed to skip to the next block.");
-      }
+      // if (skippedBytes <= 0) {
+      //   throw new IOException("The file stream failed to skip to the next block.");
+      // }
     }
   }
 
