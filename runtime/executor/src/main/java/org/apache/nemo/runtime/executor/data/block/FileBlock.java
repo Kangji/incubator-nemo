@@ -65,7 +65,7 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
   private final Boolean crail;
   @Nullable
   private final CrailStore fs;
-  private CrailFile file; // not final since fetching the File might fail.
+  private final CrailFile file;
 
   /**
    * Constructor.
@@ -102,7 +102,8 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
                    final String filePath,
                    final FileMetadata<K> metadata,
                    final MemoryPoolAssigner memoryPoolAssigner,
-                   final CrailStore fs) {
+                   final CrailStore fs,
+                   final CrailFile file) {
     this.id = blockId;
     this.nonCommittedPartitionsMap = new HashMap<>();
     this.serializer = serializer;
@@ -111,18 +112,7 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
     this.memoryPoolAssigner = memoryPoolAssigner;
     this.crail = true;
     this.fs = fs;
-    try {
-      this.file = fs.create(filePath, CrailNodeType.DATAFILE, CrailStorageClass.DEFAULT,
-        CrailLocationClass.DEFAULT, true).get().asFile();
-      file.syncDir();
-    } catch (Exception e1) {
-      try {
-        this.file = fs.lookup(filePath).get().asFile();
-      } catch (Exception e2) {
-        LOG.info("{} fetch failed", blockId);
-        throw new RuntimeException();
-      }
-    }
+    this.file = file;
   }
 
   /**
@@ -347,9 +337,9 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
       final long skippedBytes = inputStream.skip(bytesToSkip);
       remainingBytesToSkip -= skippedBytes;
       LOG.info("Skipped {} bytes and {} to go", skippedBytes, remainingBytesToSkip);
-      // if (skippedBytes <= 0) {
-      //   throw new IOException("The file stream failed to skip to the next block.");
-      // }
+      if (skippedBytes <= 0) {
+        throw new IOException("The file stream failed to skip to the next block.");
+      }
     }
   }
 

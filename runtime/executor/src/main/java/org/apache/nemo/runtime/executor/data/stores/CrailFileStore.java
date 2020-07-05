@@ -19,7 +19,7 @@
 
 package org.apache.nemo.runtime.executor.data.stores;
 
-import org.apache.crail.CrailStore;
+import org.apache.crail.*;
 import org.apache.crail.conf.CrailConfiguration;
 import org.apache.nemo.common.exception.BlockFetchException;
 import org.apache.nemo.common.exception.BlockWriteException;
@@ -77,7 +77,14 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
     final String filePath = DataUtil.blockIdToFilePath(blockId, fileDirectory);
     final String metaPath = DataUtil.blockIdToMetaFilePath(blockId, fileDirectory);
     final CrailFileMetadata metadata = CrailFileMetadata.create(metaPath, fs);
-    return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner(), fs);
+    try {
+      final CrailFile file = fs.create(filePath, CrailNodeType.DATAFILE, CrailStorageClass.DEFAULT,
+        CrailLocationClass.DEFAULT, true).get().asFile();
+      file.syncDir();
+      return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner(), fs, file);
+    } catch (final Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -160,6 +167,7 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
     final String filePath = DataUtil.blockIdToFilePath(blockId, fileDirectory);
     final CrailFileMetadata<K> metadata =
       CrailFileMetadata.open(DataUtil.blockIdToMetaFilePath(blockId, fileDirectory), fs);
-    return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner(), fs);
+    final CrailFile file = fs.lookup(filePath).get().asFile();
+    return new FileBlock<>(blockId, serializer, filePath, metadata, getMemoryPoolAssigner(), fs, file);
   }
 }
