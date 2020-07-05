@@ -94,6 +94,10 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     this.verticesWithStageOutgoingEdges = verticesWithStageOutgoingEdges;
     this.lastVerticesInStage = lastVerticesInStage;
     this.samplingRateInverse = samplingRateInverse;
+
+    if (samplingRateInverse == 1) {
+      setMaxNumberOfIterations(1);
+    }
   }
 
   // Getters of attributes

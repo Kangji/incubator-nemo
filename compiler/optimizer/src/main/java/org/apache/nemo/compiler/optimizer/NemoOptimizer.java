@@ -31,6 +31,7 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
+import org.apache.nemo.compiler.optimizer.policy.DefaultPolicy;
 import org.apache.nemo.compiler.optimizer.policy.DynamicTaskSizingPolicy;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
 import org.apache.nemo.compiler.optimizer.policy.XGBoostPolicy;
@@ -96,6 +97,8 @@ public final class NemoOptimizer implements Optimizer {
 
     if (optimizationPolicy instanceof DynamicTaskSizingPolicy) {
       ((DynamicTaskSizingPolicy) optimizationPolicy).injectParameters(parallelism, samplingRateInverse);
+    } else if (optimizationPolicy instanceof DefaultPolicy) {
+      ((DefaultPolicy) optimizationPolicy).injectParameters(parallelism);
     }
   }
 

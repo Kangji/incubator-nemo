@@ -19,23 +19,35 @@
 package org.apache.nemo.compiler.optimizer.policy;
 
 import org.apache.nemo.common.ir.IRDAG;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.DefaultCompositePass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.*;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 
 /**
  * A basic default policy, that performs the minimum amount of optimization to be done to a specific DAG.
  */
 public final class DefaultPolicy implements Policy {
-  public static final PolicyBuilder BUILDER =
-    new PolicyBuilder()
-      .registerCompileTimePass(new DefaultCompositePass());
-  private final Policy policy;
+  public static final PolicyBuilder BUILDER = new PolicyBuilder();
+  private Policy policy;
 
   /**
    * Default constructor.
    */
   public DefaultPolicy() {
     this.policy = BUILDER.build();
+  }
+
+  public void injectParameters(final int parallelism) {
+    BUILDER
+      .registerCompileTimePass(new DefaultParallelismPass(parallelism, 2))
+      .registerCompileTimePass(new DefaultEdgeEncoderPass())
+      .registerCompileTimePass(new DefaultEdgeDecoderPass())
+      .registerCompileTimePass(new DefaultDataStorePass())
+      .registerCompileTimePass(new DefaultDataPersistencePass())
+      .registerCompileTimePass(new DefaultScheduleGroupPass())
+      .registerCompileTimePass(new CompressionPass())
+      .registerCompileTimePass(new ResourceLocalityPass())
+      .registerCompileTimePass(new ResourceSlotPass());
+    policy = BUILDER.build();
   }
 
   @Override
