@@ -31,6 +31,7 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
+import org.apache.nemo.compiler.optimizer.policy.DynamicTaskSizingPolicy;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
 import org.apache.nemo.compiler.optimizer.policy.XGBoostPolicy;
 import org.apache.nemo.conf.JobConf;
@@ -57,6 +58,9 @@ public final class NemoOptimizer implements Optimizer {
   private final Map<UUID, Integer> cacheIdToParallelism = new HashMap<>();
   private int irDagCount = 0;
 
+  // added for tests for sampling
+  private final int parallelism;
+  private final int samplingRateInverse;
 
   /**
    * @param dagDirectory       to store JSON representation of intermediate DAGs.
@@ -70,11 +74,16 @@ public final class NemoOptimizer implements Optimizer {
                         @Parameter(JobConf.OptimizationPolicy.class) final String policyName,
                         @Parameter(JobConf.EnvironmentType.class) final String environmentTypeStr,
                         @Parameter(JobConf.ExecutorJSONContents.class) final String executorInfoContents,
+                        @Parameter(JobConf.Parallelism.class) final int parallelism,
+                        @Parameter(JobConf.SamplingRate.class) final int samplingRateInverse,
                         final ClientRPC clientRPC) {
     this.dagDirectory = dagDirectory;
     this.environmentTypeStr = OptimizerUtils.filterEnvironmentTypeString(environmentTypeStr);
     this.executorInfoContents = executorInfoContents;
     this.clientRPC = clientRPC;
+
+    this.parallelism = parallelism;
+    this.samplingRateInverse = samplingRateInverse;
 
     try {
       optimizationPolicy = (Policy) Class.forName(policyName).newInstance();
@@ -83,6 +92,10 @@ public final class NemoOptimizer implements Optimizer {
       }
     } catch (final Exception e) {
       throw new CompileTimeOptimizationException(e);
+    }
+
+    if (optimizationPolicy instanceof DynamicTaskSizingPolicy) {
+      ((DynamicTaskSizingPolicy) optimizationPolicy).injectParameters(parallelism, samplingRateInverse);
     }
   }
 

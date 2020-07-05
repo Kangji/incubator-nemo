@@ -30,8 +30,19 @@ import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 public final class DynamicTaskSizingPolicy implements Policy {
   public static final PolicyBuilder BUILDER =
     new PolicyBuilder()
-      .registerCompileTimePass(new DefaultParallelismPass())
-      .registerCompileTimePass(new SamplingTaskSizingPass(256))
+      .registerCompileTimePass(new DefaultParallelismPass());
+  private Policy policy;
+
+  /**
+   * Default constructor.
+   */
+  public DynamicTaskSizingPolicy() {
+    this.policy = BUILDER.build();
+  }
+
+  public void injectParameters(final int parallelism, final int samplingRateInverse) {
+    BUILDER
+      .registerCompileTimePass(new SamplingTaskSizingPass(parallelism, samplingRateInverse))
       .registerCompileTimePass(new LoopUnrollingPass())
       .registerCompileTimePass(new DefaultEdgeEncoderPass())
       .registerCompileTimePass(new DefaultEdgeDecoderPass())
@@ -41,13 +52,7 @@ public final class DynamicTaskSizingPolicy implements Policy {
       .registerCompileTimePass(new CompressionPass())
       .registerCompileTimePass(new ResourceLocalityPass())
       .registerCompileTimePass(new ResourceSlotPass());
-  private final Policy policy;
-
-  /**
-   * Default constructor.
-   */
-  public DynamicTaskSizingPolicy() {
-    this.policy = BUILDER.build();
+    policy = BUILDER.build();
   }
   @Override
   public IRDAG runCompileTimeOptimization(final IRDAG dag, final String dagDirectory) {

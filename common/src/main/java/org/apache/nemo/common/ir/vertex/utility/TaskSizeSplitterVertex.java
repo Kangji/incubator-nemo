@@ -57,7 +57,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
 
   // Information about partition sizes
   private final int partitionerProperty;
-  private final int taskSizeRatio;
+  private final int samplingRateInverse;
 
   // Information about splitter vertex's iteration
   private int testingTrial;
@@ -82,7 +82,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
                                 final Set<IRVertex> verticesWithStageOutgoingEdges,
                                 final Set<IRVertex> lastVerticesInStage,
                                 final int partitionerProperty,
-                                final int taskSizeRatio) {
+                                final int samplingRateInverse) {
     super(splitterVertexName); // need to take care of here
     this.testingTrial = 0;
     this.originalVertices = originalVertices;
@@ -93,7 +93,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     this.firstVerticesInStage = firstVerticesInStage;
     this.verticesWithStageOutgoingEdges = verticesWithStageOutgoingEdges;
     this.lastVerticesInStage = lastVerticesInStage;
-    this.taskSizeRatio = taskSizeRatio;
+    this.samplingRateInverse = samplingRateInverse;
   }
 
   // Getters of attributes
@@ -284,14 +284,15 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
    * @param irVertex    vertex to set parallelism property.
    */
   private void setParallelismPropertyByTestingTrial(final IRVertex irVertex) {
-    if (testingTrial < 2 && !(irVertex instanceof OperatorVertex
+    if (testingTrial==0 && !(irVertex instanceof OperatorVertex
       && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform)) {
-      irVertex.setPropertyPermanently(ParallelismProperty.of(32));
-    } else if (testingTrial == 2 && !(irVertex instanceof OperatorVertex
+      irVertex.setPropertyPermanently(ParallelismProperty.of(partitionerProperty / samplingRateInverse));
+    } else if (testingTrial == 1 && !(irVertex instanceof OperatorVertex
       && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform)) {
-      irVertex.setPropertyPermanently(ParallelismProperty.of(64));
+      irVertex.setPropertyPermanently(
+        ParallelismProperty.of(partitionerProperty - (partitionerProperty / samplingRateInverse)));
     } else {
-      irVertex.setPropertyPermanently(ParallelismProperty.of(128));
+      irVertex.setPropertyPermanently(ParallelismProperty.of(1));
     }
   }
 
@@ -302,26 +303,16 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
   private void setSubPartitionSetPropertyByTestingTrial(final IREdge edge) {
     final ArrayList<KeyRange> partitionSet = new ArrayList<>();
     int taskIndex = 0;
-    final int regex = partitionerProperty / taskSizeRatio;
+    final int regex = 1;
     //this is new code for testing the correctness of sampling
     if (testingTrial == 0) {
       //sampling for [0, partitioner/8)
-      for (int index = 0; index < partitionerProperty / 8; index += regex) {
+      for (int index = 0; index < partitionerProperty / samplingRateInverse; index += regex) {
         partitionSet.add(taskIndex, HashRange.of(index, index + regex));
         taskIndex++;
       }
-    } else if (testingTrial == 1) {
-      for (int index = partitionerProperty / 8; index < partitionerProperty / 4; index += regex) {
-        partitionSet.add(taskIndex, HashRange.of(index, index + regex));
-        taskIndex++;
-      }
-    } else if (testingTrial == 2) {
-      for (int index = partitionerProperty / 4; index < partitionerProperty / 2; index += regex) {
-        partitionSet.add(taskIndex, HashRange.of(index, index + regex));
-        taskIndex++;
-      }
-    } else { // testingTrial == 3
-      for (int index = partitionerProperty / 2; index < partitionerProperty; index += regex) {
+    } else { // testingTrial == 1
+      for (int index = partitionerProperty / samplingRateInverse; index < partitionerProperty; index += regex) {
         partitionSet.add(taskIndex, HashRange.of(index, index + regex));
         taskIndex++;
       }

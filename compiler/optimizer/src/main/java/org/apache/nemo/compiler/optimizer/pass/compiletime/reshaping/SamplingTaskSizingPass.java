@@ -59,35 +59,21 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
   private static final int PARTITIONER_PROPERTY_FOR_MEDIUM_JOB = 2048;
   private static final int PARTITIONER_PROPERTY_FOR_BIG_JOB = 4096;
   private final StagePartitioner stagePartitioner = new StagePartitioner();
-  private final int taskSizeRatio;
+  private final int parallelism;
+  private final int samplingRateInverse;
   /**
    * Default constructor.
    */
-  public SamplingTaskSizingPass(final int taskSizeRatio) {
+  public SamplingTaskSizingPass(final int parallelism, final int samplingRateInverse) {
     super(SamplingTaskSizingPass.class);
-    this.taskSizeRatio = taskSizeRatio;
+    this.parallelism = parallelism;
+    this.samplingRateInverse = samplingRateInverse;
   }
 
   @Override
   public IRDAG apply(final IRDAG dag) {
     /* Step 1. check DTS launch by job size */
-    boolean enableDynamicTaskSizing = getEnableFromJobSize(dag);
-    if (!enableDynamicTaskSizing) {
-      dag.topologicalDo(v -> {
-        v.setProperty(EnableDynamicTaskSizingProperty.of(enableDynamicTaskSizing));
-        for (IREdge e : dag.getIncomingEdgesOf(v)) { // do we need this? erase this code and check results
-          if (!CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
-            e.getPropertyValue(CommunicationPatternProperty.class).get())) {
-            final int partitionerProperty = e.getDst().getPropertyValue(ParallelismProperty.class).get();
-            e.setPropertyPermanently(PartitionerProperty.of(
-              e.getPropertyValue(PartitionerProperty.class).get().left(), partitionerProperty));
-          }
-        }
-      });
-      return dag;
-    }
-
-    final int partitionerProperty = setPartitionerProperty(dag);
+    final int partitionerProperty = parallelism;
 
     /* Step 2-1. Group vertices by stage using stage merging logic */
     final Map<IRVertex, Integer> vertexToStageId = stagePartitioner.apply(dag);
@@ -116,7 +102,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
       for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
         if (shuffleEdgesForDTS.contains(edge)) {
           shuffleEdgesForDTS.remove(edge);
-          edge.setProperty(PartitionerProperty.of(PartitionerProperty.Type.HASH, partitionerProperty));
+          edge.setProperty(PartitionerProperty.of(PartitionerProperty.Type.HASH, parallelism));
           shuffleEdgesForDTS.add(edge);
         }
       }
@@ -388,10 +374,16 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     final Set<IREdge> fromOriginalToOutside = setEdgesFromOriginalToOutside(dag, stageVertices,
       verticesWithStageOutgoingEdges);
     final TaskSizeSplitterVertex toInsert = new TaskSizeSplitterVertex(
-      "Splitter" + stageStartingVertices.iterator().next().getId(), stageVertices,
-      stageStartingVertices, verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty, taskSizeRatio);
+      "Splitter" + stageStartingVertices.iterator().next().getId(),
+      stageVertices,
+      stageStartingVertices,
+      verticesWithStageOutgoingEdges,
+      stageEndingVertices,
+      partitionerProperty,
+      samplingRateInverse);
+
     // By default, set the number of iterations as 2
-    toInsert.setMaxNumberOfIterations(4);
+    toInsert.setMaxNumberOfIterations(2);
     // make edges connected to splitter vertex
     final Set<IREdge> fromOutsideToSplitter = setEdgesFromOutsideToSplitter(dag, toInsert, stageStartingVertices);
     final Set<IREdge> fromSplitterToOutside = setEdgesFromSplitterToOutside(dag, toInsert,
