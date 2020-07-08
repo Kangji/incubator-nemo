@@ -163,7 +163,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     final HashSet<IREdge> edgesToOptimize = new HashSet<>();
 
     if (testingTrial.intValue() == 0) {
-      insertSignalVertex(new SignalVertex());
+      // insertSignalVertex(new SignalVertex());
     }
 
     final List<OperatorVertex> previousSignalVertex = new ArrayList<>(1);
@@ -269,7 +269,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     }
 
     // assign signal vertex of n-th iteration with nonIterativeIncomingEdges of (n+1)th iteration
-    markEdgesToOptimize(previousSignalVertex, edgesToOptimize);
+    // markEdgesToOptimize(previousSignalVertex, edgesToOptimize);
 
     // process next iteration's DAG incoming edges, and add them as the next loop's incoming edges:
     // clear, as we're done with the current loop and need to prepare it for the next one.

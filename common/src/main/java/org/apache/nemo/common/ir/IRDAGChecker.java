@@ -196,7 +196,8 @@ public final class IRDAGChecker {
       try {
         if (parallelism.isPresent() && v instanceof SourceVertex) {
           final int numOfReadables = ((SourceVertex) v).getReadables(parallelism.get()).size();
-          if (parallelism.get() != numOfReadables) {
+          if (parallelism.get() != numOfReadables && !v.getExecutionProperties()
+            .get(EnableDynamicTaskSizingProperty.class).orElse(false)) {
             return failure(String.format("(Parallelism %d) != (Number of SourceVertex %s Readables %d)",
               parallelism.get(), v.getId(), numOfReadables));
           }

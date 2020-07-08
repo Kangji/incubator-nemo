@@ -118,6 +118,7 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
     if (source != null) {
       LOG.info("estimate: {}", source.getEstimatedSizeBytes(null));
       LOG.info("desired: {}", desiredNumOfSplits);
+      // need to import other source code then default
       final List<BoundedSource<O>> boundedSourceList = (List<BoundedSource<O>>) source
         .split(this.estimatedSizeBytes / desiredNumOfSplits, null);
 
