@@ -108,6 +108,7 @@ public final class JobLauncher {
   public static void main(final String[] args) throws Exception {
     try {
       setup(args);
+      LOG.info("main");
       // Launch client main. The shutdown() method is called inside the launchDAG() method.
       runUserProgramMain(builtJobConf);
     } catch (final InjectionException e) {

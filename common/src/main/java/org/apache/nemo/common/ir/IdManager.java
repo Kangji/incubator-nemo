@@ -41,6 +41,7 @@ public final class IdManager {
   private static AtomicInteger edgeId = new AtomicInteger(1);
   private static AtomicLong resourceSpecIdGenerator = new AtomicLong(0);
   private static AtomicInteger duplicatedEdgeGroupId = new AtomicInteger(0);
+  private static AtomicInteger messageId = new AtomicInteger(1);
   private static volatile boolean isDriver = false;
 
   // Vertex ID Map to be used upon cloning in loop vertices.
@@ -100,6 +101,9 @@ public final class IdManager {
     return "ResourceSpec" + resourceSpecIdGenerator.getAndIncrement();
   }
 
+  public static Integer generateMessageId() {
+    return messageId.getAndIncrement();
+  }
   public static Integer generateDuplicatedEdgeGroupId() {
     return duplicatedEdgeGroupId.getAndIncrement();
   }

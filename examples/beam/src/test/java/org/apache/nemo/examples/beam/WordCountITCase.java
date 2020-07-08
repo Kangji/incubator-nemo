@@ -100,7 +100,8 @@ public final class WordCountITCase {
       .build());
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
+  // TODO # 453: Add test methods related to Dynamic Task Sizing in Nemo.
+  @Test(timeout = 240000, expected = Test.None.class)
   public void testDTS() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
