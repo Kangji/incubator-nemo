@@ -69,7 +69,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
   @Override
   public IRDAG apply(final IRDAG dag) {
     /* Step 1. check DTS launch by job size */
-    boolean enableDynamicTaskSizing = isDTSEnabledByJobSize(dag);
+    boolean enableDynamicTaskSizing = true; //isDTSEnabledByJobSize(dag);
     if (!enableDynamicTaskSizing) {
       return dag;
     } else {
@@ -136,9 +136,9 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
             .flatMap(vertexInPartition -> dag.getIncomingEdgesOf(vertexInPartition).stream())
             .map(Edge::getSrc)
             .allMatch(stageVertices::contains);
-          if (isSourcePartition) {
-            break;
-          }
+          // if (isSourcePartition) {
+          //   break;
+          // }
           insertSplitterVertex(dag, stageVertices, Collections.singleton(edge.getDst()),
             verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty);
         }
