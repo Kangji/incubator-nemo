@@ -445,19 +445,13 @@ public final class IRDAGChecker {
             -> e.getPropertyValue(EncoderProperty.class).get().getClass()).collect(Collectors.toSet());
           if (1 != nonStreamVertexEdge.stream()
             .map(e -> e.getPropertyValue(EncoderProperty.class).get().getClass()).distinct().count()) {
-            if (!encoderProperties.contains(EncoderFactory.DummyEncoderFactory.class)
-              || encoderProperties.size() != 2) {
-              return failure("Incompatible encoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
-            }
+            return failure("Incompatible encoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
           }
           Set<? extends Class<? extends DecoderFactory>> decoderProperties = nonStreamVertexEdge.stream().map(e
             -> e.getPropertyValue(DecoderProperty.class).get().getClass()).collect(Collectors.toSet());
           if (1 != nonStreamVertexEdge.stream()
             .map(e -> e.getPropertyValue(DecoderProperty.class).get().getClass()).distinct().count()) {
-            if (!decoderProperties.contains(DecoderFactory.DummyDecoderFactory.class)
-              || encoderProperties.size() != 2) {
-              return failure("Incompatible decoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
-            }
+            return failure("Incompatible decoders in " + Util.stringifyIREdgeIds(nonStreamVertexEdge));
           }
         }
       }

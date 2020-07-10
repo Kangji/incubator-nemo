@@ -32,6 +32,7 @@ import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.EnableDynamicTaskSizingProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ScheduleGroupProperty;
 import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
@@ -170,14 +171,24 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
 
         // Take care of the readables of a source vertex.
         if (vertexToPutIntoStage instanceof SourceVertex && !isStagePartitioned.contains(vertexToPutIntoStage)) {
+          final boolean coalesceEnabled = vertexToPutIntoStage
+            .getPropertyValue(EnableDynamicTaskSizingProperty.class)
+            .orElse(false);
           final SourceVertex sourceVertex = (SourceVertex) vertexToPutIntoStage;
-          try {
-            final List<Readable> readables = sourceVertex.getReadables(stageParallelism);
-            for (int i = 0; i < stageParallelism; i++) {
-              vertexIdToReadables.get(i).put(vertexToPutIntoStage.getId(), readables.get(i));
+          final List<Readable> readables;
+          if (!coalesceEnabled) {
+            try {
+              readables = sourceVertex.getReadables(stageParallelism);
+            } catch (final Exception e) {
+              throw new PhysicalPlanGenerationException(e);
             }
-          } catch (final Exception e) {
-            throw new PhysicalPlanGenerationException(e);
+          } else {
+            try {
+              readables = sourceVertex.getCoalescedReadables(getPartitionerPropertyByJobSize(irDAG),
+                stageParallelism, irDAG.getIncomingEdgesOf(sourceVertex).isEmpty());
+            } catch (final Exception e) {
+              throw new PhysicalPlanGenerationException(e);
+            }
           }
           // Clear internal metadata.
           sourceVertex.clearInternalStates();
@@ -240,6 +251,17 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
     return dagOfStagesBuilder.build();
   }
 
+  private int getPartitionerPropertyByJobSize(final IRDAG dag) {
+    long jobSizeInBytes = dag.getInputSize();
+    long jobSizeInGB = jobSizeInBytes / (1024 * 1024 * 1024);
+    if (jobSizeInGB < 10) {
+      return 1024;
+    } else if (10 <= jobSizeInGB && jobSizeInGB < 100) {
+      return 2048;
+    } else {
+      return 4096;
+    }
+  }
   /**
    * This method is needed, because we do not want to put Sampling vertices into a stage.
    * The underlying runtime only understands Source and Operator vertices.

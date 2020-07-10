@@ -73,7 +73,12 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
   @Override
   public IRDAG apply(final IRDAG dag) {
     /* Step 1. check DTS launch by job size */
+    boolean enableDynamicTaskSizing = true;
+    if (!enableDynamicTaskSizing) {
+      return dag;
+    }
     final int partitionerProperty = parallelism;
+
 
     /* Step 2-1. Group vertices by stage using stage merging logic */
     final Map<IRVertex, Integer> vertexToStageId = stagePartitioner.apply(dag);
@@ -86,16 +91,37 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     });
 
     /* Step 2-2. Mark stages to insert splitter vertex and get target edges of DTS */
+    final Set<Integer> sourceStageIds = new HashSet<>();
     Set<Integer> stageIdsToInsertSplitter = new HashSet<>();
     Set<IREdge> shuffleEdgesForDTS = new HashSet<>();
     dag.topologicalDo(v -> {
-      for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
-        if (checkForInsertingSplitterVertex(dag, v, edge, vertexToStageId, stageIdToStageVertices)) {
-          stageIdsToInsertSplitter.add(vertexToStageId.get(v));
+      // get source partition
+      if (dag.getIncomingEdgesOf(v).isEmpty()) {
+        sourceStageIds.add(vertexToStageId.get(v));
+      }
+      // for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
+      //    if (isAppropriateForInsertingSplitterVertex(dag, v, edge, vertexToStageId, stageIdToStageVertices)) {
+      //      stageIdsToInsertSplitter.add(vertexToStageId.get(v));
+      //      shuffleEdgesForDTS.add(edge);
+      //    }
+      //  }
+    });
+
+    // handle source stages
+    for (int sourceStageId : sourceStageIds) {
+      Set<IREdge> stageOutgoingEdges = stageIdToStageVertices.get(sourceStageId).stream()
+        .flatMap(vertex -> dag.getOutgoingEdgesOf(vertex).stream())
+        .filter(edge -> !stageIdToStageVertices.get(sourceStageId).contains(edge.getDst()))
+        .collect(Collectors.toSet());
+
+      for (IREdge edge : stageOutgoingEdges) {
+        if (isAppropriateForInsertingSplitterVertex(dag, edge.getSrc(), edge,
+          vertexToStageId, stageIdToStageVertices)) {
+          stageIdsToInsertSplitter.add(vertexToStageId.get(edge.getSrc()));
           shuffleEdgesForDTS.add(edge);
         }
       }
-    });
+    }
 
     /* Step 2-3. Change partitioner property for DTS target edges */
     dag.topologicalDo(v -> {
@@ -117,6 +143,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     });
 
     /* Step 3. Insert Splitter Vertex */
+    /*
     List<IRVertex> reverseTopologicalOrder = dag.getTopologicalSort();
     Collections.reverse(reverseTopologicalOrder);
     for (IRVertex v : reverseTopologicalOrder) {
@@ -134,10 +161,6 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
               }
             }
           }
-          //Set<IRVertex> verticesWithStageOutgoingEdges = stageVertices.stream().filter(stageVertex ->
-          //  dag.getOutgoingEdgesOf(stageVertex).stream()
-          //    .map(Edge::getDst).anyMatch(Predicate.not(stageVertices::contains)))
-          //  .collect(Collectors.toSet());
           Set<IRVertex> stageEndingVertices = stageVertices.stream()
             .filter(stageVertex -> dag.getOutgoingEdgesOf(stageVertex).isEmpty()
               || !dag.getOutgoingEdgesOf(stageVertex).stream().map(Edge::getDst).anyMatch(stageVertices::contains))
@@ -149,9 +172,37 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
           if (isSourcePartition) {
             break;
           }
-          makeAndInsertSplitterVertex(dag, stageVertices, Collections.singleton(edge.getDst()),
+          insertSplitterVertex(dag, stageVertices, Collections.singleton(edge.getDst()),
             verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty);
         }
+      }
+    }
+
+     */
+
+    // source partition!
+    for (int sourceStageId : sourceStageIds) {
+      if (stageIdsToInsertSplitter.contains(sourceStageId)) {
+        Set<IRVertex> stageVertices = stageIdToStageVertices.get(sourceStageId);
+        Set<IRVertex> verticesWithStageOutgoingEdges = new HashSet<>();
+        for (IRVertex v2 : stageVertices) {
+          Set<IRVertex> nextVertices = dag.getOutgoingEdgesOf(v2).stream().map(Edge::getDst)
+            .collect(Collectors.toSet());
+          for (IRVertex v3 : nextVertices) {
+            if (!stageVertices.contains(v3)) {
+              verticesWithStageOutgoingEdges.add(v2);
+            }
+          }
+        }
+        Set<IRVertex> stageStartingVertices = stageVertices.stream()
+          .filter(stageVertex -> dag.getIncomingEdgesOf(stageVertex).isEmpty())
+          .collect(Collectors.toSet());
+        Set<IRVertex> stageEndingVertices = stageVertices.stream()
+          .filter(stageVertex -> dag.getOutgoingEdgesOf(stageVertex).isEmpty()
+            || !dag.getOutgoingEdgesOf(stageVertex).stream().map(Edge::getDst).anyMatch(stageVertices::contains))
+          .collect(Collectors.toSet());
+        insertSplitterVertex(dag, stageVertices, stageStartingVertices,
+          verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty);
       }
     }
     return dag;
@@ -188,8 +239,8 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
    * @param stageIdToStageVertices  maps stage id to its vertices
    * @return                        true if we can wrap this stage with splitter vertex (i.e. appropriate for DTS)
    */
-  private boolean checkForInsertingSplitterVertex(final IRDAG dag,
-                                                  final IRVertex observingVertex,
+  private boolean isAppropriateForInsertingSplitterVertex(final IRDAG dag,
+                                                          final IRVertex observingVertex,
                                                   final IREdge observingEdge,
                                                   final Map<IRVertex, Integer> vertexToStageId,
                                                   final Map<Integer, Set<IRVertex>> stageIdToStageVertices) {
@@ -351,12 +402,12 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
    *                                         vertices in this stage
    * @param partitionerProperty              partitioner property
    */
-  private void makeAndInsertSplitterVertex(final IRDAG dag,
-                                           final Set<IRVertex> stageVertices,
-                                           final Set<IRVertex> stageStartingVertices,
-                                           final Set<IRVertex> verticesWithStageOutgoingEdges,
-                                           final Set<IRVertex> stageEndingVertices,
-                                           final int partitionerProperty) {
+  private void insertSplitterVertex(final IRDAG dag,
+                                    final Set<IRVertex> stageVertices,
+                                    final Set<IRVertex> stageStartingVertices,
+                                    final Set<IRVertex> verticesWithStageOutgoingEdges,
+                                    final Set<IRVertex> stageEndingVertices,
+                                    final int partitionerProperty) {
     final Set<IREdge> incomingEdgesOfOriginalVertices = stageVertices
       .stream()
       .flatMap(ov -> dag.getIncomingEdgesOf(ov).stream())
