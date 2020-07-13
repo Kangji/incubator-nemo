@@ -95,9 +95,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     this.lastVerticesInStage = lastVerticesInStage;
     this.samplingRateInverse = samplingRateInverse;
 
-    if (samplingRateInverse == 1) {
-      setMaxNumberOfIterations(1);
-    }
+    setMaxNumberOfIterations(samplingRateInverse);
   }
 
   // Getters of attributes
@@ -288,13 +286,9 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
    * @param irVertex    vertex to set parallelism property.
    */
   private void setParallelismPropertyByTestingTrial(final IRVertex irVertex) {
-    if (testingTrial == 0 && !(irVertex instanceof OperatorVertex
+    if (!(irVertex instanceof OperatorVertex
       && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform)) {
       irVertex.setPropertyPermanently(ParallelismProperty.of(partitionerProperty / samplingRateInverse));
-    } else if (testingTrial == 1 && !(irVertex instanceof OperatorVertex
-      && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform)) {
-      irVertex.setPropertyPermanently(
-        ParallelismProperty.of(partitionerProperty - (partitionerProperty / samplingRateInverse)));
     } else {
       irVertex.setPropertyPermanently(ParallelismProperty.of(1));
     }
@@ -308,18 +302,12 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
     final ArrayList<KeyRange> partitionSet = new ArrayList<>();
     int taskIndex = 0;
     final int regex = 1;
+    final int groupBound = partitionerProperty / samplingRateInverse;
     //this is new code for testing the correctness of sampling
-    if (testingTrial == 0) {
-      //sampling for [0, partitioner/8)
-      for (int index = 0; index < partitionerProperty / samplingRateInverse; index += regex) {
-        partitionSet.add(taskIndex, HashRange.of(index, index + regex));
-        taskIndex++;
-      }
-    } else { // testingTrial == 1
-      for (int index = partitionerProperty / samplingRateInverse; index < partitionerProperty; index += regex) {
-        partitionSet.add(taskIndex, HashRange.of(index, index + regex));
-        taskIndex++;
-      }
+    for (int index = 0; index < groupBound; index += regex) {
+      partitionSet.add(taskIndex, HashRange.of(groupBound * testingTrial + index,
+        groupBound * testingTrial + index + regex));
+      taskIndex++;
     }
     edge.setProperty(SubPartitionSetProperty.of(partitionSet));
     /*
