@@ -52,7 +52,7 @@ under the License.
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-sdks-java-io-hadoop-format</artifactId>
-      <version>${beam.version}</version>
+      <version>${beam.version}-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
