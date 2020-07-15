@@ -29,8 +29,7 @@ import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
  */
 public final class DynamicTaskSizingPolicy implements Policy {
   public static final PolicyBuilder BUILDER =
-    new PolicyBuilder()
-      .registerCompileTimePass(new DefaultParallelismPass());
+    new PolicyBuilder();
   private Policy policy;
 
   /**
@@ -42,6 +41,7 @@ public final class DynamicTaskSizingPolicy implements Policy {
 
   public void injectParameters(final int parallelism, final int samplingRateInverse) {
     BUILDER
+      .registerCompileTimePass(new DefaultParallelismPass(parallelism, 2))
       .registerCompileTimePass(new SamplingTaskSizingPass(parallelism, samplingRateInverse))
       .registerCompileTimePass(new LoopUnrollingPass())
       .registerCompileTimePass(new DefaultEdgeEncoderPass())

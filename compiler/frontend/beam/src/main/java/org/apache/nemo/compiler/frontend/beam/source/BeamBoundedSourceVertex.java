@@ -121,12 +121,22 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
       // need to import other source code then default
       final List<BoundedSource<O>> boundedSourceList = (List<BoundedSource<O>>) source
         .split(this.estimatedSizeBytes / desiredNumOfSplits, null);
-      LOG.error("source list length: {}", boundedSourceList.size());
-      final int regex = stageParallelism / maxTrialToSample;
-      for (int i = 0; i < regex; i++) {
-        readables.add(new BeamBoundedSourceVertex.BoundedSourceReadable<>(
-          boundedSourceList.get(samplingRound * regex + i)));
+      LOG.error("desired parallelism: {}", stageParallelism);
+      LOG.error("received parallelism: {}", boundedSourceList.size());
+      final int regex = boundedSourceList.size() / maxTrialToSample;
+      if (samplingRound < maxTrialToSample - 1) {
+        for (int i = 0; i < regex; i++) {
+          readables.add(new BeamBoundedSourceVertex.BoundedSourceReadable<>(
+            boundedSourceList.get(samplingRound * regex + i)));
+        }
+      } else {
+        // last iteration
+        for (int i = samplingRound * regex; i < boundedSourceList.size(); i++) {
+          readables.add(new BeamBoundedSourceVertex.BoundedSourceReadable<>(
+            boundedSourceList.get(i)));
+        }
       }
+
 
       /*
       if (isInSamplingStage) {

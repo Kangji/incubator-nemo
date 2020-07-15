@@ -188,7 +188,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
             }
           } else {
             try {
-              readables = sourceVertex.getCoalescedReadables(getPartitionerPropertyByJobSize(irDAG),
+              readables = sourceVertex.getCoalescedReadables(stageParallelism,
                 stageParallelism, maxSamplingTrial, thisSamplingTrial);
             } catch (final Exception e) {
               throw new PhysicalPlanGenerationException(e);
