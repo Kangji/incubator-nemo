@@ -123,7 +123,9 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
         .split(this.estimatedSizeBytes / desiredNumOfSplits, null);
       LOG.error("desired parallelism: {}", stageParallelism);
       LOG.error("received parallelism: {}", boundedSourceList.size());
+      LOG.error("sampling rate: {}", maxTrialToSample);
       final int regex = boundedSourceList.size() / maxTrialToSample;
+      LOG.error("parallelism for each divided source: {}", regex);
       if (samplingRound < maxTrialToSample - 1) {
         for (int i = 0; i < regex; i++) {
           readables.add(new BeamBoundedSourceVertex.BoundedSourceReadable<>(
