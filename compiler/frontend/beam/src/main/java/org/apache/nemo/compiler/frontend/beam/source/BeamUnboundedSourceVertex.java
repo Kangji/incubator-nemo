@@ -103,14 +103,16 @@ public final class BeamUnboundedSourceVertex<O, M extends UnboundedSource.Checkp
    *
    * @param desiredNumOfSplits number of splits desired.
    * @param stageParallelism   number of parallelism.
-   * @param isInSamplingStage  true if in sampling stage, false if not.
+   * @param maxTrialToSample    maximum number to sample.
+   * @param samplingRound  true if in sampling stage, false if not.
    * @return the list of readables.
    * @throws Exception if failed to get.
    */
   @Override
   public List<Readable<Object>> getCoalescedReadables(final int desiredNumOfSplits,
                                                       final int stageParallelism,
-                                                      final boolean isInSamplingStage) throws Exception {
+                                                      final int maxTrialToSample,
+                                                      final int samplingRound) throws Exception {
     return getReadables(desiredNumOfSplits);
   }
 

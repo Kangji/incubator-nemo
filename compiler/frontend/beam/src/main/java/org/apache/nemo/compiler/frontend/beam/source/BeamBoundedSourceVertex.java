@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -112,7 +111,8 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
   // need to add execution order here?
   public List<Readable<WindowedValue<O>>> getCoalescedReadables(final int desiredNumOfSplits,
                                                                 final int stageParallelism,
-                                                                final boolean isInSamplingStage) throws Exception {
+                                                                final int maxTrialToSample,
+                                                                final int samplingRound) throws Exception {
     final List<Readable<WindowedValue<O>>> readables = new ArrayList<>();
 
     if (source != null) {
@@ -121,10 +121,18 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
       // need to import other source code then default
       final List<BoundedSource<O>> boundedSourceList = (List<BoundedSource<O>>) source
         .split(this.estimatedSizeBytes / desiredNumOfSplits, null);
+      LOG.error("source list length: {}", boundedSourceList.size());
+      final int regex = stageParallelism / maxTrialToSample;
+      for (int i = 0; i < regex; i++) {
+        readables.add(new BeamBoundedSourceVertex.BoundedSourceReadable<>(
+          boundedSourceList.get(samplingRound * regex + i)));
+      }
 
+      /*
       if (isInSamplingStage) {
         // for now, let's stick with the current ad-hoc method
         //index 0-511 are for sampling
+
         for (int i = 0; i < 4; i++) {
           readables.add(new CoalescedBoundedSourceReadable<>(Collections.singletonList(boundedSourceList.get(i))));
         }
@@ -145,11 +153,14 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
         readables.add(new CoalescedBoundedSourceReadable<>(boundedSourceList.subList(
           512 + (stageParallelism - 1) * numberOfSplitsToBindTogether, boundedSourceList.size())));
       }
+
+       */
     } else {
       // TODO #333: Remove SourceVertex#clearInternalStates
       final SourceVertex emptySourceVertex = new EmptyComponents.EmptySourceVertex("EMPTY");
       return emptySourceVertex.getReadables(desiredNumOfSplits);
     }
+
     return readables;
   }
 

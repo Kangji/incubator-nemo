@@ -72,20 +72,11 @@ public final class CachedSourceVertex<T> extends SourceVertex<T> {
     return readables;
   }
 
-  /**
-   * Gets readables with diverse size. Currently, this is implemented in BeamBoundedSourceVertex, and exponentially
-   * groups readables
-   *
-   * @param desiredNumOfSplits number of splits desired.
-   * @param stageParallelism   number of parallelism.
-   * @param isInSamplingStage  true if in sampling stage, false if not.
-   * @return the list of readables.
-   * @throws Exception if failed to get.
-   */
   @Override
   public List<Readable<T>> getCoalescedReadables(final int desiredNumOfSplits,
                                                  final int stageParallelism,
-                                                 final boolean isInSamplingStage) throws Exception {
+                                                 final int maxTrialToSample,
+                                                 final int samplingRound) throws Exception {
     return readables;
   }
 

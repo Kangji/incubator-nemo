@@ -111,7 +111,7 @@ public final class WordCountITCase {
       .addResourceJson(executorResourceFileName)
       .addJobId(WordCountITCase.class.getSimpleName() + "_dtsSampling")
       .addOptimizationPolicy(DynamicTaskSizingPolicy.class.getCanonicalName())
-      .addParallelism(32)
+      .addParallelism(512)
       .addSamplingRate(8)
       .build());
   }

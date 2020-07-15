@@ -32,6 +32,7 @@ import org.apache.nemo.common.ir.vertex.LoopVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.SamplingTrialProperty;
 import org.apache.nemo.common.ir.vertex.transform.SignalTransform;
 import org.apache.nemo.common.ir.vertex.utility.runtimepasstriggervertex.SignalVertex;
 import org.slf4j.Logger;
@@ -165,6 +166,7 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
       if (!(irVertex instanceof SignalVertex)) {
         final IRVertex newIrVertex = irVertex.getClone();
         setParallelismPropertyByTestingTrial(newIrVertex);
+        newIrVertex.setPropertyPermanently(SamplingTrialProperty.of(samplingRateInverse, testingTrial));
         originalToNewIRVertex.putIfAbsent(irVertex, newIrVertex);
         dagBuilder.addVertex(newIrVertex, dagToAdd);
         dagToAdd.getIncomingEdgesOf(irVertex).forEach(edge -> {

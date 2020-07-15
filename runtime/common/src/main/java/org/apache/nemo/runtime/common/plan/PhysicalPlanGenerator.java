@@ -34,6 +34,7 @@ import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.EnableDynamicTaskSizingProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.SamplingTrialProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ScheduleGroupProperty;
 import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
 import org.apache.nemo.conf.JobConf;
@@ -174,6 +175,9 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
           final boolean coalesceEnabled = vertexToPutIntoStage
             .getPropertyValue(EnableDynamicTaskSizingProperty.class)
             .orElse(false);
+          final int maxSamplingTrial = vertexToPutIntoStage.getPropertyValue(SamplingTrialProperty.class).get().left();
+          final int thisSamplingTrial = vertexToPutIntoStage
+            .getPropertyValue(SamplingTrialProperty.class).get().right();
           final SourceVertex sourceVertex = (SourceVertex) vertexToPutIntoStage;
           final List<Readable> readables;
           if (!coalesceEnabled) {
@@ -185,7 +189,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
           } else {
             try {
               readables = sourceVertex.getCoalescedReadables(getPartitionerPropertyByJobSize(irDAG),
-                stageParallelism, irDAG.getIncomingEdgesOf(sourceVertex).isEmpty());
+                stageParallelism, maxSamplingTrial, thisSamplingTrial);
             } catch (final Exception e) {
               throw new PhysicalPlanGenerationException(e);
             }
