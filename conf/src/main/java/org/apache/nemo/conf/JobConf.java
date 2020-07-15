@@ -250,6 +250,14 @@ public final class JobConf extends ConfigurationModuleBuilder {
   public final class ExecutorJSONContents implements Name<String> {
   }
 
+  /**
+   * aa.
+   */
+  @NamedParameter(doc = ".", default_value = "1")
+  public final class Parallelism implements Name<Integer> {
+
+  }
+
   //////////////////////////////// Runtime Data Plane Configurations
 
   /**

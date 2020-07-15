@@ -31,6 +31,7 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
+import org.apache.nemo.compiler.optimizer.policy.DefaultPolicy;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
 import org.apache.nemo.compiler.optimizer.policy.XGBoostPolicy;
 import org.apache.nemo.conf.JobConf;
@@ -56,25 +57,21 @@ public final class NemoOptimizer implements Optimizer {
 
   private final Map<UUID, Integer> cacheIdToParallelism = new HashMap<>();
   private int irDagCount = 0;
+  private final int parallelism;
 
-
-  /**
-   * @param dagDirectory       to store JSON representation of intermediate DAGs.
-   * @param policyName         the name of the optimization policy.
-   * @param environmentTypeStr the environment type of the workload to optimize the DAG for.
-   * @param executorInfoContents the string of the information of the executors provided.
-   * @param clientRPC          the RPC channel to communicate with the client.
-   */
   @Inject
   private NemoOptimizer(@Parameter(JobConf.DAGDirectory.class) final String dagDirectory,
                         @Parameter(JobConf.OptimizationPolicy.class) final String policyName,
                         @Parameter(JobConf.EnvironmentType.class) final String environmentTypeStr,
                         @Parameter(JobConf.ExecutorJSONContents.class) final String executorInfoContents,
+                        @Parameter(JobConf.Parallelism.class) final int parallelism,
                         final ClientRPC clientRPC) {
     this.dagDirectory = dagDirectory;
     this.environmentTypeStr = OptimizerUtils.filterEnvironmentTypeString(environmentTypeStr);
     this.executorInfoContents = executorInfoContents;
     this.clientRPC = clientRPC;
+
+    this.parallelism = parallelism;
 
     try {
       optimizationPolicy = (Policy) Class.forName(policyName).newInstance();
@@ -83,6 +80,10 @@ public final class NemoOptimizer implements Optimizer {
       }
     } catch (final Exception e) {
       throw new CompileTimeOptimizationException(e);
+    }
+
+    if (optimizationPolicy instanceof DefaultPolicy) {
+      ((DefaultPolicy) optimizationPolicy).injectParameters(parallelism);
     }
   }
 
