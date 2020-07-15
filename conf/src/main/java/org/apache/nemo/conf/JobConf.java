@@ -253,7 +253,7 @@ public final class JobConf extends ConfigurationModuleBuilder {
   /**
    * aa.
    */
-  @NamedParameter(doc = ".", default_value = "1")
+  @NamedParameter(doc = ".", short_name = "parallelism", default_value = "1")
   public final class Parallelism implements Name<Integer> {
 
   }
