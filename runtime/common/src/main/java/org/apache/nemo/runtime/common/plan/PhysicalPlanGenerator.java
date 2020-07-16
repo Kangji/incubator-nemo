@@ -161,7 +161,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
       final DAGBuilder<IRVertex, RuntimeEdge<IRVertex>> stageInternalDAGBuilder = new DAGBuilder<>();
 
       // Prepare vertexIdToReadables
-      final List<Map<String, Readable>> vertexIdToReadables = new ArrayList<>();
+      final List<Map<String, Readable>> vertexIdToReadables = new ArrayList<>(stageParallelism);
 
       // For each IRVertex,
       for (final IRVertex v : stageVertices) {
