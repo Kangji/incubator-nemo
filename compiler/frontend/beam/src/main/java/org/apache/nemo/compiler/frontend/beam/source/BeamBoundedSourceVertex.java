@@ -116,16 +116,16 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
     final List<Readable<WindowedValue<O>>> readables = new ArrayList<>();
 
     if (source != null) {
-      LOG.info("estimate: {}", source.getEstimatedSizeBytes(null));
-      LOG.info("desired: {}", desiredNumOfSplits);
+      LOG.info("[HWARIM] estimate: {}", source.getEstimatedSizeBytes(null));
+      LOG.info("[HWARIM] desired: {}", desiredNumOfSplits);
       // need to import other source code then default
       final List<BoundedSource<O>> boundedSourceList = (List<BoundedSource<O>>) source
         .split(this.estimatedSizeBytes / desiredNumOfSplits, null);
-      LOG.error("desired parallelism: {}", stageParallelism);
-      LOG.error("received parallelism: {}", boundedSourceList.size());
-      LOG.error("sampling rate: {}", maxTrialToSample);
+      LOG.error("[HWARIM] desired parallelism: {}", stageParallelism);
+      LOG.error("[HWARIM] received parallelism: {}", boundedSourceList.size());
+      LOG.error("[HWARIM] sampling rate: {}", maxTrialToSample);
       final int regex = boundedSourceList.size() / maxTrialToSample;
-      LOG.error("parallelism for each divided source: {}", regex);
+      LOG.error("[HWARIM] parallelism for each divided source: {}", regex);
       if (samplingRound < maxTrialToSample - 1) {
         for (int i = 0; i < regex; i++) {
           readables.add(new BeamBoundedSourceVertex.BoundedSourceReadable<>(

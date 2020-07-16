@@ -161,11 +161,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
       final DAGBuilder<IRVertex, RuntimeEdge<IRVertex>> stageInternalDAGBuilder = new DAGBuilder<>();
 
       // Prepare vertexIdToReadables
-      LOG.error("[HWARIM] parallelism of vertexIdToReadables: {}", stageParallelism);
-      final List<Map<String, Readable>> vertexIdToReadables = new ArrayList<>(stageParallelism);
-      for (int i = 0; i < stageParallelism; i++) {
-        vertexIdToReadables.add(new HashMap<>());
-      }
+      final List<Map<String, Readable>> vertexIdToReadables = new ArrayList<>();
 
       // For each IRVertex,
       for (final IRVertex v : stageVertices) {
@@ -185,6 +181,10 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
           if (!coalesceEnabled) {
             try {
               readables = sourceVertex.getReadables(stageParallelism);
+              LOG.error("[HWARIM] parallelism of vertexIdToReadables: {}", readables.size());
+              for (int i = 0; i < readables.size(); i++) {
+                vertexIdToReadables.add(new HashMap<>());
+              }
               for (int i = 0; i < readables.size(); i++) {
                 vertexIdToReadables.get(i + thisSamplingTrial * readables.size())
                   .put(vertexToPutIntoStage.getId(), readables.get(i));
@@ -196,6 +196,10 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
             try {
               readables = sourceVertex.getCoalescedReadables(stageParallelism,
                 stageParallelism, maxSamplingTrial, thisSamplingTrial);
+              LOG.error("[HWARIM] parallelism of vertexIdToReadables: {}", readables.size());
+              for (int i = 0; i < readables.size(); i++) {
+                vertexIdToReadables.add(new HashMap<>());
+              }
               for (int i = 0; i < readables.size(); i++) {
                 vertexIdToReadables.get(i + thisSamplingTrial * readables.size())
                   .put(vertexToPutIntoStage.getId(), readables.get(i));
