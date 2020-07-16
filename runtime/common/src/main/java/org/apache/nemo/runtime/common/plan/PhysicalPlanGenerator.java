@@ -177,7 +177,8 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
             .orElse(false);
           final int maxSamplingTrial = vertexToPutIntoStage.getPropertyValue(SamplingTrialProperty.class).get().left();
           final int thisSamplingTrial = vertexToPutIntoStage
-            .getPropertyValue(SamplingTrialProperty.class).get().right();
+            .getPropertyValue(SamplingTrialProperty.class).get().right() - 1;
+          LOG.error("[HWARIM] this sampling trial: {}", thisSamplingTrial);
           final SourceVertex sourceVertex = (SourceVertex) vertexToPutIntoStage;
           final List<Readable> readables;
           if (!coalesceEnabled) {
