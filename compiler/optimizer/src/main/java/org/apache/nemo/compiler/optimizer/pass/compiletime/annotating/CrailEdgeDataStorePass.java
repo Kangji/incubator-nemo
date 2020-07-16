@@ -47,7 +47,7 @@ public final class CrailEdgeDataStorePass extends AnnotatingPass {
       final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
       inEdges.forEach(edge -> {
         edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.PULL));
-        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.CRAIL_FILE_STORE))
+        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.CRAIL_FILE_STORE));
       });
     });
     return dag;
