@@ -84,9 +84,9 @@ public final class ExecutionPropertyMap<T extends ExecutionProperty> implements 
         map.put(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE));
         break;
       case ONE_TO_ONE:
-        map.put(DataFlowProperty.of(DataFlowProperty.Value.PUSH));
+        map.put(DataFlowProperty.of(DataFlowProperty.Value.PULL));
         map.put(PartitionerProperty.of(PartitionerProperty.Type.INTACT));
-        map.put(DataStoreProperty.of(DataStoreProperty.Value.MEMORY_STORE));
+        map.put(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE));
         break;
       default:
         throw new IllegalStateException(commPattern.toString());
