@@ -139,6 +139,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
         v.setProperty(EnableDynamicTaskSizingProperty.of(true));
       } else {
         v.setProperty(EnableDynamicTaskSizingProperty.of(false));
+        v.setProperty(ParallelismProperty.of(parallelism));
       }
     });
 
