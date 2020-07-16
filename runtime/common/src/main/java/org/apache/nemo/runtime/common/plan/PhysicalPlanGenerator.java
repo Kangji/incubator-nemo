@@ -186,7 +186,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
                 vertexIdToReadables.add(new HashMap<>());
               }
               for (int i = 0; i < readables.size(); i++) {
-                vertexIdToReadables.get(i + thisSamplingTrial * readables.size())
+                vertexIdToReadables.get(i)
                   .put(vertexToPutIntoStage.getId(), readables.get(i));
               }
             } catch (final Exception e) {
@@ -201,7 +201,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
                 vertexIdToReadables.add(new HashMap<>());
               }
               for (int i = 0; i < readables.size(); i++) {
-                vertexIdToReadables.get(i + thisSamplingTrial * readables.size())
+                vertexIdToReadables.get(i)
                   .put(vertexToPutIntoStage.getId(), readables.get(i));
               }
             } catch (final Exception e) {
