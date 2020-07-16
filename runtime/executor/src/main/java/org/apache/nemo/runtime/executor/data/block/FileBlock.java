@@ -334,7 +334,9 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
     while (remainingBytesToSkip > 0) {
       if (inputStream instanceof CrailBufferedInputStream) {
         try {
-          skippedBytes = inputStream.skip(bytesToSkip);
+          long pos = ((CrailBufferedInputStream) inputStream).position();
+          ((CrailBufferedInputStream) inputStream).seek(pos + remainingBytesToSkip);
+          skippedBytes = ((CrailBufferedInputStream) inputStream).position() - pos;
           remainingBytesToSkip -= skippedBytes;
         } catch (final IOException e) {
           throw new IOException(e);
