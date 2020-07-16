@@ -183,6 +183,10 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
           if (!coalesceEnabled) {
             try {
               readables = sourceVertex.getReadables(stageParallelism);
+              for (int i = 0; i < readables.size(); i++) {
+                vertexIdToReadables.get(i + thisSamplingTrial * readables.size())
+                  .put(vertexToPutIntoStage.getId(), readables.get(i));
+              }
             } catch (final Exception e) {
               throw new PhysicalPlanGenerationException(e);
             }
@@ -190,6 +194,10 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
             try {
               readables = sourceVertex.getCoalescedReadables(stageParallelism,
                 stageParallelism, maxSamplingTrial, thisSamplingTrial);
+              for (int i = 0; i < readables.size(); i++) {
+                vertexIdToReadables.get(i + thisSamplingTrial * readables.size())
+                  .put(vertexToPutIntoStage.getId(), readables.get(i));
+              }
             } catch (final Exception e) {
               throw new PhysicalPlanGenerationException(e);
             }
