@@ -161,6 +161,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
       final DAGBuilder<IRVertex, RuntimeEdge<IRVertex>> stageInternalDAGBuilder = new DAGBuilder<>();
 
       // Prepare vertexIdToReadables
+      LOG.error("[HWARIM] parallelism of vertexIdToReadables: {}", stageParallelism);
       final List<Map<String, Readable>> vertexIdToReadables = new ArrayList<>(stageParallelism);
       for (int i = 0; i < stageParallelism; i++) {
         vertexIdToReadables.add(new HashMap<>());
@@ -177,7 +178,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
             .orElse(false);
           final int maxSamplingTrial = vertexToPutIntoStage.getPropertyValue(SamplingTrialProperty.class).get().left();
           final int thisSamplingTrial = vertexToPutIntoStage
-            .getPropertyValue(SamplingTrialProperty.class).get().right() - 1;
+            .getPropertyValue(SamplingTrialProperty.class).get().right();
           LOG.error("[HWARIM] this sampling trial: {}", thisSamplingTrial);
           final SourceVertex sourceVertex = (SourceVertex) vertexToPutIntoStage;
           final List<Readable> readables;
