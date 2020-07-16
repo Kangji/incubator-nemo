@@ -21,7 +21,6 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.annotating;
 
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
-import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
@@ -45,10 +44,8 @@ public final class CrailEdgeDataStorePass extends AnnotatingPass {
   public IRDAG apply(final IRDAG dag) {
     dag.getVertices().forEach(vertex -> { // Initialize the DataStore of the DAG with CrailFileStore.
       final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
-      inEdges.forEach(edge -> {
-        edge.setPropertyPermanently(DataFlowProperty.of(DataFlowProperty.Value.PULL));
-        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.CRAIL_FILE_STORE));
-      });
+      inEdges.forEach(edge ->
+        edge.setPropertyPermanently(DataStoreProperty.of(DataStoreProperty.Value.CRAIL_FILE_STORE)));
     });
     return dag;
   }

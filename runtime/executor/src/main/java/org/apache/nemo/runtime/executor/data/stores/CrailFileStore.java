@@ -119,6 +119,7 @@ public final class CrailFileStore extends AbstractBlockStore implements RemoteFi
     final String filePath = DataUtil.blockIdToFilePath(blockId, fileDirectory);
     try {
       if (fs.lookup(filePath).get() == null) {
+        LOG.warn("Could not find file {} from filesystem", filePath);
         return Optional.empty();
       } else {
         final FileBlock block = getBlockFromFile(blockId);
