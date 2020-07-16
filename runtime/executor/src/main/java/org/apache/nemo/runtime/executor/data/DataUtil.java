@@ -171,11 +171,7 @@ public final class DataUtil {
    */
   public static String blockIdToFilePath(final String blockId,
                                          final String fileDirectory) {
-    if (fileDirectory.isEmpty()) {
-      return blockId;
-    } else {
-      return fileDirectory + "/" + blockId;
-    }
+    return fileDirectory + "/" + blockId;
   }
 
   /**
@@ -187,11 +183,7 @@ public final class DataUtil {
    */
   public static String blockIdToMetaFilePath(final String blockId,
                                              final String fileDirectory) {
-    if (fileDirectory.isEmpty()) {
-      return blockId + "_meta";
-    } else {
-      return fileDirectory + "/" + blockId + "_meta";
-    }
+    return fileDirectory + "/" + blockId + "_meta";
   }
 
   /**

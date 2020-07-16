@@ -331,10 +331,14 @@ public final class FileBlock<K extends Serializable> implements Block<K> {
                          final long bytesToSkip) throws IOException {
     long remainingBytesToSkip = bytesToSkip;
     while (remainingBytesToSkip > 0) {
-      final long skippedBytes = inputStream.skip(bytesToSkip);
-      remainingBytesToSkip -= skippedBytes;
-      if (skippedBytes <= 0) {
-        throw new IOException("The file stream failed to skip to the next block.");
+      try {
+        final long skippedBytes = inputStream.skip(bytesToSkip);
+        remainingBytesToSkip -= skippedBytes;
+        if (skippedBytes <= 0) {
+          throw new IOException("The file stream failed to skip to the next block.");
+        }
+      } catch (final IOException e) {
+        throw new IOException(e);
       }
     }
   }
