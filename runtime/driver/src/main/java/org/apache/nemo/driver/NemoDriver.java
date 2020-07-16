@@ -259,7 +259,9 @@ public final class NemoDriver {
       .build();
 
     final JavaConfigurationBuilder jcb = Tang.Factory.getTang().newConfigurationBuilder();
-    if (remoteOpt.equals("crail")) jcb.bindImplementation(RemoteFileStore.class, CrailFileStore.class);
+    if (remoteOpt.equals("crail")) {
+      jcb.bindImplementation(RemoteFileStore.class, CrailFileStore.class);
+    }
     final Configuration remoteConf = jcb.build();
 
     final Configuration contextConfiguration = ContextConfiguration.CONF
@@ -271,7 +273,8 @@ public final class NemoDriver {
     final Configuration ncsConfiguration = getExecutorNcsConfiguration();
     final Configuration messageConfiguration = getExecutorMessageConfiguration(executorId);
 
-    return Configurations.merge(executorConfiguration, contextConfiguration, ncsConfiguration, messageConfiguration, remoteConf);
+    return Configurations.merge(executorConfiguration, contextConfiguration,
+      ncsConfiguration, messageConfiguration, remoteConf);
   }
 
   private Configuration getExecutorNcsConfiguration() {
