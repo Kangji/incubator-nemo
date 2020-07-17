@@ -165,7 +165,10 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
 
       // Prepare vertexIdToReadables
       final List<Map<String, Readable>> vertexIdToReadables = new ArrayList<>(stageParallelism);
-
+      LOG.error("initialize vertexIdToReadables: {}", vertexIdToReadables.size());
+      for (int i = 0; i < stageParallelism; i++) {
+        vertexIdToReadables.add(new HashMap<>());
+      }
       // For each IRVertex,
       for (final IRVertex v : stageVertices) {
         final IRVertex vertexToPutIntoStage = getActualVertexToPutIntoStage(v);
@@ -186,9 +189,6 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
               readables = sourceVertex.getReadables(stageParallelism);
               LOG.error("[HWARIM] parallelism of vertexIdToReadables: {}", readables.size());
               for (int i = 0; i < readables.size(); i++) {
-                vertexIdToReadables.add(new HashMap<>());
-              }
-              for (int i = 0; i < readables.size(); i++) {
                 vertexIdToReadables.get(i)
                   .put(vertexToPutIntoStage.getId(), readables.get(i));
               }
@@ -205,10 +205,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
               readables = sourceVertex.getCoalescedReadables(stageParallelism,
                 stageParallelism, maxSamplingTrial, thisSamplingTrial);
               LOG.error("[HWARIM] parallelism of vertexIdToReadables: {}", readables.size());
-              for (int i = 0; i < readables.size(); i++) {
-                vertexIdToReadables.add(new HashMap<>());
-              }
-              for (int i = 0; i < readables.size(); i++) {
+              for (int i = 0; i < stageParallelism; i++) {
                 vertexIdToReadables.get(i)
                   .put(vertexToPutIntoStage.getId(), readables.get(i));
                 LOG.error("[HWARIM] putting {} th readables in vertexIdToReadables", i);
@@ -252,7 +249,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
       if (!stageInternalDAGBuilder.isEmpty()) {
         final DAG<IRVertex, RuntimeEdge<IRVertex>> stageInternalDAG
           = stageInternalDAGBuilder.buildWithoutSourceSinkCheck();
-        LOG.error("[HWARIM] vertexIdToReadables ");
+        LOG.error("[HWARIM] vertexIdToReadables {}", vertexIdToReadables.size());
         final Stage stage = new Stage(
           stageIdentifier,
           taskIndices,
