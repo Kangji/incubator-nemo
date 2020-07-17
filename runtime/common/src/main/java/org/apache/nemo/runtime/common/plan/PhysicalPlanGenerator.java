@@ -189,6 +189,10 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
                 vertexIdToReadables.get(i)
                   .put(vertexToPutIntoStage.getId(), readables.get(i));
               }
+
+              if (stageParallelism != readables.size()) {
+                stageVertices.forEach(vertex -> vertex.setProperty(ParallelismProperty.of(readables.size())));
+              }
             } catch (final Exception e) {
               throw new PhysicalPlanGenerationException(e);
             }
@@ -203,6 +207,9 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
               for (int i = 0; i < readables.size(); i++) {
                 vertexIdToReadables.get(i)
                   .put(vertexToPutIntoStage.getId(), readables.get(i));
+              }
+              if (stageParallelism != readables.size()) {
+                stageVertices.forEach(vertex -> vertex.setProperty(ParallelismProperty.of(readables.size())));
               }
             } catch (final Exception e) {
               throw new PhysicalPlanGenerationException(e);
