@@ -287,10 +287,15 @@ public final class TaskSizeSplitterVertex extends LoopVertex {
    * Set Parallelism Property of internal vertices by unroll iteration.
    * @param irVertex    vertex to set parallelism property.
    */
-  private void setParallelismPropertyByTestingTrial(final IRVertex irVertex) {
+  private void setParallelismPropertyByTestingTrial(final IRVertex irVertex, final int testingTrial) {
     if (!(irVertex instanceof OperatorVertex
       && ((OperatorVertex) irVertex).getTransform() instanceof SignalTransform)) {
-      irVertex.setProperty(ParallelismProperty.of(partitionerProperty / samplingRateInverse));
+      if (testingTrial < samplingRateInverse - 1) {
+        irVertex.setProperty(ParallelismProperty.of(partitionerProperty / samplingRateInverse));
+      } else {
+       irVertex.setProperty(ParallelismProperty
+         .of(partitionerProperty - partitionerProperty / samplingRateInverse * (samplingRateInverse - 1)));
+      }
     } else {
       irVertex.setProperty(ParallelismProperty.of(1));
     }

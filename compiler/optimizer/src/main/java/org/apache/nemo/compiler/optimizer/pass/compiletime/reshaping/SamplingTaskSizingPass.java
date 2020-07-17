@@ -18,12 +18,14 @@
  */
 package org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.dag.Edge;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.EnableDynamicTaskSizingProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.utility.TaskSizeSplitterVertex;
@@ -94,10 +96,18 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
     final Set<Integer> sourceStageIds = new HashSet<>();
     Set<Integer> stageIdsToInsertSplitter = new HashSet<>();
     Set<IREdge> shuffleEdgesForDTS = new HashSet<>();
+    final MutableInt sourceReadablesSize = new MutableInt(0);
     dag.topologicalDo(v -> {
       // get source partition
-      if (dag.getIncomingEdgesOf(v).isEmpty()) {
+      if (dag.getIncomingEdgesOf(v).isEmpty() && v instanceof SourceVertex) {
         sourceStageIds.add(vertexToStageId.get(v));
+        final SourceVertex sourceVertex = (SourceVertex) v;
+        try {
+          sourceReadablesSize.setValue(sourceVertex
+            .getReadables(parallelism / samplingRateInverse).size());
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
       }
       // for (final IREdge edge : dag.getIncomingEdgesOf(v)) {
       //    if (isAppropriateForInsertingSplitterVertex(dag, v, edge, vertexToStageId, stageIdToStageVertices)) {
@@ -203,7 +213,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
             || !dag.getOutgoingEdgesOf(stageVertex).stream().map(Edge::getDst).anyMatch(stageVertices::contains))
           .collect(Collectors.toSet());
         insertSplitterVertex(dag, stageVertices, stageStartingVertices,
-          verticesWithStageOutgoingEdges, stageEndingVertices, partitionerProperty);
+          verticesWithStageOutgoingEdges, stageEndingVertices, sourceReadablesSize.intValue());
       }
     }
     return dag;

@@ -227,6 +227,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
         }
 
         // Add vertex to the stage.
+        // handle vertexIdToReadables here too
         stageInternalDAGBuilder.addVertex(vertexToPutIntoStage);
       }
 
@@ -251,6 +252,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
       if (!stageInternalDAGBuilder.isEmpty()) {
         final DAG<IRVertex, RuntimeEdge<IRVertex>> stageInternalDAG
           = stageInternalDAGBuilder.buildWithoutSourceSinkCheck();
+        LOG.error("[HWARIM] vertexIdToReadables ");
         final Stage stage = new Stage(
           stageIdentifier,
           taskIndices,
