@@ -95,8 +95,8 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
     final List<Readable<WindowedValue<O>>> readables = new ArrayList<>();
 
     if (source != null) {
-      LOG.info("estimate: {}", source.getEstimatedSizeBytes(null));
-      LOG.info("desired: {}", desiredNumOfSplits);
+      LOG.info("[getReadables]estimate: {}", source.getEstimatedSizeBytes(null));
+      LOG.info("[getReadables]desired: {}", desiredNumOfSplits);
       source.split(this.estimatedSizeBytes / desiredNumOfSplits, null)
         .forEach(boundedSource -> readables.add(new BoundedSourceReadable<>(boundedSource)));
       return readables;
@@ -116,8 +116,8 @@ public final class BeamBoundedSourceVertex<O> extends SourceVertex<WindowedValue
     final List<Readable<WindowedValue<O>>> readables = new ArrayList<>();
 
     if (source != null) {
-      LOG.info("[HWARIM] estimate: {}", source.getEstimatedSizeBytes(null));
-      LOG.info("[HWARIM] desired: {}", desiredNumOfSplits);
+      LOG.info("[Coalesced] estimate: {}", source.getEstimatedSizeBytes(null));
+      LOG.info("[Coalesced] desired: {}", desiredNumOfSplits);
       // need to import other source code then default
       final List<BoundedSource<O>> boundedSourceList = (List<BoundedSource<O>>) source
         .split(this.estimatedSizeBytes / desiredNumOfSplits, null);

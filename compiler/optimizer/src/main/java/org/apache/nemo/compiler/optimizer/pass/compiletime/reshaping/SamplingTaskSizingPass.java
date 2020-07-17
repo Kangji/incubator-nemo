@@ -104,7 +104,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
         final SourceVertex sourceVertex = (SourceVertex) v;
         try {
           sourceReadablesSize.setValue(sourceVertex
-            .getReadables(parallelism / samplingRateInverse).size());
+            .getReadables(parallelism).size());
         } catch (Exception e) {
           e.printStackTrace();
         }

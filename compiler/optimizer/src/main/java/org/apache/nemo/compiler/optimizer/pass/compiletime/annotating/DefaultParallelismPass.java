@@ -64,6 +64,7 @@ public final class DefaultParallelismPass extends AnnotatingPass {
 
   @Override
   public IRDAG apply(final IRDAG dag) {
+    LOG.error("[HWARIM] default parallelism pass started");
     // Propagate forward source parallelism
     dag.topologicalDo(vertex -> {
       try {
@@ -74,12 +75,13 @@ public final class DefaultParallelismPass extends AnnotatingPass {
           // (It can be more/less than the desired value.)
           final SourceVertex sourceVertex = (SourceVertex) vertex;
           final Optional<Integer> originalParallelism = vertex.getPropertyValue(ParallelismProperty.class);
-          LOG.error("original parallelism {}", originalParallelism);
+          LOG.error("[HWARIM]original parallelism {}", originalParallelism);
           // We manipulate them if it is set as default value of 1.
           if (!originalParallelism.isPresent()) {
+            LOG.error("Set source parallelism");
             vertex.setProperty(ParallelismProperty.of(
               sourceVertex.getReadables(desiredSourceParallelism).size()));
-            LOG.error("readables number {}", sourceVertex.getReadables(desiredSourceParallelism).size());
+            LOG.error("[HWARIM]readables number {}", sourceVertex.getReadables(desiredSourceParallelism).size());
           }
         } else if (!inEdges.isEmpty()) {
           // No reason to propagate via Broadcast edges, as the data streams that will use the broadcasted data
