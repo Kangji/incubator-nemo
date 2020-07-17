@@ -58,7 +58,7 @@ under the License.
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-sdks-java-io-hadoop-common</artifactId>
-      <version>${beam.version}</version>
+      <version>${beam.version}-SNAPSHOT</version>
     </dependency>
 
     <dependency>
