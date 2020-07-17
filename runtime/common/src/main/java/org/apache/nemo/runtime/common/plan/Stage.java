@@ -102,6 +102,14 @@ public final class Stage extends Vertex {
   }
 
   /**
+   * Set parallelism.
+   * @param newParallelism to set.
+   */
+  public void setParallelism(final int newParallelism) {
+    executionProperties.put(ParallelismProperty.of(newParallelism));
+  }
+
+  /**
    * @return the enable property of dynamic task sizing. If not exists, return false.
    */
   public boolean getEnableDynamicTaskSizing() {
