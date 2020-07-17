@@ -78,7 +78,8 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
   public DAG<Stage, StageEdge> apply(final IRDAG irDAG) {
     // first, stage-partition the IR DAG.
     final DAG<Stage, StageEdge> dagOfStages = stagePartitionIrDAG(irDAG);
-
+    dagOfStages.getVertices().forEach(stage ->
+      LOG.error("[HWARIM] final check: {} {}", stage.getId(), stage.getParallelism()));
     // Sanity check
     dagOfStages.getVertices().forEach(this::integrityCheck);
 
@@ -208,10 +209,12 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
               for (int i = 0; i < readables.size(); i++) {
                 vertexIdToReadables.get(i)
                   .put(vertexToPutIntoStage.getId(), readables.get(i));
+                LOG.error("[HWARIM] putting {} th readables in vertexIdToReadables", i);
               }
               if (stageParallelism != readables.size()) {
                 stageVertices.forEach(vertex -> vertex.setProperty(ParallelismProperty.of(readables.size())));
                 stageProperties.put(ParallelismProperty.of(readables.size()));
+                LOG.error("[HWARIM] stage parallelism: {}", stageProperties.get(ParallelismProperty.class));
               }
             } catch (final Exception e) {
               throw new PhysicalPlanGenerationException(e);
