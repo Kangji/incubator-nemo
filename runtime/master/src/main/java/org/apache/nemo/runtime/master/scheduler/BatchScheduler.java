@@ -315,6 +315,7 @@ public final class BatchScheduler implements Scheduler {
         .flatMap(stage ->
           BatchSchedulerUtils.selectSchedulableTasks(planStateManager, blockManagerMaster, stage).stream())
         .collect(Collectors.toList());
+      LOG.info("[HWARIM] number of tasks to schedule: {}", tasksToSchedule.size());
       if (!tasksToSchedule.isEmpty()) {
         LOG.info("Scheduling some tasks in {}, which are in the same ScheduleGroup", tasksToSchedule.stream()
           .map(Task::getTaskId)

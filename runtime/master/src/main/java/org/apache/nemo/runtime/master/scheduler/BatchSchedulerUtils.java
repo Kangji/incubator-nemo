@@ -89,6 +89,7 @@ public final class BatchSchedulerUtils {
 
     // Create and return tasks.
     final List<Map<String, Readable>> vertexIdToReadables = stageToSchedule.getVertexIdToReadables();
+    LOG.error("[HWARIM] {}, {}", stageToSchedule.getId(), vertexIdToReadables.size());
 
     final List<String> taskIdsToSchedule = planStateManager.getTaskAttemptsToSchedule(stageToSchedule.getId());
     final List<Task> tasks = new ArrayList<>(taskIdsToSchedule.size());
