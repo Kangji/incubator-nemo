@@ -339,6 +339,7 @@ public final class PlanStateManager {
     if (newTaskState.equals(TaskState.State.COMPLETE)) {
       LOG.info("{} completed: {} Task(s) out of {} are remaining in this stage",
         taskId, taskStatesOfThisStage.size() - numOfCompletedTaskIndicesInThisStage, taskStatesOfThisStage.size());
+
     }
 
     // Maintain info for speculative execution
@@ -368,6 +369,7 @@ public final class PlanStateManager {
           == physicalPlan.getStageDAG().getVertexById(stageId).getTaskIndices().size()) {
           onStageStateChanged(stageId, StageState.State.COMPLETE);
         }
+        final long stageEndingTimeMs = System.currentTimeMillis();
         break;
 
       // Doesn't affect StageState
