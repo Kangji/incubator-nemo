@@ -691,9 +691,11 @@ public final class TaskExecutor {
       outputWriter.close();
       final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
       writtenBytes.ifPresent(writtenBytesList::add);
-      final Optional<Map<Integer, Long>> partitionSizes = outputWriter.getPartitionSizeMap();
-      if (partitionSizes.isPresent()) {
-        computePartitionSizeMap(partitionSizeMap, partitionSizes.get());
+      if (true) {
+        final Optional<Map<Integer, Long>> partitionSizes = outputWriter.getPartitionSizeMap();
+        if (partitionSizes.isPresent()) {
+          computePartitionSizeMap(partitionSizeMap, partitionSizes.get());
+        }
       }
     });
 
@@ -704,9 +706,11 @@ public final class TaskExecutor {
         outputWriter.close();
         final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
         writtenBytes.ifPresent(writtenBytesList::add);
-        final Optional<Map<Integer, Long>> partitionSizes = outputWriter.getPartitionSizeMap();
-        if (partitionSizes.isPresent()) {
-          computePartitionSizeMap(partitionSizeMap, partitionSizes.get());
+        if (true) {
+          final Optional<Map<Integer, Long>> partitionSizes = outputWriter.getPartitionSizeMap();
+          if (partitionSizes.isPresent()) {
+            computePartitionSizeMap(partitionSizeMap, partitionSizes.get());
+          }
         }
       })
     );
