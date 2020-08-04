@@ -464,6 +464,10 @@ public final class RuntimeMaster {
         final String taskId = workStealingMsg.getTaskId();
         final Map<Integer, Long> partitionSizeMap = SerializationUtils
           .deserialize(workStealingMsg.getPartitionSizeMap().toByteArray());
+        if (scheduler instanceof BatchScheduler) {
+          ((BatchScheduler) scheduler).aggregateStageIdToPartitionSizeMap(taskId, partitionSizeMap);
+        }
+        break;
       case MetricFlushed:
         metricCountDownLatch.countDown();
         break;
