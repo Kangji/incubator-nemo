@@ -123,7 +123,8 @@ final class TaskDispatcher {
     }
 
     final Collection<Task> taskList = taskListOptional.get();
-    // in here, get stage Id from task Ids and snapshot SystemCurrentTimeMs when the first task of each stage is launched
+    // in here, get stage Id from task Ids and snapshot SystemCurrentTimeMs
+    // when the first task of each stage is launched
     final List<Task> couldNotSchedule = new ArrayList<>();
     for (final Task task : taskList) {
       if (!planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY)) {

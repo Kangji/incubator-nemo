@@ -19,6 +19,7 @@
 package org.apache.nemo.runtime.executor.task;
 
 import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.nemo.common.Pair;
@@ -683,7 +684,7 @@ public final class TaskExecutor {
    */
   private void finalizeOutputWriters(final VertexHarness vertexHarness) {
     final List<Long> writtenBytesList = new ArrayList<>();
-    final Map<Integer, Long> partitionSizeMap = new HashMap<>();
+    final HashMap<Integer, Long> partitionSizeMap = new HashMap<>();
 
     // finalize OutputWriters for main children
     vertexHarness.getWritersToMainChildrenTasks().forEach(outputWriter -> {
@@ -718,13 +719,20 @@ public final class TaskExecutor {
     // TODO #236: Decouple metric collection and sending logic
     metricMessageSender.send(TASK_METRIC_ID, taskId, "taskOutputBytes",
       SerializationUtils.serialize(totalWrittenBytes));
-    persistentConnectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).send(
-      ControlMessage.Message.newBuilder()
-        .setId(RuntimeIdManager.generateMessageId())
-        .setListenerId(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID)
-        .setType(ControlMessage.MessageType.ExecutorDataCollected)
-        .setDataCollected(ControlMessage.DataCollectMessage.newBuilder().setData(data).build())
-        .build()));
+
+    // send workStealingData
+    if (!partitionSizeMap.isEmpty()) {
+      persistentConnectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).send(
+        ControlMessage.Message.newBuilder()
+          .setId(RuntimeIdManager.generateMessageId())
+          .setListenerId(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID)
+          .setType(ControlMessage.MessageType.WorkStealingDataCollected)
+          .setWorkStealingDataCollected(ControlMessage.WorkStealingDataCollectMessage.newBuilder()
+            .setTaskId(taskId)
+            .setPartitionSizeMap(ByteString.copyFrom(SerializationUtils.serialize(partitionSizeMap)))
+            .build())
+          .build());
+    }
   }
 
   /**
