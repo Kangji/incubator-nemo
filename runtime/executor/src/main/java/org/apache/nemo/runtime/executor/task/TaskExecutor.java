@@ -683,20 +683,30 @@ public final class TaskExecutor {
    */
   private void finalizeOutputWriters(final VertexHarness vertexHarness) {
     final List<Long> writtenBytesList = new ArrayList<>();
+    final Map<Integer, Long> partitionSizeMap = new HashMap<>();
 
     // finalize OutputWriters for main children
     vertexHarness.getWritersToMainChildrenTasks().forEach(outputWriter -> {
       outputWriter.close();
       final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
       writtenBytes.ifPresent(writtenBytesList::add);
+      final Optional<Map<Integer, Long>> partitionSizes = outputWriter.getPartitionSizeMap();
+      if (partitionSizes.isPresent()) {
+        computePartitionSizeMap(partitionSizeMap, partitionSizes.get());
+      }
     });
 
     // finalize OutputWriters for additional tagged children
+    // question: 여기도 들어가는 게 맞나??
     vertexHarness.getWritersToAdditionalChildrenTasks().values().forEach(outputWriters ->
       outputWriters.forEach(outputWriter -> {
         outputWriter.close();
         final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
         writtenBytes.ifPresent(writtenBytesList::add);
+        final Optional<Map<Integer, Long>> partitionSizes = outputWriter.getPartitionSizeMap();
+        if (partitionSizes.isPresent()) {
+          computePartitionSizeMap(partitionSizeMap, partitionSizes.get());
+        }
       })
     );
 
@@ -708,5 +718,29 @@ public final class TaskExecutor {
     // TODO #236: Decouple metric collection and sending logic
     metricMessageSender.send(TASK_METRIC_ID, taskId, "taskOutputBytes",
       SerializationUtils.serialize(totalWrittenBytes));
+    persistentConnectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).send(
+      ControlMessage.Message.newBuilder()
+        .setId(RuntimeIdManager.generateMessageId())
+        .setListenerId(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID)
+        .setType(ControlMessage.MessageType.ExecutorDataCollected)
+        .setDataCollected(ControlMessage.DataCollectMessage.newBuilder().setData(data).build())
+        .build()));
+  }
+
+  /**
+   *
+   * @param totalPartitionSizeMap     accumulated partitionSizeMap of task.
+   * @param singlePartitionSizeMap    partitionSizeMap gained from single OutputWriter.
+   */
+  private void computePartitionSizeMap(final Map<Integer, Long> totalPartitionSizeMap,
+                                       final Map<Integer, Long> singlePartitionSizeMap) {
+    for (Integer hashedKey : singlePartitionSizeMap.keySet()) {
+      final Long partitionSize = singlePartitionSizeMap.get(hashedKey);
+      if (totalPartitionSizeMap.containsKey(hashedKey)) {
+        totalPartitionSizeMap.compute(hashedKey, (existingKey, existingValue) -> existingValue + partitionSize);
+      } else {
+        totalPartitionSizeMap.put(hashedKey, partitionSize);
+      }
+    }
   }
 }
