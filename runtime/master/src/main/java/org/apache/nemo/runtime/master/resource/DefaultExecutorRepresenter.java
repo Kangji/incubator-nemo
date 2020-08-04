@@ -210,6 +210,11 @@ public final class DefaultExecutorRepresenter implements ExecutorRepresenter {
     return runningNonComplyingTasks.size();
   }
 
+  @Override
+  public boolean isExecutorSlotAvailable() {
+    return getExecutorCapacity() - getNumOfRunningTasks() > 0;
+  }
+
   /**
    * @return the executor id
    */
