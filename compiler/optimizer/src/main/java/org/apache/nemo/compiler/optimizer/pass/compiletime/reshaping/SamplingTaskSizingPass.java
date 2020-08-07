@@ -157,7 +157,7 @@ public final class SamplingTaskSizingPass extends ReshapingPass {
    * @param dag   IRDAG to get job input data size from
    * @return      partitioner property regarding job size
    */
-  private int getPartitionerPropertyByJobSize(final IRDAG dag) {
+  public static int getPartitionerPropertyByJobSize(final IRDAG dag) {
     long jobSizeInBytes = dag.getInputSize();
     long jobSizeInGB = jobSizeInBytes / (1024 * 1024 * 1024);
     if (1 <= jobSizeInGB && jobSizeInGB < 10) {

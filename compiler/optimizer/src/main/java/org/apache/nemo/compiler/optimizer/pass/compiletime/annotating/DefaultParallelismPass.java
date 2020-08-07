@@ -114,8 +114,8 @@ public final class DefaultParallelismPass extends AnnotatingPass {
    * @param parallelism the parallelism of the most recently updated descendant.
    * @return the max value of parallelism among those observed.
    */
-  static Integer recursivelySynchronizeO2OParallelism(final IRDAG dag, final IRVertex vertex,
-                                                      final Integer parallelism) {
+  public static Integer recursivelySynchronizeO2OParallelism(final IRDAG dag, final IRVertex vertex,
+                                                             final Integer parallelism) {
     final List<IREdge> inEdges = dag.getIncomingEdgesOf(vertex);
     final Integer ancestorParallelism = inEdges.stream()
       .filter(edge -> CommunicationPatternProperty.Value.ONE_TO_ONE
