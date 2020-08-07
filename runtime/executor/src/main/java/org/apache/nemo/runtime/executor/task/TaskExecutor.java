@@ -54,7 +54,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
@@ -83,7 +82,6 @@ public final class TaskExecutor {
 
   // Dynamic optimization
   private String idOfVertexPutOnHold;
-  private AtomicLong currentlyProcessedDataInBytes = new AtomicLong(0);
 
   private final PersistentConnectionToMasterMap persistentConnectionToMasterMap;
 
@@ -766,7 +764,7 @@ public final class TaskExecutor {
         .setType(ControlMessage.MessageType.CurrentlyProcessedBytesCollected)
         .setCurrentlyProcessedBytesCollected(ControlMessage.CurrentlyProcessedBytesCollectMsg.newBuilder()
           .setTaskId(this.taskId)
-          .setProcessedDataBytes(currentlyProcessedDataInBytes.longValue())
+          .setProcessedDataBytes(serializedReadBytes)
           .build())
         .build());
   }
