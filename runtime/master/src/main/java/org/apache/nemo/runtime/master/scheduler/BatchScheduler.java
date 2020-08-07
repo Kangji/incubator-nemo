@@ -220,13 +220,7 @@ public final class BatchScheduler implements Scheduler {
         if (true) {
           final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
           if (checkForWorkStealingBaseConditions(stageId)) {
-            // need to have WorkStealingManager? or WorkStealingUtils?
-            // first, need to figure out currently running task ids
-            // second, track their size by task index
-            // third, track their currently processed data in bytes
-            // fourth, track their execution time till now
-            // five, detect skew!
-            final int dummyfile = 1;
+            detectSkew(stageId);
           }
         }
         // If the stage has completed
@@ -345,7 +339,6 @@ public final class BatchScheduler implements Scheduler {
 
         // Notify the dispatcher that a new collection is available.
         taskDispatcher.onNewPendingTaskCollectionAvailable();
-        earliest.get().forEach(stage -> detectSkew(stage.getId()));
       }
     } else {
       LOG.info("Skipping this round as no ScheduleGroup is schedulable.");
