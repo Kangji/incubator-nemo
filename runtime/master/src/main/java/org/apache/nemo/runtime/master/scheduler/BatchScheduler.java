@@ -25,13 +25,14 @@ import org.apache.nemo.common.exception.UnknownExecutionStateException;
 import org.apache.nemo.common.exception.UnrecoverableFailureException;
 import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProperty;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
+import org.apache.nemo.runtime.common.comm.ControlMessage;
+import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.common.state.StageState;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.BlockManagerMaster;
 import org.apache.nemo.runtime.master.PlanAppender;
 import org.apache.nemo.runtime.master.PlanStateManager;
-import org.apache.nemo.runtime.master.resource.DefaultExecutorRepresenter;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
 import org.slf4j.Logger;
@@ -78,8 +79,11 @@ public final class BatchScheduler implements Scheduler {
    * The below variables depend on the submitted plan to execute.
    */
   private List<List<Stage>> sortedScheduleGroups;  // Stages, sorted in the order to be scheduled.
+
+
   // Stores the partitionSize counted per key of the task output of each stage.
   private final Map<String, Map<Integer, Long>> stageIdToOutputPartitionSizeMap = new HashMap<>();
+  private final Map<String, Long> taskIdToProcessedBytes = new HashMap<>();
 
   @Inject
   private BatchScheduler(final PlanRewriter planRewriter,
@@ -321,6 +325,7 @@ public final class BatchScheduler implements Scheduler {
    * - We make {@link TaskDispatcher} dispatch only the tasks that are READY.
    */
   private void doSchedule() {
+    taskIdToProcessedBytes.clear();
     final Optional<List<Stage>> earliest =
       BatchSchedulerUtils.selectEarliestSchedulableGroup(sortedScheduleGroups, planStateManager);
 
@@ -340,6 +345,7 @@ public final class BatchScheduler implements Scheduler {
 
         // Notify the dispatcher that a new collection is available.
         taskDispatcher.onNewPendingTaskCollectionAvailable();
+        earliest.get().forEach(stage -> detectSkew(stage.getId()));
       }
     } else {
       LOG.info("Skipping this round as no ScheduleGroup is schedulable.");
@@ -409,11 +415,16 @@ public final class BatchScheduler implements Scheduler {
     for (Integer hashedKey : partitionSizeMap.keySet()) {
       final Long partitionSize = partitionSizeMap.get(hashedKey);
       if (partitionSizeMapForThisStage.containsKey(hashedKey)) {
-        partitionSizeMapForThisStage.compute(hashedKey, (existingKey, existingValue) -> existingValue + partitionSize);
+        partitionSizeMapForThisStage.put(hashedKey, partitionSize + partitionSizeMapForThisStage.get(hashedKey));
       } else {
         partitionSizeMapForThisStage.put(hashedKey, partitionSize);
       }
     }
+  }
+
+  public void aggregateTaskIdToProcessedBytes(final String taskId,
+                                              final long processedBytes) {
+    taskIdToProcessedBytes.put(taskId, processedBytes);
   }
 
   private boolean checkForWorkStealingBaseConditions(final String stageId) {
@@ -458,36 +469,59 @@ public final class BatchScheduler implements Scheduler {
   }
 
 
-
-  private Map<String, Long> getCurrentlyProcessedBytesOfRunningTasks() {
+  private void requestCurrentlyProcessedBytesOfRunningTasks() {
     // driver sends message to executors
-    executorRegistry.viewExecutors(executors -> executors.forEach(executor -> executor.sendControlMessage()));
-    // executor sends back the requested information
-    // manage that information in here
-    return new HashMap<>();
+    ControlMessage.Message message = ControlMessage.Message.newBuilder()
+      .setId(RuntimeIdManager.generateMessageId())
+      .setListenerId(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID)
+      .setType(ControlMessage.MessageType.RequestProcessedData)
+      .setRequestProcessedDataMsg(ControlMessage.RequestProcessedDataMsg.newBuilder().build())
+      .build();
+    executorRegistry.viewExecutors(executors -> executors.forEach(executor -> executor.sendControlMessage(message)));
   }
 
   private Map<String, Long> getCurrentlyTakenExecutionTimeMsOfRunningTasks(final String stageId) {
     return planStateManager.getExecutingTaskToRunningTimeMs(stageId);
   }
 
-  private void detectSkew(final String stageId) {
+  private List<Pair<String, Long>> detectSkew(final String stageId) {
     // get size of running tasks
-    Set<String> currentlyRunningTaskIds = getCurrentlyRunningTaskId(stageId); // 이것도 아이디라고 하면 좋을 것 같은데
+    Set<String> currentlyRunningTaskIds = getCurrentlyRunningTaskId(stageId);
     Set<String> parentStageId = getStagesOfPreviousSchedulingGroup(stageId);
     Map<String, Long> inputSizeOfCandidateTasks =
       getInputSizesOfCurrentlyRunningTaskIds(parentStageId, currentlyRunningTaskIds);
 
-    // get size of processed bytes of running tasks
-    Map<String, Long> taskIdToProcessedBytes = getCurrentlyProcessedBytesOfRunningTasks();
     // get time taken to process the bytes
     Map<String, Long> taskIdToElapsedTime = getCurrentlyTakenExecutionTimeMsOfRunningTasks(stageId);
 
+    // get size of processed bytes of running tasks
+    requestCurrentlyProcessedBytesOfRunningTasks();
+    // wait until we gather all the information needed
+    while (true) {
+      if (taskIdToProcessedBytes.size() == inputSizeOfCandidateTasks.size()) {
+        break;
+      }
+    }
+
     // estimate the remaining time
     List<Pair<String, Long>> estimatedTimeToFinishPerTask = new ArrayList<>(taskIdToElapsedTime.size());
-
+    for (String taskId : currentlyRunningTaskIds) {
+      long timeToFinishExecute = taskIdToElapsedTime.get(taskId) * inputSizeOfCandidateTasks.get(taskId)
+        / taskIdToProcessedBytes.get(taskId);
+      estimatedTimeToFinishPerTask.add(Pair.of(taskId, timeToFinishExecute));
+    }
     // detect skew
+    Collections.sort(estimatedTimeToFinishPerTask, new Comparator<Pair<String, Long>>() {
+      @Override
+      public int compare(Pair<String, Long> o1, Pair<String, Long> o2) {
+        return o1.right() > o2.right() ? 1 : -1;
+      }
+    });
 
+    final List<Pair<String, Long>> skewedTasks = estimatedTimeToFinishPerTask
+      .subList(0, estimatedTimeToFinishPerTask.size() / 2);
+
+    return skewedTasks;
 
     // Need to think about
     // 1. taskId가 아니라 task index정보만 가지고 있어도 충분한가? fail -> retry 의 과정을 거칠 테니 attempt만 다른 task 2개가
