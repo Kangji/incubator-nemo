@@ -87,6 +87,7 @@ enum MessageType {
     RequestPipeLoc = 14;
     PipeLocInfo = 15;
     WorkStealingDataCollected = 16;
+    RequestProcessedData = 17;
 }
 
 message Message {
@@ -109,6 +110,7 @@ message Message {
     optional RequestPipeLocationMessage requestPipeLocMsg = 17;
     optional PipeLocationInfoMessage pipeLocInfoMsg = 18;
     optional WorkStealingDataCollectMessage workStealingDataCollected = 19;
+    optional RequestProcessedDataMsg requestProcessedDataMsg = 20;
 }
 
 // Messages from Master to Executors
@@ -262,4 +264,7 @@ message PipeLocationInfoMessage {
 message WorkStealingDataCollectMessage {
   required string taskId = 1;
   required bytes partitionSizeMap = 2;
+}
+
+message RequestProcessedDataMsg {
 }
