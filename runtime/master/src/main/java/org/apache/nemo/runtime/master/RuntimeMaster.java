@@ -460,14 +460,21 @@ public final class RuntimeMaster {
           .build());
         break;
       case WorkStealingDataCollected:
-        final ControlMessage.WorkStealingDataCollectMessage workStealingMsg = message.getWorkStealingDataCollected();
-        final String taskId = workStealingMsg.getTaskId();
-        final Map<Integer, Long> partitionSizeMap = SerializationUtils
-          .deserialize(workStealingMsg.getPartitionSizeMap().toByteArray());
         if (scheduler instanceof BatchScheduler) {
+          final ControlMessage.WorkStealingDataCollectMessage workStealingMsg = message.getWorkStealingDataCollected();
+          final String taskId = workStealingMsg.getTaskId();
+          final Map<Integer, Long> partitionSizeMap = SerializationUtils
+            .deserialize(workStealingMsg.getPartitionSizeMap().toByteArray());
           ((BatchScheduler) scheduler).aggregateStageIdToPartitionSizeMap(taskId, partitionSizeMap);
         }
         break;
+      case CurrentlyProcessedBytesCollected:
+        if (scheduler instanceof BatchScheduler) {
+          ((BatchScheduler) scheduler).aggregateTaskIdToProcessedBytes(
+            message.getCurrentlyProcessedBytesCollected().getTaskId(),
+            message.getCurrentlyProcessedBytesCollected().getProcessedDataBytes()
+          );
+        }
       case MetricFlushed:
         metricCountDownLatch.countDown();
         break;

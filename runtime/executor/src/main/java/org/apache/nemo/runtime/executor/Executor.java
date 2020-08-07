@@ -89,7 +89,7 @@ public final class Executor {
   private final MetricMessageSender metricMessageSender;
 
   /**
-   * For runtime optimizations
+   * For runtime optimizations.
    */
   private final List<TaskExecutor> listOfWorkingTaskExecutors;
 
