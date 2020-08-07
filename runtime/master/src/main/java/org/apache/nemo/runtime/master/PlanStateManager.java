@@ -326,19 +326,12 @@ public final class PlanStateManager {
     // Log not-yet-completed tasks for us humans to track progress
     final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
     final Map<Integer, List<TaskState>> taskStatesOfThisStage = stageIdToTaskIdxToAttemptStates.get(stageId);
-    final long numOfCompletedTaskIndicesInThisStage = taskStatesOfThisStage.values().stream()
-      .filter(attempts -> {
-        final List<TaskState.State> states = attempts
-          .stream()
-          .map(state -> (TaskState.State) state.getStateMachine().getCurrentState())
-          .collect(Collectors.toList());
-        return states.stream().anyMatch(curState -> curState.equals(TaskState.State.ON_HOLD)) // one of them is ON_HOLD
-          || states.stream().anyMatch(curState -> curState.equals(TaskState.State.COMPLETE)); // one of them is COMPLETE
-      })
-      .count();
+    final int numOfRemainingTaskIndicesInThisStage = getNumberOfTasksRemainingInStage(stageId);
+    final int numOfCompletedTaskIndicesInThisStage = taskStatesOfThisStage.size()
+      - numOfRemainingTaskIndicesInThisStage;
     if (newTaskState.equals(TaskState.State.COMPLETE)) {
       LOG.info("{} completed: {} Task(s) out of {} are remaining in this stage",
-        taskId, taskStatesOfThisStage.size() - numOfCompletedTaskIndicesInThisStage, taskStatesOfThisStage.size());
+        taskId, numOfRemainingTaskIndicesInThisStage, taskStatesOfThisStage.size());
 
     }
 
@@ -579,6 +572,38 @@ public final class PlanStateManager {
       .collect(Collectors.toList());
   }
 
+  public int getNumberOfTasksRemainingInStage(final String stageId) {
+    final Map<Integer, List<TaskState>> taskStatesOfThisStage = stageIdToTaskIdxToAttemptStates.get(stageId);
+    final long numOfCompletedTaskIndices = taskStatesOfThisStage.values().stream()
+      .filter(attempts -> {
+        final List<TaskState.State> states = attempts
+          .stream()
+          .map(state -> (TaskState.State) state.getStateMachine().getCurrentState())
+          .collect(Collectors.toList());
+        return states.stream().anyMatch(curState -> curState.equals(TaskState.State.ON_HOLD)) // 이것도 필요한가?
+          || states.stream().anyMatch(curState -> curState.equals(TaskState.State.COMPLETE));
+      })
+      .count();
+    return (int) (taskStatesOfThisStage.size() - numOfCompletedTaskIndices);
+  }
+
+  public Set<String> getOngoingTaskIdsInStage(final String stageId) {
+    final Map<Integer, List<TaskState>> taskIdToState = stageIdToTaskIdxToAttemptStates.get(stageId);
+    final Set<String> onGoingTaskIds = new HashSet<>();
+    for (final int taskIndex : taskIdToState.keySet()) {
+      final List<TaskState> attemptStates = taskIdToState.get(taskIndex);
+      for (int attempt = 0; attempt < attemptStates.size(); attempt++) {
+        if (attemptStates.get(attempt).getStateMachine().getCurrentState().equals(TaskState.State.EXECUTING)) {
+          onGoingTaskIds.add(RuntimeIdManager.generateTaskId(stageId, taskIndex, attempt));
+        }
+      }
+    }
+    return onGoingTaskIds;
+  }
+
+  public int getParallelismOfStage(final String stageId) {
+    return physicalPlan.getStageDAG().getVertexById(stageId).getParallelism();
+  }
   /**
    * @return the physical plan.
    */

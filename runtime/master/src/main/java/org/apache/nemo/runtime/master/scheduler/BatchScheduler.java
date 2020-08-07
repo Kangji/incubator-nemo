@@ -20,6 +20,7 @@ package org.apache.nemo.runtime.master.scheduler;
 
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.nemo.common.Pair;
+import org.apache.nemo.common.dag.Vertex;
 import org.apache.nemo.common.exception.UnknownExecutionStateException;
 import org.apache.nemo.common.exception.UnrecoverableFailureException;
 import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProperty;
@@ -30,6 +31,7 @@ import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.BlockManagerMaster;
 import org.apache.nemo.runtime.master.PlanAppender;
 import org.apache.nemo.runtime.master.PlanStateManager;
+import org.apache.nemo.runtime.master.resource.DefaultExecutorRepresenter;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
 import org.slf4j.Logger;
@@ -76,6 +78,8 @@ public final class BatchScheduler implements Scheduler {
    * The below variables depend on the submitted plan to execute.
    */
   private List<List<Stage>> sortedScheduleGroups;  // Stages, sorted in the order to be scheduled.
+  // Stores the partitionSize counted per key of the task output of each stage.
+  private final Map<String, Map<Integer, Long>> stageIdToOutputPartitionSizeMap = new HashMap<>();
 
   @Inject
   private BatchScheduler(final PlanRewriter planRewriter,
@@ -209,6 +213,18 @@ public final class BatchScheduler implements Scheduler {
     switch (newState) {
       case COMPLETE:
       case ON_HOLD:
+        if (true) {
+          final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
+          if (checkForWorkStealingBaseConditions(stageId)) {
+            // need to have WorkStealingManager? or WorkStealingUtils?
+            // first, need to figure out currently running task ids
+            // second, track their size by task index
+            // third, track their currently processed data in bytes
+            // fourth, track their execution time till now
+            // five, detect skew!
+            final int dummyfile = 1;
+          }
+        }
         // If the stage has completed
         final String stageIdForTaskUponCompletion = RuntimeIdManager.getStageIdFromTaskId(taskId);
         if (planStateManager.getStageState(stageIdForTaskUponCompletion).equals(StageState.State.COMPLETE)
@@ -383,5 +399,100 @@ public final class BatchScheduler implements Scheduler {
     }
 
     return false;
+  }
+
+  // 일단은 다 여기다 만들고, 나중에 BatchSchedulerUtils 든 어디든 예쁘게 구분해서 정리하기
+  public void aggregateStageIdToPartitionSizeMap(final String taskId,
+                                                 final Map<Integer, Long> partitionSizeMap) {
+    final Map<Integer, Long> partitionSizeMapForThisStage = stageIdToOutputPartitionSizeMap
+      .get(RuntimeIdManager.getStageIdFromTaskId(taskId));
+    for (Integer hashedKey : partitionSizeMap.keySet()) {
+      final Long partitionSize = partitionSizeMap.get(hashedKey);
+      if (partitionSizeMapForThisStage.containsKey(hashedKey)) {
+        partitionSizeMapForThisStage.compute(hashedKey, (existingKey, existingValue) -> existingValue + partitionSize);
+      } else {
+        partitionSizeMapForThisStage.put(hashedKey, partitionSize);
+      }
+    }
+  }
+
+  private boolean checkForWorkStealingBaseConditions(final String stageId) {
+    final boolean executorStatus = executorRegistry.isExecutorSlotAvailable();
+    final int totalNumberOfSlots = executorRegistry.getTotalNumberOfExecutorSlots();
+    final int remainingTasks = planStateManager.getNumberOfTasksRemainingInStage(stageId);
+    return executorStatus && (totalNumberOfSlots > remainingTasks);
+  }
+
+  private Set<String> getCurrentlyRunningTaskId(final String stageId) {
+    return planStateManager.getOngoingTaskIdsInStage(stageId);
+  }
+
+  private Set<String> getStagesOfPreviousSchedulingGroup(final String currentStageId) {
+    return planStateManager.getPhysicalPlan().getStageDAG().getParents(currentStageId).stream()
+      .map(Vertex::getId)
+      .collect(Collectors.toSet());
+  }
+
+  // key가 정말로 Hash된 값으로 들어가는지(아님, 지금은 block의 경우 전부 다 디폴트 키가 integer라서 이런 식으로 된 것),
+  // block.write() 에서 partitioner를 가지고 작업 - hash 되었다고 생각할 수 있을 듯. 일단 한번 해보고 안 되면 고치자
+  // 그리고 2개 이상의 stage가 parent로 함께 있을 때 child 입장에서 partition이 올바르게 나누어져 있는지 꼭 확인하기
+  private Map<String, Long> getInputSizesOfCurrentlyRunningTaskIds(final Set<String> parentStageIds,
+                                                                    final Set<String> currentlyRunningTaskIds) {
+    // key를 hashed key로 바꿔야 함
+    // 그 다음에 task 별로 input size 알려주기
+    Map<String, Long> currentlyRunningTaskIdsToTotalSize = new HashMap<>();
+    for (String parent : parentStageIds) {
+      Map<Integer, Long> taskIdxToSize = stageIdToOutputPartitionSizeMap.get(parent);
+      for (String taskId : currentlyRunningTaskIds) {
+        if (currentlyRunningTaskIdsToTotalSize.containsKey(taskId)) {
+          final long existingValue = currentlyRunningTaskIdsToTotalSize.get(taskId);
+          currentlyRunningTaskIdsToTotalSize.put(taskId,
+            existingValue + taskIdxToSize.get(RuntimeIdManager.getIndexFromTaskId(taskId)));
+        } else {
+          currentlyRunningTaskIdsToTotalSize
+            .put(taskId, taskIdxToSize.get(RuntimeIdManager.getIndexFromTaskId(taskId)));
+        }
+      }
+    }
+    return currentlyRunningTaskIdsToTotalSize;
+  }
+
+
+
+  private Map<String, Long> getCurrentlyProcessedBytesOfRunningTasks() {
+    // driver sends message to executors
+    executorRegistry.viewExecutors(executors -> executors.forEach(executor -> executor.sendControlMessage()));
+    // executor sends back the requested information
+    // manage that information in here
+    return new HashMap<>();
+  }
+
+  private Map<String, Long> getCurrentlyTakenExecutionTimeMsOfRunningTasks(final String stageId) {
+    return planStateManager.getExecutingTaskToRunningTimeMs(stageId);
+  }
+
+  private void detectSkew(final String stageId) {
+    // get size of running tasks
+    Set<String> currentlyRunningTaskIds = getCurrentlyRunningTaskId(stageId); // 이것도 아이디라고 하면 좋을 것 같은데
+    Set<String> parentStageId = getStagesOfPreviousSchedulingGroup(stageId);
+    Map<String, Long> inputSizeOfCandidateTasks =
+      getInputSizesOfCurrentlyRunningTaskIds(parentStageId, currentlyRunningTaskIds);
+
+    // get size of processed bytes of running tasks
+    Map<String, Long> taskIdToProcessedBytes = getCurrentlyProcessedBytesOfRunningTasks();
+    // get time taken to process the bytes
+    Map<String, Long> taskIdToElapsedTime = getCurrentlyTakenExecutionTimeMsOfRunningTasks(stageId);
+
+    // estimate the remaining time
+    List<Pair<String, Long>> estimatedTimeToFinishPerTask = new ArrayList<>(taskIdToElapsedTime.size());
+
+    // detect skew
+
+
+    // Need to think about
+    // 1. taskId가 아니라 task index정보만 가지고 있어도 충분한가? fail -> retry 의 과정을 거칠 테니 attempt만 다른 task 2개가
+    // 동시에 돌아갈 일은 거의 없다고 봐도 되겠지?
+    // 2. stage 기반이 아니라 scheduling group 기반으로 되어야 하는 것 아닌가?
+    // (이러면 구현해 놓은 코드 좀 많이 고쳐야 할 것 같긴 한데, 이게 더 맞는 방향인 것 같기도 하고, 잘 모르겠네)
   }
 }
