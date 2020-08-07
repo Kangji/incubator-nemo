@@ -755,4 +755,8 @@ public final class TaskExecutor {
       }
     }
   }
+
+  public void onRequestForProcessedData() {
+
+  }
 }
