@@ -31,6 +31,7 @@ import org.apache.nemo.runtime.common.plan.PhysicalPlanGenerator;
 import org.apache.nemo.runtime.common.plan.Stage;
 import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.master.metric.MetricStore;
+import org.apache.nemo.runtime.master.scheduler.SimulatedTaskExecutor;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
 import org.apache.reef.tang.InjectionFuture;
 
@@ -99,6 +100,7 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
    *                          Long value is simulated job(=stage) duration.
    */
   private synchronized Pair<String, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
+    this.simulationScheduler.setTaskDurationEstimationMethod(SimulatedTaskExecutor.Type.ANALYTIC_ESTIMATION);
     this.simulationScheduler.schedulePlan(physicalPlan, 1);
     final MetricStore resultingMetricStore = this.simulationScheduler.collectMetricStore();
     final List<Pair<String, Long>> taskSizeRatioToDuration = new ArrayList<>();

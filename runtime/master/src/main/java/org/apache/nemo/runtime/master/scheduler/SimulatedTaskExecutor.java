@@ -20,11 +20,11 @@
 package org.apache.nemo.runtime.master.scheduler;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.Streams;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ScheduleGroupProperty;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
@@ -45,6 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * Class for simulated task execution.
@@ -63,6 +64,7 @@ public final class SimulatedTaskExecutor {
   private Long timeCheckpoint;
   private final MetricStore actualMetricStore;
   private final ConcurrentMap<String, DAG<IRVertex, RuntimeEdge<IRVertex>>> stageIDToStageIRDAG;
+  private Type taskDurationEstimationMethod = Type.ANALYTIC_ESTIMATION;
 
   /**
    * Constructor.
@@ -91,36 +93,80 @@ public final class SimulatedTaskExecutor {
     final DAG<IRVertex, RuntimeEdge<IRVertex>> stageIRDAG = stageIDToStageIRDAG.computeIfAbsent(task.getStageId(),
       i -> SerializationUtils.deserialize(task.getSerializedIRDag()));
 
+    // Retrieve the job metric.
     final Map<String, Object> jobMetricMap = this.actualMetricStore.getMetricMap(JobMetric.class);
     if (jobMetricMap.size() > 1) {
       LOG.warn("MetricStore has more than one JobMetric. The results could be misleading.");
     }
     // Fetch first element.
     final JobMetric jobMetric = (JobMetric) jobMetricMap.entrySet().iterator().next().getValue();
-    final JsonNode stageDAG = jobMetric.getStageDAG();
+    final JsonNode stageDAGJson = jobMetric.getStageDAG();
+    final JsonNode irDAGJson = jobMetric.getIRDAG();
 
-    // Gather ID of stages that have the characteristics that the task possesses.
-    final Set<String> stageIdsToGatherMetricsFrom = Streams.stream(() -> stageDAG.get("vertices").iterator())
-      .filter(s -> s.get("properties").get("irDag").get("vertices").size()
-        == stageIRDAG.getVertices().size())  // same # of vertices.
-      .filter(s -> s.get("properties").get("irDag").get("edges").size()
-        == stageIRDAG.getEdges().size())  // same # of edges.
-      .filter(s -> s.get("properties").get("executionProperties")
-        .get("org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty").asInt(0)
-        == task.getPropertyValue(ParallelismProperty.class).orElse(0))  // same parallelism.
-      .map(s -> s.get("id").asText())
-      .collect(Collectors.toSet());
+    // Perform the right action depending on the duration estimation type.
+    if (this.taskDurationEstimationMethod == Type.AVERAGE_FROM_METRICS) {
+      // Gather ID of stages that have the characteristics that the task possesses.
+      final Set<String> stageIdsToGatherMetricsFrom = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
+        stageDAGJson.get("vertices").iterator(), Spliterator.ORDERED), false)
+        .filter(s -> s.get("properties").get("irDag").get("vertices").size()
+          == stageIRDAG.getVertices().size())  // same # of vertices.
+        .filter(s -> s.get("properties").get("irDag").get("edges").size()
+          == stageIRDAG.getEdges().size())  // same # of edges.
+        .filter(s -> s.get("properties").get("executionProperties")
+          .get("org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty").asInt(0)
+          == task.getPropertyValue(ParallelismProperty.class).orElse(0))  // same parallelism.
+        .map(s -> s.get("id").asText())
+        .collect(Collectors.toSet());
 
-    // Derive the average task duration from the stages.
-    final OptionalDouble average = this.actualMetricStore.getMetricMap(TaskMetric.class).entrySet().stream()
-      .filter(e -> stageIdsToGatherMetricsFrom.contains(RuntimeIdManager.getStageIdFromTaskId(e.getKey())))
-      .map(Map.Entry::getValue)  // stream of TaskMetric.
-      .mapToLong(tm -> ((TaskMetric) tm).getTaskDuration())
-      .filter(l -> l > 0)
-      .average();
+      // Derive the average task duration from the stages.
+      final OptionalDouble average = this.actualMetricStore.getMetricMap(TaskMetric.class).entrySet().stream()
+        .filter(e -> stageIdsToGatherMetricsFrom.contains(RuntimeIdManager.getStageIdFromTaskId(e.getKey())))
+        .map(Map.Entry::getValue)  // stream of TaskMetric.
+        .mapToLong(tm -> ((TaskMetric) tm).getTaskDuration())
+        .filter(l -> l > 0)
+        .average();
 
-    // convert to long and save.
-    return (long) (average.orElse(0) + 0.5);  // 0 to indicate something went wrong
+      // convert to long and save.
+      return (long) (average.orElse(0) + 0.5);  // 0 to indicate something went wrong
+    } else if (this.taskDurationEstimationMethod == Type.ANALYTIC_ESTIMATION) {
+      final String irDAGSummary = jobMetric.getIrDagSummary();
+      final Long inputSize = jobMetric.getInputSize();
+      final Integer taskParallelism = task.getPropertyValue(ParallelismProperty.class).orElse(0);
+      final Integer taskVertexCount = stageIRDAG.getVertices().size();
+      final Integer scheduleGroup = task.getPropertyValue(ScheduleGroupProperty.class).orElse(0);
+      final Integer numOfExecutors = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
+        irDAGJson.get("executor_info").iterator(), Spliterator.ORDERED), false)
+        .mapToInt(ei -> ei.get("count").asInt())
+        .sum();
+      final Long totalMemory = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
+        irDAGJson.get("executor_info").iterator(), Spliterator.ORDERED), false)
+        .mapToInt(ei -> ei.get("memory").asInt())
+        .asLongStream().sum();
+      final Integer totalCores = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
+        irDAGJson.get("executor_info").iterator(), Spliterator.ORDERED), false)
+        .mapToInt(ei -> ei.get("capacity").asInt())
+        .sum();
+
+      // TODO: do something with the stats.
+      return 0;
+    }
+    return 0;
+  }
+
+  /**
+   * Set the estimation method variable.
+   * @param taskDurationEstimationMethod the estimation method variable to use for task duration estimation.
+   */
+  public void setTaskDurationEstimationMethod(final Type taskDurationEstimationMethod) {
+    this.taskDurationEstimationMethod = taskDurationEstimationMethod;
+  }
+
+  /**
+   * Type of the method for calculating the expected task duration.
+   */
+  public enum Type {
+    AVERAGE_FROM_METRICS,
+    ANALYTIC_ESTIMATION
   }
 
   /**

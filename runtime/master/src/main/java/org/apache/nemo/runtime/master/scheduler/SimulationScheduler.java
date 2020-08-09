@@ -239,6 +239,15 @@ public final class SimulationScheduler implements Scheduler {
   }
 
   /**
+   * Set the task duration estimation method to the task simulated task executors.
+   * @param taskDurationEstimationMethod the method to use for task duration estimation.
+   */
+  public void setTaskDurationEstimationMethod(final SimulatedTaskExecutor.Type taskDurationEstimationMethod) {
+    this.simulatedTaskExecutorMap.values().forEach(te ->
+      te.setTaskDurationEstimationMethod(taskDurationEstimationMethod));
+  }
+
+  /**
    * The main entry point for task scheduling.
    * This operation can be invoked at any point during job execution, as it is designed to be free of side-effects.
    * <p>

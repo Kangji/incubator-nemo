@@ -18,6 +18,8 @@
  */
 package org.apache.nemo.common.ir;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Sets;
 import org.apache.nemo.common.Pair;
@@ -915,7 +917,24 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
 
   @Override
   public ObjectNode asJsonNode() {
-    return modifiedDAG.asJsonNode();
+    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectNode node = modifiedDAG.asJsonNode();
+    final ArrayNode executorInfoNodes = mapper.createArrayNode();
+    executorInfo.forEach(p -> {
+      final ObjectNode executorInfoNode = mapper.createObjectNode();
+      executorInfoNode.put("count", p.left());
+      executorInfoNode.put("container_type", p.right().getContainerType());
+      executorInfoNode.put("capacity", p.right().getCapacity());
+      executorInfoNode.put("memory", p.right().getMemory());
+      executorInfoNode.put("id", p.right().getResourceSpecId());
+      p.right().getMaxOffheapRatio().ifPresent(ratio ->
+        executorInfoNode.put("max_offheap_ratio", ratio));
+      p.right().getPoisonSec().ifPresent(psec ->
+        executorInfoNode.put("poison_sec", psec));
+      executorInfoNodes.add(executorInfoNode);
+    });
+    node.set("executor_info", executorInfoNodes);
+    return node;
   }
 
   @Override
