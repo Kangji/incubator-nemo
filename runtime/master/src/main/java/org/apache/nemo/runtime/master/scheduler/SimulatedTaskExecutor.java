@@ -129,7 +129,10 @@ public final class SimulatedTaskExecutor {
       // convert to long and save.
       return (long) (average.orElse(0) + 0.5);  // 0 to indicate something went wrong
     } else if (this.taskDurationEstimationMethod == Type.ANALYTIC_ESTIMATION) {
-      final String irDAGSummary = jobMetric.getIrDagSummary();
+      final String[] irDAGSummary = jobMetric.getIrDagSummary().split("_");
+      final Integer sourceNum = Integer.valueOf(irDAGSummary[0].split("rv")[1]);
+      final Integer totalVerticesNum = Integer.valueOf(irDAGSummary[1].split("v")[1]);
+      final Integer totalEdgeNum = Integer.valueOf(irDAGSummary[2].split("e")[1]);
       final Long inputSize = jobMetric.getInputSize();
       final Integer taskParallelism = task.getPropertyValue(ParallelismProperty.class).orElse(0);
       final Integer taskVertexCount = stageIRDAG.getVertices().size();
@@ -146,6 +149,7 @@ public final class SimulatedTaskExecutor {
         irDAGJson.get("executor_info").iterator(), Spliterator.ORDERED), false)
         .mapToInt(ei -> ei.get("capacity").asInt())
         .sum();
+
 
       // TODO: do something with the stats.
       return 0;
