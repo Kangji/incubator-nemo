@@ -421,9 +421,13 @@ public final class BatchScheduler implements Scheduler {
   }
 
   private boolean checkForWorkStealingBaseConditions(final String stageId) {
+    LOG.error("[HWARIM]checking for work stealing conditions in {}...", stageId);
     final boolean executorStatus = executorRegistry.isExecutorSlotAvailable();
     final int totalNumberOfSlots = executorRegistry.getTotalNumberOfExecutorSlots();
     final int remainingTasks = planStateManager.getNumberOfTasksRemainingInStage(stageId);
+    LOG.error("[HWARIM] isExecutorSlotAvailable: {}", executorStatus);
+    LOG.error("[HWARIM] total number of slots: {}", totalNumberOfSlots);
+    LOG.error("[HWARIM] number of remaining tasks in this stage: {}", remainingTasks);
     return executorStatus && (totalNumberOfSlots > remainingTasks);
   }
 
