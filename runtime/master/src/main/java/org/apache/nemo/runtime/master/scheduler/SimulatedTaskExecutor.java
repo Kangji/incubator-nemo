@@ -24,7 +24,6 @@ import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ScheduleGroupProperty;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
@@ -37,6 +36,7 @@ import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
+import org.apache.nemo.runtime.master.scheduler.prophet.StaticParallelismProphet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,30 +129,7 @@ public final class SimulatedTaskExecutor {
       // convert to long and save.
       return (long) (average.orElse(0) + 0.5);  // 0 to indicate something went wrong
     } else if (this.taskDurationEstimationMethod == Type.ANALYTIC_ESTIMATION) {
-      final String[] irDAGSummary = jobMetric.getIrDagSummary().split("_");
-      final Integer sourceNum = Integer.valueOf(irDAGSummary[0].split("rv")[1]);
-      final Integer totalVerticesNum = Integer.valueOf(irDAGSummary[1].split("v")[1]);
-      final Integer totalEdgeNum = Integer.valueOf(irDAGSummary[2].split("e")[1]);
-      final Long inputSize = jobMetric.getInputSize();
-      final Integer taskParallelism = task.getPropertyValue(ParallelismProperty.class).orElse(0);
-      final Integer taskVertexCount = stageIRDAG.getVertices().size();
-      final Integer scheduleGroup = task.getPropertyValue(ScheduleGroupProperty.class).orElse(0);
-      final Integer numOfExecutors = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
-        irDAGJson.get("executor_info").iterator(), Spliterator.ORDERED), false)
-        .mapToInt(ei -> ei.get("count").asInt())
-        .sum();
-      final Long totalMemory = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
-        irDAGJson.get("executor_info").iterator(), Spliterator.ORDERED), false)
-        .mapToInt(ei -> ei.get("memory").asInt())
-        .asLongStream().sum();
-      final Integer totalCores = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
-        irDAGJson.get("executor_info").iterator(), Spliterator.ORDERED), false)
-        .mapToInt(ei -> ei.get("capacity").asInt())
-        .sum();
-
-
-      // TODO: do something with the stats.
-      return 0;
+      return StaticParallelismProphet.estimateDurationOf(task, jobMetric, stageIRDAG, irDAGJson);
     }
     return 0;
   }

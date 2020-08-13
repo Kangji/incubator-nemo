@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.nemo.compiler.optimizer.prophet;
+package org.apache.nemo.runtime.master.scheduler.prophet;
 
 import java.util.Map;
 
 /**
- * A prophet class for optimization. This object calculates and provides optimization information based on the
+ * A prophet class for the simulator. This object calculates and provides optimization information based on the
  * information available.
  *
  * @param <K> key type of the optimized value
