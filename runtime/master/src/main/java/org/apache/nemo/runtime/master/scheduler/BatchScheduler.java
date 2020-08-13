@@ -421,24 +421,36 @@ public final class BatchScheduler implements Scheduler {
   }
 
   private boolean checkForWorkStealingBaseConditions(final String stageId) {
+    final List<String> scheduleGroup = getScheduleGroupByStage(stageId);
     LOG.error("[HWARIM]checking for work stealing conditions in {}...", stageId);
     final boolean executorStatus = executorRegistry.isExecutorSlotAvailable();
     final int totalNumberOfSlots = executorRegistry.getTotalNumberOfExecutorSlots();
-    final int remainingTasks = planStateManager.getNumberOfTasksRemainingInStage(stageId);
+    int remainingTasks = 0;
+    for (String stage : scheduleGroup) {
+      remainingTasks += planStateManager.getNumberOfTasksRemainingInStage(stage); // ready + executing?
+    }
     LOG.error("[HWARIM] isExecutorSlotAvailable: {}", executorStatus);
     LOG.error("[HWARIM] total number of slots: {}", totalNumberOfSlots);
     LOG.error("[HWARIM] number of remaining tasks in this stage: {}", remainingTasks);
     return executorStatus && (totalNumberOfSlots > remainingTasks);
   }
 
-  private Set<String> getCurrentlyRunningTaskId(final String stageId) {
-    return planStateManager.getOngoingTaskIdsInStage(stageId);
+  private Set<String> getCurrentlyRunningTaskId(final List<String> scheduleGroup) {
+    final Set<String> onGoingTasksOfSchedulingGroup = new HashSet<>();
+    for (String stageId : scheduleGroup) {
+      onGoingTasksOfSchedulingGroup.addAll(planStateManager.getOngoingTaskIdsInStage(stageId));
+    }
+    return onGoingTasksOfSchedulingGroup;
   }
 
-  private Set<String> getStagesOfPreviousSchedulingGroup(final String currentStageId) {
-    return planStateManager.getPhysicalPlan().getStageDAG().getParents(currentStageId).stream()
-      .map(Vertex::getId)
-      .collect(Collectors.toSet());
+  private Map<String, Set<String>> getParentStages(final List<String> scheduleGroup) {
+    Map<String, Set<String>> parentStages = new HashMap<>();
+    for (String stageId : scheduleGroup) {
+      parentStages.put(stageId, planStateManager.getPhysicalPlan().getStageDAG().getParents(stageId).stream()
+        .map(Vertex::getId)
+        .collect(Collectors.toSet()));
+    }
+    return parentStages;
   }
 
   // key가 정말로 Hash된 값으로 들어가는지(아님, 지금은 block의 경우 전부 다 디폴트 키가 integer라서 이런 식으로 된 것),
@@ -477,25 +489,43 @@ public final class BatchScheduler implements Scheduler {
     executorRegistry.viewExecutors(executors -> executors.forEach(executor -> executor.sendControlMessage(message)));
   }
 
-  private Map<String, Long> getCurrentlyTakenExecutionTimeMsOfRunningTasks(final String stageId) {
-    return planStateManager.getExecutingTaskToRunningTimeMs(stageId);
+  private Map<String, Long> getCurrentlyTakenExecutionTimeMsOfRunningTasks(final List<String> scheduleGroup) {
+    final Map<String, Long> taskToExecutionTime = new HashMap<>();
+    for (String stageId : scheduleGroup) {
+      taskToExecutionTime.putAll(planStateManager.getExecutingTaskToRunningTimeMs(stageId));
+    }
+    return taskToExecutionTime;
+  }
+
+  private List<String> getScheduleGroupByStage(final String stageId) {
+    return sortedScheduleGroups.get(
+      planStateManager.getPhysicalPlan().getStageDAG().getVertexById(stageId).getScheduleGroup())
+      .stream()
+      .map(Vertex::getId)
+      .collect(Collectors.toList());
   }
 
   private List<Pair<String, Long>> detectSkew(final String stageId) {
     // get size of running tasks
-    Set<String> currentlyRunningTaskIds = getCurrentlyRunningTaskId(stageId);
-    Set<String> parentStageId = getStagesOfPreviousSchedulingGroup(stageId);
-    Map<String, Long> inputSizeOfCandidateTasks =
-      getInputSizesOfCurrentlyRunningTaskIds(parentStageId, currentlyRunningTaskIds);
+    final List<String> scheduleGroup = getScheduleGroupByStage(stageId);
+    final Set<String> currentlyRunningTaskIds = getCurrentlyRunningTaskId(scheduleGroup);
+    final Map<String, Set<String>> parentStageId = getParentStages(scheduleGroup);
+    final Map<String, Long> inputSizeOfCandidateTasks = new HashMap<>();
+    for (String stage : scheduleGroup) {
+      inputSizeOfCandidateTasks.putAll(
+        getInputSizesOfCurrentlyRunningTaskIds(parentStageId.get(stage), currentlyRunningTaskIds));
+    }
 
     // get time taken to process the bytes
-    Map<String, Long> taskIdToElapsedTime = getCurrentlyTakenExecutionTimeMsOfRunningTasks(stageId);
+    Map<String, Long> taskIdToElapsedTime = getCurrentlyTakenExecutionTimeMsOfRunningTasks(scheduleGroup);
 
     // get size of processed bytes of running tasks
+    final long startTime = System.currentTimeMillis();
     requestCurrentlyProcessedBytesOfRunningTasks();
     // wait until we gather all the information needed
     while (true) {
-      if (taskIdToProcessedBytes.size() == inputSizeOfCandidateTasks.size()) {
+      final long currTime = System.currentTimeMillis();
+      if (taskIdToProcessedBytes.size() == inputSizeOfCandidateTasks.size() || currTime - startTime >= 1000) {
         break;
       }
     }
@@ -510,7 +540,10 @@ public final class BatchScheduler implements Scheduler {
     // detect skew
     Collections.sort(estimatedTimeToFinishPerTask, new Comparator<Pair<String, Long>>() {
       @Override
-      public int compare(Pair<String, Long> o1, Pair<String, Long> o2) {
+      public int compare(final Pair<String, Long> o1, final Pair<String, Long> o2) {
+        if (o1.right().equals(o2.right())) {
+          return 0;
+        }
         return o1.right() > o2.right() ? 1 : -1;
       }
     });
