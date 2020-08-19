@@ -1,0 +1,15 @@
+[
+  {
+    "type": "Transient",
+    "memory_mb": 15360,
+    "capacity": 2,
+    "num": 10
+  },
+  {
+    "type": "Reserved",
+    "memory_mb": 15360,
+    "capacity": 2,
+    "num": 8
+  }
+
+]

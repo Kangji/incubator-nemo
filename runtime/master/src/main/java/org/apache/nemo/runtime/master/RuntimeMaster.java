@@ -206,6 +206,15 @@ public final class RuntimeMaster {
   }
 
   /**
+   * Record IR DAG information on the default plan.
+   *
+   * @param irdag the IR DAG to record.
+   */
+  public void recordIRDAGMetrics(final IRDAG irdag) {
+    metricStore.getOrCreateMetric(JobMetric.class, "Plan0").setIRDAG(irdag);
+  }
+
+  /**
    * Record IR DAG related metrics.
    *
    * @param irdag  the IR DAG to record.

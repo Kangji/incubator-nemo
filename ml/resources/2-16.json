@@ -1,0 +1,8 @@
+[
+  {
+    "type": "Compute",
+    "memory_mb": 7680,
+    "capacity": 2,
+    "num": 16
+  }
+]

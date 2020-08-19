@@ -1,0 +1,7 @@
+*.model
+*.txt
+*.test
+*.train
+*.pickle
+*.out
+__pycache__*

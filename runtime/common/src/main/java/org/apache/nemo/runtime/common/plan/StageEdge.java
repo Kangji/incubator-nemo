@@ -24,10 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.nemo.common.HashRange;
 import org.apache.nemo.common.KeyRange;
-import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
-import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
-import org.apache.nemo.common.ir.edge.executionproperty.PartitionSetProperty;
-import org.apache.nemo.common.ir.edge.executionproperty.SubPartitionSetProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.vertex.IRVertex;
@@ -153,6 +150,15 @@ public final class StageEdge extends RuntimeEdge<Stage> {
     return getExecutionProperties().get(DataFlowProperty.class)
       .orElseThrow(() -> new RuntimeException(String.format(
         "DataFlowProperty not set for %s", getId())));
+  }
+
+  /**
+   * @return {@link DataStoreProperty} value;
+   */
+  public DataStoreProperty.Value getDataStoreProperty() {
+    return getExecutionProperties().get(DataStoreProperty.class)
+      .orElseThrow(() -> new RuntimeException(String.format(
+        "DataStoreProperty not set for %s", getId())));
   }
 
   /**

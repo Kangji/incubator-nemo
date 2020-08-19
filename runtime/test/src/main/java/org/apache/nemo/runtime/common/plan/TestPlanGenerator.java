@@ -105,7 +105,7 @@ public final class TestPlanGenerator {
   /**
    * @return a dag that joins two vertices.
    */
-  private static IRDAG getTwoVerticesJoinedDAG() {
+  public static IRDAG getTwoVerticesJoinedDAG() {
     final DAGBuilder<IRVertex, IREdge> dagBuilder = new DAGBuilder<>();
 
     final Transform t = new EmptyComponents.EmptyTransform("empty");

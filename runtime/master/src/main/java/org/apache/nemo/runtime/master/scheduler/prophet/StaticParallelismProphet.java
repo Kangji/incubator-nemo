@@ -29,22 +29,23 @@ import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.exception.CompileTimeOptimizationException;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
+import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ScheduleGroupProperty;
-import org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping.SamplingTaskSizingPass;
 import org.apache.nemo.runtime.common.metric.JobMetric;
 import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.scheduler.SimulatedTaskExecutor;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
-import org.apache.reef.io.data.loading.api.DataLoader;
 import org.apache.reef.tang.InjectionFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -55,15 +56,19 @@ import java.util.stream.StreamSupport;
  * which tells you the estimated optimal parallelisms for each vertex.
  */
 public final class StaticParallelismProphet implements Prophet<String, Integer> {
+  private static final Logger LOG = LoggerFactory.getLogger(StaticParallelismProphet.class.getName());
+
   private final SimulationScheduler simulationScheduler;
   private final PhysicalPlanGenerator physicalPlanGenerator;
   private IRDAG currentIRDAG;
+  private Integer totalCores;
 
   @Inject
   public StaticParallelismProphet(final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture,
                                   final PhysicalPlanGenerator physicalPlanGenerator) {
     this.simulationScheduler = simulationSchedulerInjectionFuture.get();
     this.physicalPlanGenerator = physicalPlanGenerator;
+    this.totalCores = 64;  // todo: Fix later on.
   }
 
   @Override
@@ -74,7 +79,8 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
     final DAG<Stage, StageEdge> dagOfStages = physicalPlanGenerator.stagePartitionIrDAG(currentIRDAG);
 
     final List<Pair<String, DAG<Stage, StageEdge>>> stageDAGs =
-      makePhysicalPlansForSimulation(1, degreeOfConfigurationSpace, dagOfStages);
+
+      makePhysicalPlansForSimulation(0, degreeOfConfigurationSpace, dagOfStages);
     stageDAGs.forEach(stageDAGPair ->
       listOfPhysicalPlans.add(new PhysicalPlan(stageDAGPair.left(), stageDAGPair.right())));
 
@@ -137,7 +143,7 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
     // We only handle the space with smaller parallelism than the source, e.g. 512 to 2, 512 to 4, upto 512 to 512.
     IntStream.range(parallelismDivisor, degreeOfConfigurationSpace).forEachOrdered(i -> {
       final int parallelism = (int)  // parallelism for the first stage
-        (SamplingTaskSizingPass.getPartitionerPropertyByJobSize(currentIRDAG) / Math.pow(2, i));
+        (totalCores * Math.pow(2, i));
 
       // process first stage.
       final Stage firstStage = topologicalStages.remove(0);
@@ -163,7 +169,7 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
         });
         final DAG<Stage, StageEdge> restStageDAGBeforeOpt = restStageBuilder.buildWithoutSourceSinkCheck();
         final List<Pair<String, DAG<Stage, StageEdge>>> restStageDAGs =  // this is where recursion occurs
-          makePhysicalPlansForSimulation(i, degreeOfConfigurationSpace, restStageDAGBeforeOpt);
+          makePhysicalPlansForSimulation(0, i, restStageDAGBeforeOpt);
         // recursively accumulated DAGs are each added onto the list.
         restStageDAGs.forEach(restStageDAGPair -> {
           final DAG<Stage, StageEdge> restStageDAG = restStageDAGPair.right();
@@ -184,8 +190,7 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
 
   public static long estimateDurationOf(final Task task,
                                         final JobMetric jobMetric,
-                                        final DAG<IRVertex, RuntimeEdge<IRVertex>> stageIRDAG,
-                                        final JsonNode irDAGJson) {
+                                        final DAG<IRVertex, RuntimeEdge<IRVertex>> stageIRDAG) {
     final String[] irDAGSummary = jobMetric.getIrDagSummary().split("_");
     final Integer sourceNum = Integer.valueOf(irDAGSummary[0].split("rv")[1]);
     final Integer totalVerticesNum = Integer.valueOf(irDAGSummary[1].split("v")[1]);
@@ -194,6 +199,8 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
     final Integer taskParallelism = task.getPropertyValue(ParallelismProperty.class).orElse(0);
     final Integer taskVertexCount = stageIRDAG.getVertices().size();
     final Integer scheduleGroup = task.getPropertyValue(ScheduleGroupProperty.class).orElse(0);
+
+    final JsonNode irDAGJson = jobMetric.getIRDAG();
     final Integer numOfExecutors = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
       irDAGJson.get("executor_info").iterator(), Spliterator.ORDERED), false)
       .mapToInt(ei -> ei.get("count").asInt())
@@ -207,122 +214,89 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
       .mapToInt(ei -> ei.get("capacity").asInt())
       .sum();
 
+    final List<StageEdge> incomingStageEdges = task.getTaskIncomingEdges();
+    final Integer isSource = incomingStageEdges.size() > 0 ? 0 : 1;
+    final Integer sourceCommunicationPatternShuffle = incomingStageEdges.stream().anyMatch(e ->
+      e.getDataCommunicationPattern().equals(CommunicationPatternProperty.Value.SHUFFLE)) ? 1 : 0;
+    final Integer sourceCommunicationPatternOneToOne = incomingStageEdges.stream().anyMatch(e ->
+      e.getDataCommunicationPattern().equals(CommunicationPatternProperty.Value.ONE_TO_ONE)) ? 1 : 0;
+    final Integer sourceCommunicationPatternBroadcast =  incomingStageEdges.stream().anyMatch(e ->
+      e.getDataCommunicationPattern().equals(CommunicationPatternProperty.Value.BROADCAST)) ? 1 : 0;
+    final Integer sourceDataStoreMemoryStore = incomingStageEdges.stream().anyMatch(e ->
+      e.getDataStoreProperty().equals(DataStoreProperty.Value.MEMORY_STORE)
+        || e.getDataStoreProperty().equals(DataStoreProperty.Value.SERIALIZED_MEMORY_STORE)) ? 1 : 0;
+    final Integer sourceDataStoreLocalFileStore = incomingStageEdges.stream().anyMatch(e ->
+      e.getDataStoreProperty().equals(DataStoreProperty.Value.LOCAL_FILE_STORE)) ? 1 : 0;
+    final Integer sourceDataStoreDisaggStore = incomingStageEdges.stream().anyMatch(e ->
+      e.getDataStoreProperty().equals(DataStoreProperty.Value.GLUSTER_FILE_STORE)) ? 1 : 0;
+    final Integer sourceDataStorePipe = incomingStageEdges.stream().anyMatch(e ->
+      e.getDataStoreProperty().equals(DataStoreProperty.Value.PIPE)) ? 1 : 0;
+    final Integer sourceDataFlowPull = incomingStageEdges.stream().anyMatch(e ->
+      e.getDataFlowModel().equals(DataFlowProperty.Value.PULL)) ? 1 : 0;
+    final Integer sourceDataFlowPush = incomingStageEdges.stream().anyMatch(e ->
+      e.getDataFlowModel().equals(DataFlowProperty.Value.PUSH)) ? 1 : 0;
+
     try {
-      // Learn model
-      final String trainPath = "";
-      final String testPath = "";
-      final DMatrix trainMat = new DMatrix(trainPath);
-      final DMatrix testMat = new DMatrix(testPath);
+      final String modelPath = "../../ml/task_duration_model/model/xgb.model";
+      final File file = new File(modelPath);
+      final Booster booster;
+      if (file.exists()) {
+        //reload model and data
+        booster = XGBoost.loadModel(modelPath);
+      } else {
+        // Learn model
+        final String trainPath = "../../ml/task_duration_model/dataset.txt.train";
+        final String testPath = "../../ml/task_duration_model/dataset.txt.test";
+        final DMatrix trainMat = new DMatrix(trainPath);
+        final DMatrix testMat = new DMatrix(testPath);
 
-      //specify parameters
-      HashMap<String, Object> params = new HashMap<String, Object>();
-      params.put("eta", 0.8);
-      params.put("max_depth", 5);
-      params.put("verbosity", 1);
-      params.put("objective", "reg:squaredlogerror");
+        //specify parameters
+        final HashMap<String, Object> params = new HashMap<String, Object>();
+        params.put("eta", 0.8);
+        params.put("max_depth", 6);
+        params.put("verbosity", 1);
+        params.put("objective", "reg:squarederror");
 
-      HashMap<String, DMatrix> watches = new HashMap<String, DMatrix>();
-      watches.put("train", trainMat);
-      watches.put("test", testMat);
+        final HashMap<String, DMatrix> watches = new HashMap<String, DMatrix>();
+        watches.put("train", trainMat);
+        watches.put("test", testMat);
 
-      //set round
-      int round = 2;
+        //set round
+        final int round = 5;
 
-      //train a boost model
-      Booster booster = XGBoost.train(trainMat, params, round, watches, null, null);
+        //train a boost model
+        booster = XGBoost.train(trainMat, params, round, watches, null, null);
 
-      //predict using first 2 tree
-      // float[][] leafindex = booster.predictLeaf(testMat, 2);
-      // for (float[] leafs : leafindex) {
-      //   System.out.println(Arrays.toString(leafs));
-      // }
-
-      //predict all trees
-      // leafindex = booster.predictLeaf(testMat, 0);
-      // for (float[] leafs : leafindex) {
-      //   System.out.println(Arrays.toString(leafs));
-      // }
-
-      //predict
-      float[][] predicts = booster.predict(testMat);
-
-      //save model to modelPath
-      File file = new File("./model");
-      if (!file.exists()) {
-        file.mkdirs();
+        //save model to modelPath
+        final File path = new File("../../ml/task_duration_model/model");
+        if (!path.exists()) {
+          path.mkdirs();
+        }
+        booster.saveModel(modelPath);
       }
 
-      String modelPath = "./model/xgb.model";
-      booster.saveModel(modelPath);
+      // Format the data to predict the result for.
+      final float[] data = new float[] {sourceNum, totalVerticesNum, totalEdgeNum, inputSize, numOfExecutors,
+        totalMemory, totalCores, taskParallelism, taskVertexCount, scheduleGroup,
+        isSource,
+        sourceCommunicationPatternShuffle, sourceCommunicationPatternOneToOne, sourceCommunicationPatternBroadcast,
+        sourceDataStoreMemoryStore, sourceDataStoreLocalFileStore, sourceDataStoreDisaggStore, sourceDataStorePipe,
+        sourceDataFlowPull, sourceDataFlowPush
+      };
+      final int nrow = 1;
+      final int ncol = 20;
+      final float missing = 0.0f;
+      final DMatrix currentData = new DMatrix(data, nrow, ncol, missing);
+      // Predict using the trained booster model.
+      final float[][] predicts = booster.predict(currentData);
 
-      //dump model with feature map
-      String[] modelInfos = booster.getModelDump("../../demo/data/featmap.txt", false);
-      saveDumpModel("./model/dump.raw.txt", modelInfos);
+      for (final float[] predict : predicts) {
+        LOG.info("Prediction for {} is {}", task.getTaskId(), Arrays.toString(predict));
+      }
 
-      //save dmatrix into binary buffer
-      testMat.saveBinary("./model/dtest.buffer");
-
-      //reload model and data
-      Booster booster2 = XGBoost.loadModel("./model/xgb.model");
-      DMatrix testMat2 = new DMatrix("./model/dtest.buffer");
-      float[][] predicts2 = booster2.predict(testMat2);
-
-
-      //check the two predicts
-      System.out.println(checkPredicts(predicts, predicts2));
-
-      System.out.println("start build dmatrix from csr sparse data ...");
-      //build dmatrix from CSR Sparse Matrix
-      DataLoader.CSRSparseData spData = DataLoader.loadSVMFile("../../demo/data/agaricus.txt.train");
-
-      DMatrix trainMat2 = new DMatrix(spData.rowHeaders, spData.colIndex, spData.data,
-        DMatrix.SparseType.CSR);
-      trainMat2.setLabel(spData.labels);
-
-      //specify watchList
-      HashMap<String, DMatrix> watches2 = new HashMap<String, DMatrix>();
-      watches2.put("train", trainMat2);
-      watches2.put("test", testMat2);
-      Booster booster3 = XGBoost.train(trainMat2, params, round, watches2, null, null);
-      float[][] predicts3 = booster3.predict(testMat2);
-
-      //check predicts
-      System.out.println(checkPredicts(predicts, predicts3));
-
-      // TODO: Do something based on https://github.com/dmlc/xgboost/blob/master/jvm-packages/xgboost4j-example/src/main/java/ml/dmlc/xgboost4j/java/example/BasicWalkThrough.java
+      return (long) predicts[0][0];
     } catch (final XGBoostError e) {
       throw new CompileTimeOptimizationException(e);
-    } catch (final IOException e) {
-      throw new CompileTimeOptimizationException(e);
     }
-
-    return 0;
-  }
-
-  public static void saveDumpModel(String modelPath, String[] modelInfos) throws IOException {
-    try{
-      PrintWriter writer = new PrintWriter(modelPath, "UTF-8");
-      for(int i = 0; i < modelInfos.length; ++ i) {
-        writer.print("booster[" + i + "]:\n");
-        writer.print(modelInfos[i]);
-      }
-      writer.close();
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-  }
-
-  public static boolean checkPredicts(float[][] fPredicts, float[][] sPredicts) {
-    if (fPredicts.length != sPredicts.length) {
-      return false;
-    }
-
-    for (int i = 0; i < fPredicts.length; i++) {
-      if (!Arrays.equals(fPredicts[i], sPredicts[i])) {
-        return false;
-      }
-    }
-
-    return true;
   }
 }

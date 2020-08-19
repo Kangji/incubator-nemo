@@ -101,7 +101,6 @@ public final class SimulatedTaskExecutor {
     // Fetch first element.
     final JobMetric jobMetric = (JobMetric) jobMetricMap.entrySet().iterator().next().getValue();
     final JsonNode stageDAGJson = jobMetric.getStageDAG();
-    final JsonNode irDAGJson = jobMetric.getIRDAG();
 
     // Perform the right action depending on the duration estimation type.
     if (this.taskDurationEstimationMethod == Type.AVERAGE_FROM_METRICS) {
@@ -129,7 +128,7 @@ public final class SimulatedTaskExecutor {
       // convert to long and save.
       return (long) (average.orElse(0) + 0.5);  // 0 to indicate something went wrong
     } else if (this.taskDurationEstimationMethod == Type.ANALYTIC_ESTIMATION) {
-      return StaticParallelismProphet.estimateDurationOf(task, jobMetric, stageIRDAG, irDAGJson);
+      return StaticParallelismProphet.estimateDurationOf(task, jobMetric, stageIRDAG);
     }
     return 0;
   }
