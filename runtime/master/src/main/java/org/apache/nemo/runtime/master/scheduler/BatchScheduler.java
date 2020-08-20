@@ -569,6 +569,7 @@ public final class BatchScheduler implements Scheduler {
     for (String taskId : taskIdToProcessedBytes.keySet()) {
       long timeToFinishExecute = taskIdToElapsedTime.get(taskId) * inputSizeOfCandidateTasks.get(taskId)
         / taskIdToProcessedBytes.get(taskId);
+      LOG.error("{} estimated time to finish {}", taskId, timeToFinishExecute);
       estimatedTimeToFinishPerTask.add(Pair.of(taskId, timeToFinishExecute));
     }
     // detect skew
@@ -576,7 +577,7 @@ public final class BatchScheduler implements Scheduler {
       @Override
       public int compare(final Pair<String, Long> o1, final Pair<String, Long> o2) {
         if (o1.right().equals(o2.right())) {
-          return 0;
+          return o1.left().compareTo(o2.left());
         }
         return o1.right() > o2.right() ? 1 : -1;
       }

@@ -157,6 +157,7 @@ class ParentTaskDataFetcher extends DataFetcher {
   private void fetchDataLazily() {
     final List<CompletableFuture<DataUtil.IteratorWithNumBytes>> futures = inputReader.read();
     this.expectedNumOfIterators = futures.size();
+    LOG.error("expected number of iterators: {}", expectedNumOfIterators);
     for (int i = 0; i < futures.size(); i++) {
       final int index = i;
       final CompletableFuture<DataUtil.IteratorWithNumBytes> future = futures.get(i);

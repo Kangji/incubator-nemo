@@ -19,6 +19,7 @@
 package org.apache.nemo.runtime.executor.data;
 
 import com.google.common.io.CountingInputStream;
+import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.nemo.common.ByteBufferInputStream;
 import org.apache.nemo.common.coder.DecoderFactory;
 import org.apache.nemo.common.coder.EncoderFactory;
@@ -222,7 +223,7 @@ public final class DataUtil {
     private T next;
     private boolean cannotContinueDecoding = false;
     private DecoderFactory.Decoder<T> decoder = null;
-    private long numSerializedBytes = 0;
+    private final MutableLong numSerializedBytes = new MutableLong(0);
     private long numEncodedBytes = 0;
 
     /**
@@ -268,7 +269,7 @@ public final class DataUtil {
           return true;
         } catch (final IOException e) {
           // IOException from decoder indicates EOF event.
-          numSerializedBytes += serializedCountingStream.getCount();
+          numSerializedBytes.add(serializedCountingStream.getCount());
           numEncodedBytes += encodedCountingStream.getCount();
           serializedCountingStream = null;
           encodedCountingStream = null;
@@ -291,10 +292,10 @@ public final class DataUtil {
 
     @Override
     public long getNumSerializedBytes() {
-      if (hasNext()) {
-        throw new IllegalStateException("Iteration not completed.");
-      }
-      return numSerializedBytes;
+      //if (hasNext()) {
+      //  throw new IllegalStateException("Iteration not completed.");
+      //}
+      return numSerializedBytes.longValue();
     }
 
     @Override
