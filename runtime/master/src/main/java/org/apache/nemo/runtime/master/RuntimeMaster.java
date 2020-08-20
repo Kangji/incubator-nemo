@@ -81,9 +81,11 @@ public final class RuntimeMaster {
   private static final int METRIC_ARRIVE_TIMEOUT = 10000;
   private static final int REST_SERVER_PORT = 10101;
   private static final int SPECULATION_CHECKING_PERIOD_MS = 100;
+  private static final int WORK_STEALING_CHECKING_PERIOD_MS = 200;
 
   private final ExecutorService runtimeMasterThread;
   private final ScheduledExecutorService speculativeTaskCloningThread;
+  private final ScheduledExecutorService workStealingThread;
 
   private final Scheduler scheduler;
   private final ContainerManager containerManager;
@@ -152,6 +154,15 @@ public final class RuntimeMaster {
       () -> this.runtimeMasterThread.submit(scheduler::onSpeculativeExecutionCheck),
       SPECULATION_CHECKING_PERIOD_MS,
       SPECULATION_CHECKING_PERIOD_MS,
+      TimeUnit.MILLISECONDS);
+
+    // Check for work stealing execution
+    this.workStealingThread = Executors
+      .newSingleThreadScheduledExecutor(runnable -> new Thread(runnable, "WorkStealing thread"));
+    this.workStealingThread.scheduleAtFixedRate(
+      () -> this.runtimeMasterThread.submit(scheduler::onWorkStealingCheck),
+      WORK_STEALING_CHECKING_PERIOD_MS,
+      WORK_STEALING_CHECKING_PERIOD_MS,
       TimeUnit.MILLISECONDS);
 
     this.scheduler = scheduler;

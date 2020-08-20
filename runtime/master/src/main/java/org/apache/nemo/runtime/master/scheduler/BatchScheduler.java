@@ -217,12 +217,12 @@ public final class BatchScheduler implements Scheduler {
     switch (newState) {
       case COMPLETE:
       case ON_HOLD:
-        if (true) {
-          final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
-          if (checkForWorkStealingBaseConditions(stageId)) {
-            detectSkew(stageId);
-          }
-        }
+        //if (true) {
+        //  final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
+        //  if (checkForWorkStealingBaseConditions(stageId)) {
+        //    detectSkew(stageId);
+        //  }
+        //}
         // If the stage has completed
         final String stageIdForTaskUponCompletion = RuntimeIdManager.getStageIdFromTaskId(taskId);
         if (planStateManager.getStageState(stageIdForTaskUponCompletion).equals(StageState.State.COMPLETE)
@@ -270,6 +270,21 @@ public final class BatchScheduler implements Scheduler {
 
     if (isNewCloneCreated.booleanValue()) {
       doSchedule(); // Do schedule the new clone.
+    }
+  }
+
+  @Override
+  public void onWorkStealingCheck() {
+    MutableBoolean isWorkStealingConditionSatisfied = new MutableBoolean(false);
+    List<Stage> scheduleGroup = BatchSchedulerUtils
+      .selectEarliestSchedulableGroup(sortedScheduleGroups, planStateManager).orElse(new ArrayList<>());
+    List<String> scheduleGroupInId = scheduleGroup.stream().map(Stage::getId).collect(Collectors.toList());
+    LOG.error("schedule group: {}", scheduleGroupInId);
+    isWorkStealingConditionSatisfied.setValue(checkForWorkStealingBaseConditions(scheduleGroupInId));
+
+    if (isWorkStealingConditionSatisfied.booleanValue()) {
+      taskIdToProcessedBytes.clear();
+      detectSkew(scheduleGroupInId);
     }
   }
 
@@ -404,7 +419,7 @@ public final class BatchScheduler implements Scheduler {
   public void aggregateStageIdToPartitionSizeMap(final String taskId,
                                                  final Map<Integer, Long> partitionSizeMap) {
     final Map<Integer, Long> partitionSizeMapForThisStage = stageIdToOutputPartitionSizeMap
-      .get(RuntimeIdManager.getStageIdFromTaskId(taskId));
+      .getOrDefault(RuntimeIdManager.getStageIdFromTaskId(taskId), new HashMap<>());
     for (Integer hashedKey : partitionSizeMap.keySet()) {
       final Long partitionSize = partitionSizeMap.get(hashedKey);
       if (partitionSizeMapForThisStage.containsKey(hashedKey)) {
@@ -413,25 +428,26 @@ public final class BatchScheduler implements Scheduler {
         partitionSizeMapForThisStage.put(hashedKey, partitionSize);
       }
     }
+    stageIdToOutputPartitionSizeMap.put(RuntimeIdManager.getStageIdFromTaskId(taskId), partitionSizeMapForThisStage);
   }
 
   public void aggregateTaskIdToProcessedBytes(final String taskId,
                                               final long processedBytes) {
+    LOG.error("{} data arrived! {}", taskId, processedBytes);
     taskIdToProcessedBytes.put(taskId, processedBytes);
   }
 
-  private boolean checkForWorkStealingBaseConditions(final String stageId) {
-    final List<String> scheduleGroup = getScheduleGroupByStage(stageId);
-    LOG.error("[HWARIM]checking for work stealing conditions in {}...", stageId);
+  private boolean checkForWorkStealingBaseConditions(final List<String> scheduleGroup) {
+    LOG.error("[HWARIM]checking for work stealing conditions in {}...", scheduleGroup);
     final boolean executorStatus = executorRegistry.isExecutorSlotAvailable();
     final int totalNumberOfSlots = executorRegistry.getTotalNumberOfExecutorSlots();
     int remainingTasks = 0;
     for (String stage : scheduleGroup) {
       remainingTasks += planStateManager.getNumberOfTasksRemainingInStage(stage); // ready + executing?
     }
-    LOG.error("[HWARIM] isExecutorSlotAvailable: {}", executorStatus);
-    LOG.error("[HWARIM] total number of slots: {}", totalNumberOfSlots);
-    LOG.error("[HWARIM] number of remaining tasks in this stage: {}", remainingTasks);
+    //LOG.error("[HWARIM] isExecutorSlotAvailable: {}", executorStatus);
+    //LOG.error("[HWARIM] total number of slots: {}", totalNumberOfSlots);
+    //LOG.error("[HWARIM] number of remaining tasks in this stage: {}", remainingTasks);
     return executorStatus && (totalNumberOfSlots > remainingTasks);
   }
 
@@ -505,9 +521,16 @@ public final class BatchScheduler implements Scheduler {
       .collect(Collectors.toList());
   }
 
-  private List<Pair<String, Long>> detectSkew(final String stageId) {
+  private List<Pair<String, Long>> detectSkew(final List<String> scheduleGroup) {
+    LOG.error("Skew detection in {}", scheduleGroup);
+    // if this schedule group contains a source stage, return empty list
+    if (scheduleGroup.stream().anyMatch(stage ->
+      planStateManager.getPhysicalPlan().getStageDAG().getParents(stage).isEmpty())) {
+      LOG.error("returning since this is a source stage...");
+      return new ArrayList<>();
+    }
+
     // get size of running tasks
-    final List<String> scheduleGroup = getScheduleGroupByStage(stageId);
     final Set<String> currentlyRunningTaskIds = getCurrentlyRunningTaskId(scheduleGroup);
     final Map<String, Set<String>> parentStageId = getParentStages(scheduleGroup);
     final Map<String, Long> inputSizeOfCandidateTasks = new HashMap<>();
@@ -515,6 +538,9 @@ public final class BatchScheduler implements Scheduler {
       inputSizeOfCandidateTasks.putAll(
         getInputSizesOfCurrentlyRunningTaskIds(parentStageId.get(stage), currentlyRunningTaskIds));
     }
+    LOG.error("currently running task id: {}", currentlyRunningTaskIds);
+    LOG.error("parent stage ID: {}", parentStageId);
+    LOG.error("input size: {}", inputSizeOfCandidateTasks);
 
     // get time taken to process the bytes
     Map<String, Long> taskIdToElapsedTime = getCurrentlyTakenExecutionTimeMsOfRunningTasks(scheduleGroup);
@@ -525,14 +551,22 @@ public final class BatchScheduler implements Scheduler {
     // wait until we gather all the information needed
     while (true) {
       final long currTime = System.currentTimeMillis();
-      if (taskIdToProcessedBytes.size() == inputSizeOfCandidateTasks.size() || currTime - startTime >= 1000) {
+      if (taskIdToProcessedBytes.size() == inputSizeOfCandidateTasks.size() || currTime - startTime >= 5000) {
         break;
       }
     }
+    LOG.error("task id to processed bytes: {}", taskIdToProcessedBytes);
+    LOG.error("task id to elapsed time: {}", taskIdToElapsedTime);
+    // if there are no tasks left to optimize, return empty list
+    if (taskIdToProcessedBytes.isEmpty()) {
+      LOG.error("maybe all finished.");
+      return new ArrayList<>();
+    }
 
     // estimate the remaining time
+
     List<Pair<String, Long>> estimatedTimeToFinishPerTask = new ArrayList<>(taskIdToElapsedTime.size());
-    for (String taskId : currentlyRunningTaskIds) {
+    for (String taskId : taskIdToProcessedBytes.keySet()) {
       long timeToFinishExecute = taskIdToElapsedTime.get(taskId) * inputSizeOfCandidateTasks.get(taskId)
         / taskIdToProcessedBytes.get(taskId);
       estimatedTimeToFinishPerTask.add(Pair.of(taskId, timeToFinishExecute));
@@ -551,6 +585,7 @@ public final class BatchScheduler implements Scheduler {
     final List<Pair<String, Long>> skewedTasks = estimatedTimeToFinishPerTask
       .subList(0, estimatedTimeToFinishPerTask.size() / 2);
 
+    LOG.error("skewed tasks: {}", skewedTasks);
     return skewedTasks;
 
     // Need to think about

@@ -392,6 +392,7 @@ public final class TaskExecutor {
       if (dataFetcher instanceof SourceVertexDataFetcher) {
         boundedSourceReadTime += ((SourceVertexDataFetcher) dataFetcher).getBoundedSourceReadTime();
       } else if (dataFetcher instanceof ParentTaskDataFetcher) {
+        LOG.error("serialized read bytes: {}", ((ParentTaskDataFetcher) dataFetcher).getSerializedBytes());
         serializedReadBytes += ((ParentTaskDataFetcher) dataFetcher).getSerializedBytes();
         encodedReadBytes += ((ParentTaskDataFetcher) dataFetcher).getEncodedBytes();
       } else if (dataFetcher instanceof MultiThreadParentTaskDataFetcher) {
@@ -757,6 +758,7 @@ public final class TaskExecutor {
   }
 
   public void onRequestForProcessedData() {
+    LOG.error("{}, bytes {}, replying for the request", taskId, serializedReadBytes);
     persistentConnectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).send(
       ControlMessage.Message.newBuilder()
         .setId(RuntimeIdManager.generateMessageId())
