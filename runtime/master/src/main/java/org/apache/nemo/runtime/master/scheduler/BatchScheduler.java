@@ -27,12 +27,14 @@ import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProper
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
+import org.apache.nemo.runtime.common.metric.TaskMetric;
 import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.common.state.StageState;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.BlockManagerMaster;
 import org.apache.nemo.runtime.master.PlanAppender;
 import org.apache.nemo.runtime.master.PlanStateManager;
+import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
 import org.slf4j.Logger;
@@ -69,6 +71,7 @@ public final class BatchScheduler implements Scheduler {
   private final PendingTaskCollectionPointer pendingTaskCollectionPointer;  // A 'pointer' to the list of pending tasks.
   private final ExecutorRegistry executorRegistry;  // A registry for executors available for the job.
   private final PlanStateManager planStateManager;  // A component that manages the state of the plan.
+  private final MetricStore metricStore = MetricStore.getStore();
 
   /**
    * Other necessary components of this {@link org.apache.nemo.runtime.master.RuntimeMaster}.
@@ -284,7 +287,14 @@ public final class BatchScheduler implements Scheduler {
 
     if (isWorkStealingConditionSatisfied.booleanValue()) {
       taskIdToProcessedBytes.clear();
-      detectSkew(scheduleGroupInId);
+      List<Pair<String, Long>> skewedTasks = detectSkew(scheduleGroupInId);
+      // things to do for now
+      // find and access task executor of skewed tasks
+      // clone and split iterator
+      // make new task and allocate the splitted iterator
+      // update plan
+      // done!
+
     }
   }
 
@@ -496,13 +506,17 @@ public final class BatchScheduler implements Scheduler {
 
   private void requestCurrentlyProcessedBytesOfRunningTasks() {
     // driver sends message to executors
+    // ask executors to flush metric
     ControlMessage.Message message = ControlMessage.Message.newBuilder()
       .setId(RuntimeIdManager.generateMessageId())
       .setListenerId(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID)
-      .setType(ControlMessage.MessageType.RequestProcessedData)
-      .setRequestProcessedDataMsg(ControlMessage.RequestProcessedDataMsg.newBuilder().build())
+      .setType(ControlMessage.MessageType.RequestMetricFlush)
       .build();
     executorRegistry.viewExecutors(executors -> executors.forEach(executor -> executor.sendControlMessage(message)));
+    try {
+      Thread.sleep(1000); // wait for 1 sec
+    } catch (InterruptedException ignored) {
+    }
   }
 
   private Map<String, Long> getCurrentlyTakenExecutionTimeMsOfRunningTasks(final List<String> scheduleGroup) {
@@ -548,13 +562,12 @@ public final class BatchScheduler implements Scheduler {
     // get size of processed bytes of running tasks
     final long startTime = System.currentTimeMillis();
     requestCurrentlyProcessedBytesOfRunningTasks();
-    // wait until we gather all the information needed
-    while (true) {
-      final long currTime = System.currentTimeMillis();
-      if (taskIdToProcessedBytes.size() == inputSizeOfCandidateTasks.size() || currTime - startTime >= 5000) {
-        break;
-      }
+
+    for (String taskId : currentlyRunningTaskIds) {
+      TaskMetric taskMetric = metricStore.getMetricWithId(TaskMetric.class, taskId);
+      taskIdToProcessedBytes.put(taskId, taskMetric.getSerializedReadBytes());
     }
+
     LOG.error("task id to processed bytes: {}", taskIdToProcessedBytes);
     LOG.error("task id to elapsed time: {}", taskIdToElapsedTime);
     // if there are no tasks left to optimize, return empty list
@@ -567,6 +580,9 @@ public final class BatchScheduler implements Scheduler {
 
     List<Pair<String, Long>> estimatedTimeToFinishPerTask = new ArrayList<>(taskIdToElapsedTime.size());
     for (String taskId : taskIdToProcessedBytes.keySet()) {
+      if (taskIdToProcessedBytes.get(taskId) <= 0) {
+        continue;
+      }
       long timeToFinishExecute = taskIdToElapsedTime.get(taskId) * inputSizeOfCandidateTasks.get(taskId)
         / taskIdToProcessedBytes.get(taskId);
       LOG.error("{} estimated time to finish {}", taskId, timeToFinishExecute);

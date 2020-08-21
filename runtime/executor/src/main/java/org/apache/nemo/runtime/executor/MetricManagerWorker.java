@@ -55,6 +55,7 @@ public final class MetricManagerWorker implements MetricMessageSender {
 
   @Override
   public void flush() {
+    LOG.error("flushing metric...");
     flushMetricMessageQueueToMaster();
     persistentConnectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).send(
       ControlMessage.Message.newBuilder()

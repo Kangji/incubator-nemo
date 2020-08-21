@@ -455,7 +455,7 @@ public final class TaskExecutor {
       while (availableIterator.hasNext()) {
         final DataFetcher dataFetcher = availableIterator.next();
         try {
-          final Object element = dataFetcher.fetchDataElement();
+          final Object element = dataFetcher.fetchDataElementWithTrace(taskId, metricMessageSender);
           onEventFromDataFetcher(element, dataFetcher);
           if (element instanceof Finishmark) {
             availableIterator.remove();
@@ -486,7 +486,6 @@ public final class TaskExecutor {
           final DataFetcher dataFetcher = pendingIterator.next();
           try {
             final Object element = dataFetcher.fetchDataElement();
-            onEventFromDataFetcher(element, dataFetcher);
 
             // We processed data. This means the data fetcher is now available.
             // Add current data fetcher to available

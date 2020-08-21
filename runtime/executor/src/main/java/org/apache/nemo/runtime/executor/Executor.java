@@ -127,7 +127,7 @@ public final class Executor {
   // synchronized as well?
   private synchronized void onDataRequestReceived() {
     LOG.error("data request from master");
-    executorService.execute(() -> listOfWorkingTaskExecutors.forEach(TaskExecutor::onRequestForProcessedData));
+    listOfWorkingTaskExecutors.forEach(TaskExecutor::onRequestForProcessedData);
   }
 
   /**
