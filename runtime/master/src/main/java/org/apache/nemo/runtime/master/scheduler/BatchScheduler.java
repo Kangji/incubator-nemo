@@ -23,15 +23,23 @@ import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.exception.UnknownExecutionStateException;
 import org.apache.nemo.common.exception.UnrecoverableFailureException;
 import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
-import org.apache.nemo.runtime.common.plan.*;
+import org.apache.nemo.runtime.common.plan.PhysicalPlan;
+import org.apache.nemo.runtime.common.plan.PlanRewriter;
+import org.apache.nemo.runtime.common.plan.Stage;
+import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.common.state.StageState;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.BlockManagerMaster;
 import org.apache.nemo.runtime.master.PlanAppender;
 import org.apache.nemo.runtime.master.PlanStateManager;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
+import org.apache.nemo.runtime.master.scheduler.prophet.StaticParallelismProphet;
 import org.apache.reef.annotations.audience.DriverSide;
+import org.apache.reef.tang.InjectionFuture;
+import org.apache.reef.tang.annotations.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +75,9 @@ public final class BatchScheduler implements Scheduler {
   private final ExecutorRegistry executorRegistry;  // A registry for executors available for the job.
   private final PlanStateManager planStateManager;  // A component that manages the state of the plan.
 
+  private final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture;
+  private final boolean smartParallelismEnabled;
+
   /**
    * Other necessary components of this {@link org.apache.nemo.runtime.master.RuntimeMaster}.
    */
@@ -83,13 +94,17 @@ public final class BatchScheduler implements Scheduler {
                          final PendingTaskCollectionPointer pendingTaskCollectionPointer,
                          final BlockManagerMaster blockManagerMaster,
                          final ExecutorRegistry executorRegistry,
-                         final PlanStateManager planStateManager) {
+                         final PlanStateManager planStateManager,
+                         final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture,
+                         @Parameter(JobConf.SmartParallelismEnabled.class) final Boolean smartParallelismEnabled) {
     this.planRewriter = planRewriter;
     this.taskDispatcher = taskDispatcher;
     this.pendingTaskCollectionPointer = pendingTaskCollectionPointer;
     this.blockManagerMaster = blockManagerMaster;
     this.executorRegistry = executorRegistry;
     this.planStateManager = planStateManager;
+    this.simulationSchedulerInjectionFuture = simulationSchedulerInjectionFuture;
+    this.smartParallelismEnabled = smartParallelismEnabled;
   }
 
   ////////////////////////////////////////////////////////////////////// Methods for plan rewriting.
@@ -143,6 +158,19 @@ public final class BatchScheduler implements Scheduler {
   public void schedulePlan(final PhysicalPlan submittedPhysicalPlan,
                            final int maxScheduleAttempt) {
     LOG.info("Plan to schedule: {}", submittedPhysicalPlan.getPlanId());
+
+    if (this.smartParallelismEnabled) {
+      final StaticParallelismProphet prophet =
+        new StaticParallelismProphet(this.simulationSchedulerInjectionFuture.get());
+      prophet.setCurrentStageDAG(submittedPhysicalPlan.getStageDAG());
+      final Map<String, Integer> calculationResult = prophet.calculate();
+      submittedPhysicalPlan.getStageDAG().topologicalDo(stage -> {
+        if (calculationResult.containsKey(stage.getId())) {
+          final Integer parallelism = calculationResult.get(stage.getId());
+          stage.getExecutionProperties().put(ParallelismProperty.of(parallelism));
+        }
+      });
+    }
 
     if (!planStateManager.isInitialized()) {
       // First scheduling.

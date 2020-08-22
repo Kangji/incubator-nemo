@@ -28,7 +28,6 @@ import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.exception.CompileTimeOptimizationException;
-import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataStoreProperty;
@@ -40,11 +39,9 @@ import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.scheduler.SimulatedTaskExecutor;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
-import org.apache.reef.tang.InjectionFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -59,15 +56,12 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
   private static final Logger LOG = LoggerFactory.getLogger(StaticParallelismProphet.class.getName());
 
   private final SimulationScheduler simulationScheduler;
-  private final PhysicalPlanGenerator physicalPlanGenerator;
-  private IRDAG currentIRDAG;
+  private DAG<Stage, StageEdge> currentStageDAG;
   private Integer totalCores;
+  private static HashMap<String, Long> stageIDToDurationCache = new HashMap<>();
 
-  @Inject
-  public StaticParallelismProphet(final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture,
-                                  final PhysicalPlanGenerator physicalPlanGenerator) {
-    this.simulationScheduler = simulationSchedulerInjectionFuture.get();
-    this.physicalPlanGenerator = physicalPlanGenerator;
+  public StaticParallelismProphet(final SimulationScheduler simulationScheduler) {
+    this.simulationScheduler = simulationScheduler;
     this.totalCores = 64;  // todo: Fix later on.
   }
 
@@ -76,10 +70,9 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
     final Integer degreeOfConfigurationSpace = 7;
 
     final List<PhysicalPlan> listOfPhysicalPlans = new ArrayList<>();  // list to fill up with physical plans.
-    final DAG<Stage, StageEdge> dagOfStages = physicalPlanGenerator.stagePartitionIrDAG(currentIRDAG);
+    final DAG<Stage, StageEdge> dagOfStages = currentStageDAG;
 
     final List<Pair<String, DAG<Stage, StageEdge>>> stageDAGs =
-
       makePhysicalPlansForSimulation(0, degreeOfConfigurationSpace, dagOfStages);
     stageDAGs.forEach(stageDAGPair ->
       listOfPhysicalPlans.add(new PhysicalPlan(stageDAGPair.left(), stageDAGPair.right())));
@@ -95,18 +88,17 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
     final Iterator<Stage> stageIterator = dagOfStages.getTopologicalSort().iterator();
     final Map<String, Integer> vertexIdToParallelism = new HashMap<>();
     for (final String stageParallelism: stageParallelisms) {
-      stageIterator.next().getIRDAG().getVertices().forEach(v ->
-        vertexIdToParallelism.put(v.getId(), Integer.valueOf(stageParallelism)));
+      vertexIdToParallelism.put(stageIterator.next().getId(), Integer.valueOf(stageParallelism));
     }
     return vertexIdToParallelism;
   }
 
   /**
    * Set the value of the current IR DAG to optimize.
-   * @param currentIRDAG the current IR DAG to optimize.
+   * @param stageDAG the current Stage DAG to optimize.
    */
-  public void setCurrentIRDAG(final IRDAG currentIRDAG) {
-    this.currentIRDAG = currentIRDAG;
+  public void setCurrentStageDAG(final DAG<Stage, StageEdge> stageDAG) {
+    this.currentStageDAG = stageDAG;
   }
 
   /**
@@ -191,6 +183,11 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
   public static long estimateDurationOf(final Task task,
                                         final JobMetric jobMetric,
                                         final DAG<IRVertex, RuntimeEdge<IRVertex>> stageIRDAG) {
+    final String taskStageID = task.getStageId();
+    if (stageIDToDurationCache.containsKey(taskStageID)) {
+      return stageIDToDurationCache.get(taskStageID);
+    }
+
     final String[] irDAGSummary = jobMetric.getIrDagSummary().split("_");
     final Integer sourceNum = Integer.valueOf(irDAGSummary[0].split("rv")[1]);
     final Integer totalVerticesNum = Integer.valueOf(irDAGSummary[1].split("v")[1]);
@@ -294,7 +291,9 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
         LOG.info("Prediction for {} is {}", task.getTaskId(), Arrays.toString(predict));
       }
 
-      return (long) predicts[0][0];
+      final Long result = (long) predicts[0][0];
+      stageIDToDurationCache.putIfAbsent(taskStageID, result);
+      return result.longValue();
     } catch (final XGBoostError e) {
       throw new CompileTimeOptimizationException(e);
     }
