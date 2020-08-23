@@ -31,11 +31,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Fetches data from parent tasks.
@@ -54,15 +52,21 @@ class ParentTaskDataFetcher extends DataFetcher {
   private int currentIteratorIndex;
   private long serBytes = 0;
   private long encodedBytes = 0;
+  private int iteratorStartingIndex;
+  private int iteratorEndingIndex;
 
   ParentTaskDataFetcher(final IRVertex dataSource,
                         final InputReader inputReader,
-                        final OutputCollector outputCollector) {
+                        final OutputCollector outputCollector,
+                        final int iteratorStartingIndex,
+                        final int iteratorEndingIndex) {
     super(dataSource, outputCollector);
     this.inputReader = inputReader;
     this.firstFetch = true;
     this.currentIteratorIndex = 0;
     this.iteratorQueue = new LinkedBlockingDeque();
+    this.iteratorStartingIndex = iteratorStartingIndex;
+    this.iteratorEndingIndex = iteratorEndingIndex;
   }
 
   @Override
@@ -109,6 +113,9 @@ class ParentTaskDataFetcher extends DataFetcher {
                                    final MetricMessageSender metricMessageSender) throws IOException {
     try {
       if (firstFetch) {
+        while(currentIteratorIndex < iteratorStartingIndex) {
+          advanceIterator();
+        }
         fetchDataLazily();
         advanceIterator();
         firstFetch = false;
@@ -121,7 +128,9 @@ class ParentTaskDataFetcher extends DataFetcher {
         }
 
         // This iterator does not have the element
-        if (currentIteratorIndex < expectedNumOfIterators) {
+        if (currentIteratorIndex == iteratorEndingIndex) { // need to check if this condition is correct
+          break;
+        } else if (currentIteratorIndex < expectedNumOfIterators) {
           // Next iterator has the element
           countBytes(currentIterator);
           metricMessageSender.send("TaskMetric", taskId, "serializedReadBytes",
@@ -207,6 +216,9 @@ class ParentTaskDataFetcher extends DataFetcher {
   private void fetchDataLazily() {
     final List<CompletableFuture<DataUtil.IteratorWithNumBytes>> futures = inputReader.read();
     this.expectedNumOfIterators = futures.size();
+    if (iteratorEndingIndex > expectedNumOfIterators) {
+      iteratorEndingIndex = expectedNumOfIterators;
+    }
     LOG.error("expected number of iterators: {}", expectedNumOfIterators);
     for (int i = 0; i < futures.size(); i++) {
       final int index = i;

@@ -159,6 +159,14 @@ public final class Task implements Serializable {
     return irVertexIdToReadable;
   }
 
+  public int getIteratorStartingIndex() {
+    return this.iteratorStartingIndex;
+  }
+
+  public int getIteratorEndingIndex() {
+    return this.iteratorEndingIndex;
+  }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder();

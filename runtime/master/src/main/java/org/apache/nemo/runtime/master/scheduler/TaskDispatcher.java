@@ -154,6 +154,8 @@ final class TaskDispatcher {
           LOG.error("{} scheduled to {}", task.getTaskId(), selectedExecutor.getExecutorId());
           // send the task
           selectedExecutor.onTaskScheduled(task);
+
+
         } else {
           couldNotSchedule.add(task);
         }

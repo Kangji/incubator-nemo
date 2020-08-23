@@ -374,8 +374,8 @@ public final class PlanStateManager {
       case ON_HOLD:
         if (!physicalPlan.getStageDAG().getVertexById(stageId).getWorkStealingTaskIds().isEmpty()) {
           if (numOfCompletedTaskIndicesInThisStage
-            == physicalPlan.getStageDAG().getVertexById(stageId).getTaskIndices().size() +
-          physicalPlan.getStageDAG().getVertexById(stageId).getWorkStealingTaskIds().size()) {
+            == physicalPlan.getStageDAG().getVertexById(stageId).getTaskIndices().size()
+            + physicalPlan.getStageDAG().getVertexById(stageId).getWorkStealingTaskIds().size()) {
             onStageStateChanged(stageId, StageState.State.COMPLETE);
           }
         } else {
