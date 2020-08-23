@@ -39,6 +39,8 @@ public final class Task implements Serializable {
   private final ExecutionPropertyMap<VertexExecutionProperty> executionProperties;
   private final byte[] serializedIRDag;
   private final Map<String, Readable> irVertexIdToReadable;
+  private int iteratorStartingIndex;
+  private int iteratorEndingIndex;
 
   /**
    * Constructor.
@@ -58,6 +60,19 @@ public final class Task implements Serializable {
               final List<StageEdge> taskIncomingEdges,
               final List<StageEdge> taskOutgoingEdges,
               final Map<String, Readable> irVertexIdToReadable) {
+    this(planId, taskId, executionProperties, serializedIRDag, taskIncomingEdges, taskOutgoingEdges,
+      irVertexIdToReadable, 0, Integer.MAX_VALUE);
+  }
+
+  public Task(final String planId,
+              final String taskId,
+              final ExecutionPropertyMap<VertexExecutionProperty> executionProperties,
+              final byte[] serializedIRDag,
+              final List<StageEdge> taskIncomingEdges,
+              final List<StageEdge> taskOutgoingEdges,
+              final Map<String, Readable> irVertexIdToReadable,
+              final int iteratorStartingIndex,
+              final int iteratorEndingIndex) {
     this.planId = planId;
     this.taskId = taskId;
     this.executionProperties = executionProperties;
@@ -65,6 +80,8 @@ public final class Task implements Serializable {
     this.taskIncomingEdges = taskIncomingEdges;
     this.taskOutgoingEdges = taskOutgoingEdges;
     this.irVertexIdToReadable = irVertexIdToReadable;
+    this.iteratorStartingIndex = iteratorStartingIndex;
+    this.iteratorEndingIndex = iteratorEndingIndex;
   }
 
   /**

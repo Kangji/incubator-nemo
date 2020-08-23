@@ -74,6 +74,10 @@ public final class RuntimeIdManager {
     return stageId + SPLITTER + index + SPLITTER + attempt;
   }
 
+  public static String generateWorkStealingTaskId(final String taskId) {
+    return getStageIdFromTaskId(taskId) + SPLITTER + getIndexFromTaskId(taskId) + SPLITTER + "*";
+  }
+
   /**
    * Generates the ID for executor.
    *

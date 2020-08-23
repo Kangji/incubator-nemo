@@ -104,6 +104,7 @@ public final class TaskExecutor {
                       final MetricMessageSender metricMessageSender,
                       final PersistentConnectionToMasterMap persistentConnectionToMasterMap) {
     // Essential information
+    final long taskPrepareStarted = System.currentTimeMillis();
     this.isExecuted = false;
     this.taskId = task.getTaskId();
     this.taskStateManager = taskStateManager;
@@ -124,6 +125,8 @@ public final class TaskExecutor {
     this.sortedHarnesses = pair.right();
 
     this.timeSinceLastExecution = System.currentTimeMillis();
+    metricMessageSender.send("TaskMetric", taskId, "taskPreparationTime",
+      SerializationUtils.serialize(System.currentTimeMillis() - taskPrepareStarted));
   }
 
   // Get all of the intra-task edges + inter-task edges
