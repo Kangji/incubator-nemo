@@ -27,6 +27,7 @@ import ml.dmlc.xgboost4j.java.XGBoostError;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.dag.DAGBuilder;
+import org.apache.nemo.common.dag.Vertex;
 import org.apache.nemo.common.exception.CompileTimeOptimizationException;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DataFlowProperty;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
@@ -56,12 +58,14 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
   private static final Logger LOG = LoggerFactory.getLogger(StaticParallelismProphet.class.getName());
 
   private final SimulationScheduler simulationScheduler;
+  private final CountDownLatch currentStageDAGReadyLatch;
   private DAG<Stage, StageEdge> currentStageDAG;
   private Integer totalCores;
   private static HashMap<String, Long> stageIDToDurationCache = new HashMap<>();
 
   public StaticParallelismProphet(final SimulationScheduler simulationScheduler) {
     this.simulationScheduler = simulationScheduler;
+    this.currentStageDAGReadyLatch = new CountDownLatch(1);
     this.totalCores = 64;  // todo: Fix later on.
   }
 
@@ -71,6 +75,15 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
 
     final List<PhysicalPlan> listOfPhysicalPlans = new ArrayList<>();  // list to fill up with physical plans.
     final DAG<Stage, StageEdge> dagOfStages = currentStageDAG;
+
+    try {
+      LOG.error("Waiting for the DAG to be ready!");
+      this.currentStageDAGReadyLatch.await();
+    } catch (final InterruptedException e) {
+      LOG.warn("interrupted.. ", e);
+      // clean up state...
+      Thread.currentThread().interrupt();
+    }
 
     final List<Pair<String, DAG<Stage, StageEdge>>> stageDAGs =
       makePhysicalPlansForSimulation(0, degreeOfConfigurationSpace, dagOfStages);
@@ -99,6 +112,7 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
    */
   public void setCurrentStageDAG(final DAG<Stage, StageEdge> stageDAG) {
     this.currentStageDAG = stageDAG;
+    this.currentStageDAGReadyLatch.countDown();
   }
 
   /**
@@ -131,6 +145,9 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
                                                             final DAG<Stage, StageEdge> dagOfStages) {
     final List<Pair<String, DAG<Stage, StageEdge>>> result = new ArrayList<>();
     final List<Stage> topologicalStages = dagOfStages.getTopologicalSort();
+    LOG.error("Making physical plan for stages with {}",
+      topologicalStages.stream().map(Vertex::getId).collect(Collectors.toList()));
+    final Stage firstStage = topologicalStages.remove(0);
 
     // We only handle the space with smaller parallelism than the source, e.g. 512 to 2, 512 to 4, upto 512 to 512.
     IntStream.range(parallelismDivisor, degreeOfConfigurationSpace).forEachOrdered(i -> {
@@ -138,18 +155,20 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
         (totalCores * Math.pow(2, i));
 
       // process first stage.
-      final Stage firstStage = topologicalStages.remove(0);
       firstStage.getExecutionProperties().put(ParallelismProperty.of(parallelism));
       final DAG<Stage, StageEdge> firstStageDAG = new DAGBuilder<Stage, StageEdge>()
         .addVertex(firstStage).buildWithoutSourceSinkCheck();
 
-      if (topologicalStages.isEmpty()) {  // no more rest of the stages. (rest = not first)
+      if (topologicalStages.isEmpty()) {
+        LOG.error("Reached the end! Adding {} with {}", i, firstStage.getId());
         result.add(Pair.of(String.valueOf(i), firstStageDAG));
       } else {  // we recursively apply the function to the rest of the stages.
+        LOG.error("recursion occurring!");
         final DAGBuilder<Stage, StageEdge> restStageBuilder = new DAGBuilder<>();
         // Below is used when we have to connect the rest back to the first.
         final List<StageEdge> edgesToRestStage = new ArrayList<>();
-        topologicalStages.forEach(s -> {  // make a separate stage DAG for the rest of the stages.
+        topologicalStages.forEach(s -> {
+          // make a separate stage DAG for the rest of the stages.
           restStageBuilder.addVertex(s);
           dagOfStages.getIncomingEdgesOf(s).forEach(e -> {
             if (restStageBuilder.contains(e.getSrc())) {
