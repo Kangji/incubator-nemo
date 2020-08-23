@@ -290,10 +290,16 @@ public final class BatchScheduler implements Scheduler {
       List<Pair<String, Long>> skewedTasks = detectSkew(scheduleGroupInId);
       // things to do for now
       // find and access task executor of skewed tasks
-      // clone and split iterator
-      // make new task and allocate the splitted iterator
+      for (Pair<String, Long> task : skewedTasks) {
+        executorRegistry.findExecutorForTask(task.left()).ifPresent(executor -> executor.isExecutorSlotAvailable());
+      }
+
+      // clone and split the queue of iterator
+      // make new task and allocate the splitted queue
       // update plan
+      // schedule new tasks
       // done!
+      // do schedule!
 
     }
   }

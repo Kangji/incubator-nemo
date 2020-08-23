@@ -31,8 +31,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -43,7 +45,7 @@ class ParentTaskDataFetcher extends DataFetcher {
   private static final Logger LOG = LoggerFactory.getLogger(ParentTaskDataFetcher.class);
 
   private final InputReader inputReader;
-  private final LinkedBlockingQueue iteratorQueue;
+  private final LinkedBlockingDeque iteratorQueue;
 
   // Non-finals (lazy fetching)
   private boolean firstFetch;
@@ -60,7 +62,7 @@ class ParentTaskDataFetcher extends DataFetcher {
     this.inputReader = inputReader;
     this.firstFetch = true;
     this.currentIteratorIndex = 0;
-    this.iteratorQueue = new LinkedBlockingQueue<>();
+    this.iteratorQueue = new LinkedBlockingDeque();
   }
 
   @Override
@@ -124,6 +126,10 @@ class ParentTaskDataFetcher extends DataFetcher {
           countBytes(currentIterator);
           metricMessageSender.send("TaskMetric", taskId, "serializedReadBytes",
             SerializationUtils.serialize(serBytes));
+          metricMessageSender.send("TaskMetric", taskId, "currentIteratorIndex",
+            SerializationUtils.serialize(currentIteratorIndex));
+          metricMessageSender.send("TaskMetric", taskId, "totalIteratorNumber",
+            SerializationUtils.serialize(expectedNumOfIterators));
           advanceIterator();
           continue;
         } else {
