@@ -771,6 +771,8 @@ public final class TaskExecutor {
     }
   }
 
+  //methods for work stealing
+
   public void onRequestForProcessedData() {
     LOG.error("{}, bytes {}, replying for the request", taskId, serializedReadBytes);
     persistentConnectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).send(
@@ -783,5 +785,9 @@ public final class TaskExecutor {
           .setProcessedDataBytes(serializedReadBytes)
           .build())
         .build());
+  }
+
+  public void modifyDataFetchers() {
+
   }
 }

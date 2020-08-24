@@ -55,7 +55,6 @@ class ParentTaskDataFetcher extends DataFetcher {
   private long encodedBytes = 0;
   private int iteratorStartingIndex;
   private int iteratorEndingIndex;
-  private boolean onHold = false;
 
   ParentTaskDataFetcher(final IRVertex dataSource,
                         final InputReader inputReader,
@@ -259,14 +258,6 @@ class ParentTaskDataFetcher extends DataFetcher {
     } catch (final IllegalStateException e) {
       LOG.error("Failed to get the number of bytes of encoded data - the data is not ready yet ", e);
     }
-  }
-
-  void setOnHold(final boolean onHold) {
-    this.onHold = onHold;
-  }
-
-  final boolean isDataFetcherOnHold() {
-    return onHold;
   }
 
   @Override

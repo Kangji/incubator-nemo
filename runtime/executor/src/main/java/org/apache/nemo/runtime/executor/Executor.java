@@ -19,7 +19,6 @@
 package org.apache.nemo.runtime.executor;
 
 import com.google.protobuf.ByteString;
-import org.apache.commons.lang.mutable.Mutable;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -139,8 +138,9 @@ public final class Executor {
     //listOfWorkingTaskExecutors.forEach(TaskExecutor::onRequestForProcessedData);
   }
 
-  private synchronized void onHoldSkewedTasks() {
-
+  private synchronized void resumePausedTasksWithWorkStealing() {
+    // update iterator information
+    listOfWorkingTaskExecutors.forEach(pair -> pair.right().setValue(false));
   }
 
   /**
