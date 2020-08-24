@@ -58,8 +58,11 @@ import javax.inject.Inject;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Executor.
@@ -95,6 +98,7 @@ public final class Executor {
    * For runtime optimizations.
    */
   private final List<Pair<TaskExecutor, MutableBoolean>> listOfWorkingTaskExecutors;
+  private final Map<String, Pair<AtomicInteger, AtomicInteger>> taskIdToIteratorInfo;
 
   @Inject
   private Executor(@Parameter(JobConf.ExecutorId.class) final String executorId,
@@ -118,6 +122,7 @@ public final class Executor {
     this.metricMessageSender = metricMessageSender;
     messageEnvironment.setupListener(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID, new ExecutorMessageReceiver());
     this.listOfWorkingTaskExecutors = Collections.synchronizedList(new LinkedList<>());
+    this.taskIdToIteratorInfo = new ConcurrentHashMap();
   }
 
   public String getExecutorId() {
@@ -138,8 +143,20 @@ public final class Executor {
     //listOfWorkingTaskExecutors.forEach(TaskExecutor::onRequestForProcessedData);
   }
 
-  private synchronized void resumePausedTasksWithWorkStealing() {
+  private synchronized void resumePausedTasksWithWorkStealing(final Map<String, Pair<Integer, Integer>> result) {
     // update iterator information
+    // skewed tasks: set iterator value
+    // non skewed tasks: do not change iterator
+    for (String taskId : result.keySet()) {
+      Pair<Integer, Integer> startAndEndIndex = result.get(taskId);
+      if (startAndEndIndex.left() == 0 && startAndEndIndex.right() == Integer.MAX_VALUE) {
+        continue;
+      } else {
+        Pair<AtomicInteger, AtomicInteger> currentInfo = taskIdToIteratorInfo.get(taskId);
+        currentInfo.left().set(startAndEndIndex.left());
+        currentInfo.right().set(startAndEndIndex.right());
+      }
+    }
     listOfWorkingTaskExecutors.forEach(pair -> pair.right().setValue(false));
   }
 
@@ -179,10 +196,14 @@ public final class Executor {
       final MutableBoolean onHold = new MutableBoolean(false);
       final TaskExecutor taskExecutor = new TaskExecutor(task, irDag, taskStateManager, intermediateDataIOFactory,
         broadcastManagerWorker, metricMessageSender, persistentConnectionToMasterMap, onHold);
+      Pair<TaskExecutor, MutableBoolean> taskExecutorPair = Pair.of(taskExecutor, onHold);
 
-      listOfWorkingTaskExecutors.add(Pair.of(taskExecutor, onHold));
+      listOfWorkingTaskExecutors.add(taskExecutorPair);
+      taskIdToIteratorInfo.put(task.getTaskId(),
+        Pair.of(task.getIteratorStartingIndex(), task.getIteratorEndingIndex()));
       taskExecutor.execute();
-      listOfWorkingTaskExecutors.remove(taskExecutor);
+      listOfWorkingTaskExecutors.remove(taskExecutorPair);
+      taskIdToIteratorInfo.remove(task.getTaskId());
     } catch (final Exception e) {
       persistentConnectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).send(
         ControlMessage.Message.newBuilder()
@@ -257,9 +278,14 @@ public final class Executor {
           metricMessageSender.flush();
           break;
         case RequestProcessedData:
+          metricMessageSender.flush();
           onDataRequestReceived();
           break;
-
+        case SendWorkStealingResult:
+          final ControlMessage.WorkStealingResultMsg workStealingResultMsg = message.getSendWorkStealingResult();
+          final Map<String, Pair<Integer, Integer>> iteratorInformationMap =
+            SerializationUtils.deserialize(workStealingResultMsg.getWorkStealingResult().toByteArray());
+          resumePausedTasksWithWorkStealing(iteratorInformationMap);
         default:
           throw new IllegalMessageException(
             new Exception("This message should not be received by an executor :" + message.getType()));

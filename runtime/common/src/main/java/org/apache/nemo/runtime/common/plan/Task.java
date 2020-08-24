@@ -27,6 +27,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A Task (attempt) is a self-contained executable that can be executed on a machine.
@@ -39,8 +40,8 @@ public final class Task implements Serializable {
   private final ExecutionPropertyMap<VertexExecutionProperty> executionProperties;
   private final byte[] serializedIRDag;
   private final Map<String, Readable> irVertexIdToReadable;
-  private int iteratorStartingIndex;
-  private int iteratorEndingIndex;
+  private final AtomicInteger iteratorStartingIndex;
+  private final AtomicInteger iteratorEndingIndex;
 
   /**
    * Constructor.
@@ -61,7 +62,7 @@ public final class Task implements Serializable {
               final List<StageEdge> taskOutgoingEdges,
               final Map<String, Readable> irVertexIdToReadable) {
     this(planId, taskId, executionProperties, serializedIRDag, taskIncomingEdges, taskOutgoingEdges,
-      irVertexIdToReadable, 0, Integer.MAX_VALUE);
+      irVertexIdToReadable, new AtomicInteger(0), new AtomicInteger(Integer.MAX_VALUE));
   }
 
   public Task(final String planId,
@@ -71,8 +72,8 @@ public final class Task implements Serializable {
               final List<StageEdge> taskIncomingEdges,
               final List<StageEdge> taskOutgoingEdges,
               final Map<String, Readable> irVertexIdToReadable,
-              final int iteratorStartingIndex,
-              final int iteratorEndingIndex) {
+              final AtomicInteger iteratorStartingIndex,
+              final AtomicInteger iteratorEndingIndex) {
     this.planId = planId;
     this.taskId = taskId;
     this.executionProperties = executionProperties;
@@ -159,11 +160,11 @@ public final class Task implements Serializable {
     return irVertexIdToReadable;
   }
 
-  public int getIteratorStartingIndex() {
+  public AtomicInteger getIteratorStartingIndex() {
     return this.iteratorStartingIndex;
   }
 
-  public int getIteratorEndingIndex() {
+  public AtomicInteger getIteratorEndingIndex() {
     return this.iteratorEndingIndex;
   }
 

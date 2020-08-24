@@ -301,8 +301,8 @@ public final class TaskExecutor {
                   parentTaskReader.getSrcIrVertex(),
                   parentTaskReader,
                   dataFetcherOutputCollector,
-                  task.getIteratorStartingIndex(),
-                  task.getIteratorEndingIndex()));
+                  task.getIteratorStartingIndex(), // inclusive
+                  task.getIteratorEndingIndex())); // exclusive
             }
           }
         });

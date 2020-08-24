@@ -45,6 +45,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.inject.Inject;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -86,6 +87,7 @@ public final class BatchScheduler implements Scheduler {
 
 
   // Stores the partitionSize counted per key of the task output of each stage.
+  private final Set<String> workStealingCandidates = new HashSet<>();
   private final Map<String, Map<Integer, Long>> stageIdToOutputPartitionSizeMap = new HashMap<>();
   private final Map<String, Long> taskIdToProcessedBytes = new HashMap<>();
   private final Map<String, Boolean> stageIdToWorkStealingExecuted = new HashMap<>();
@@ -292,6 +294,7 @@ public final class BatchScheduler implements Scheduler {
 
     if (isWorkStealingConditionSatisfied.booleanValue()) {
       taskIdToProcessedBytes.clear();
+
       final Map<String, Pair<Integer, Integer>> skewedTasks = detectSkew(scheduleGroupInId);
       if (skewedTasks.isEmpty()) {
         return;
@@ -310,10 +313,11 @@ public final class BatchScheduler implements Scheduler {
       }
 
       List<Task> tasksToSchedule = new ArrayList<>(skewedTasks.size());
+      Map<String, Pair<Integer, Integer>> accumulatedResult = new HashMap<>();
 
       for (String stageId : stageToNumOfTasks.keySet()) {
         // do workstealing for only once : this is because of the index based task state tracking system
-        stageIdToWorkStealingExecuted.putIfAbsent(stageId, true);
+        stageIdToWorkStealingExecuted.put(stageId, true);
 
         Stage stageToSchedule = planStateManager.getPhysicalPlan().getStageDAG().getVertexById(stageId);
 
@@ -351,29 +355,27 @@ public final class BatchScheduler implements Scheduler {
             stageIncomingEdges,
             stageOutgoingEdges,
             vertexIdToReadables.get(taskIdx),
-            iteratorInfoForThisTask.left(),
-            iteratorInfoForThisTask.right()));
+            new AtomicInteger(iteratorInfoForThisTask.left()),
+            new AtomicInteger(iteratorInfoForThisTask.right())));
         });
+
+        for (String taskId : workStealingCandidates) {
+          if (idsForOriginalTasks.contains(taskId)) { // this is for skewed task
+            Pair<Integer, Integer> currentAndTotalIteratorIndex = skewedTasks.get(taskId);
+            accumulatedResult.put(taskId,
+              Pair.of(currentAndTotalIteratorIndex.left() + 1, currentAndTotalIteratorIndex.right()));
+          } else { // this is for non skewed tasks
+            accumulatedResult.put(taskId, Pair.of(0, Integer.MAX_VALUE));
+          }
+        }
       }
+
+      // now, update the combined iterator information (skewed + non skewed)
 
       pendingTaskCollectionPointer.setToOverwrite(tasksToSchedule);
 
       // Notify the dispatcher that a new collection is available.
       taskDispatcher.onNewPendingTaskCollectionAvailable();
-
-      /**
-      PhysicalPlan currentPlan = planStateManager.getPhysicalPlan();
-
-      for (String stageId : stageToNumOfTasks.keySet()) {
-        final ExecutionPropertyMap<VertexExecutionProperty> executionProperties = currentPlan.getStageDAG()
-          .getVertexById(stageId).getExecutionProperties();
-        final int currentParallelism = currentPlan.getStageDAG().getVertexById(stageId).getParallelism();
-        executionProperties
-          .put(ParallelismProperty.of(currentParallelism + stageToNumOfTasks.get(stageId)), false);
-
-
-      }
-       **/
 
       // make new task and allocate the splitted queue
       // update plan
@@ -431,6 +433,7 @@ public final class BatchScheduler implements Scheduler {
    */
   private void doSchedule() {
     taskIdToProcessedBytes.clear();
+    workStealingCandidates.clear();
     final Optional<List<Stage>> earliest =
       BatchSchedulerUtils.selectEarliestSchedulableGroup(sortedScheduleGroups, planStateManager);
 
@@ -597,12 +600,13 @@ public final class BatchScheduler implements Scheduler {
   private void requestCurrentlyProcessedBytesOfRunningTasks() {
     // driver sends message to executors
     // ask executors to flush metric
-    ControlMessage.Message message = ControlMessage.Message.newBuilder()
+    ControlMessage.Message dataRequestMessage = ControlMessage.Message.newBuilder()
       .setId(RuntimeIdManager.generateMessageId())
       .setListenerId(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID)
       .setType(ControlMessage.MessageType.RequestMetricFlush)
       .build();
-    executorRegistry.viewExecutors(executors -> executors.forEach(executor -> executor.sendControlMessage(message)));
+    executorRegistry.viewExecutors(executors -> executors.forEach(executor ->
+      executor.sendControlMessage(dataRequestMessage)));
     try {
       Thread.sleep(1000); // wait for 1 sec
     } catch (InterruptedException ignored) {
@@ -637,14 +641,14 @@ public final class BatchScheduler implements Scheduler {
     }
 
     // get size of running tasks
-    final Set<String> currentlyRunningTaskIds = getCurrentlyRunningTaskId(scheduleGroup);
+    workStealingCandidates.addAll(getCurrentlyRunningTaskId(scheduleGroup));
     final Map<String, Set<String>> parentStageId = getParentStages(scheduleGroup);
     final Map<String, Long> inputSizeOfCandidateTasks = new HashMap<>();
     for (String stage : scheduleGroup) {
       inputSizeOfCandidateTasks.putAll(
-        getInputSizesOfCurrentlyRunningTaskIds(parentStageId.get(stage), currentlyRunningTaskIds));
+        getInputSizesOfCurrentlyRunningTaskIds(parentStageId.get(stage), workStealingCandidates));
     }
-    LOG.error("currently running task id: {}", currentlyRunningTaskIds);
+    LOG.error("currently running task id: {}", workStealingCandidates);
     LOG.error("parent stage ID: {}", parentStageId);
     LOG.error("input size: {}", inputSizeOfCandidateTasks);
 
@@ -653,9 +657,10 @@ public final class BatchScheduler implements Scheduler {
 
     // get size of processed bytes of running tasks
     final long startTime = System.currentTimeMillis();
+    // on this method, stop the currently working task executor
     requestCurrentlyProcessedBytesOfRunningTasks();
 
-    for (String taskId : currentlyRunningTaskIds) {
+    for (String taskId : workStealingCandidates) {
       TaskMetric taskMetric = metricStore.getMetricWithId(TaskMetric.class, taskId);
       taskIdToProcessedBytes.put(taskId, taskMetric.getSerializedReadBytes());
       taskIdToIteratorInformation.put(taskId, Pair.of(
@@ -697,11 +702,8 @@ public final class BatchScheduler implements Scheduler {
     Collections.sort(estimatedTimeToFinishPerTask, new Comparator<Pair<String, Long>>() {
       @Override
       public int compare(final Pair<String, Long> o1, final Pair<String, Long> o2) {
-        if (o1.right().equals(o2.right())) {
-          return o1.left().compareTo(o2.left());
-        }
-        return o1.right() > o2.right() ? 1 : -1;
-      }
+        return o2.right().compareTo(o1.right());
+    }
     });
 
     final List<Pair<String, Long>> skewedTasks = estimatedTimeToFinishPerTask
@@ -720,5 +722,20 @@ public final class BatchScheduler implements Scheduler {
     // 동시에 돌아갈 일은 거의 없다고 봐도 되겠지?
     // 2. stage 기반이 아니라 scheduling group 기반으로 되어야 하는 것 아닌가?
     // (이러면 구현해 놓은 코드 좀 많이 고쳐야 할 것 같긴 한데, 이게 더 맞는 방향인 것 같기도 하고, 잘 모르겠네)
+  }
+
+  private void sendWorkStealingResultToExecutor() {
+    // driver sends message to executors
+    // ask executors to flush metric
+    ControlMessage.Message message = ControlMessage.Message.newBuilder()
+      .setId(RuntimeIdManager.generateMessageId())
+      .setListenerId(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID)
+      .setType(ControlMessage.MessageType.RequestMetricFlush)
+      .build();
+    executorRegistry.viewExecutors(executors -> executors.forEach(executor -> executor.sendControlMessage(message)));
+    try {
+      Thread.sleep(1000); // wait for 1 sec
+    } catch (InterruptedException ignored) {
+    }
   }
 }
