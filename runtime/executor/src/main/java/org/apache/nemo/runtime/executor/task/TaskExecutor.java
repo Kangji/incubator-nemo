@@ -20,7 +20,6 @@ package org.apache.nemo.runtime.executor.task;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.nemo.common.Pair;
@@ -57,6 +56,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -86,7 +86,7 @@ public final class TaskExecutor {
   // Dynamic optimization
   private String idOfVertexPutOnHold;
   private final ExecutorService workStealingExecutorThread;
-  private final MutableBoolean onHold;
+  private final AtomicBoolean onHold;
 
   private final PersistentConnectionToMasterMap persistentConnectionToMasterMap;
 
@@ -108,7 +108,7 @@ public final class TaskExecutor {
                       final BroadcastManagerWorker broadcastManagerWorker,
                       final MetricMessageSender metricMessageSender,
                       final PersistentConnectionToMasterMap persistentConnectionToMasterMap,
-                      final MutableBoolean onHold) {
+                      final AtomicBoolean onHold) {
     // Essential information
     final long taskPrepareStarted = System.currentTimeMillis();
     this.isExecuted = false;
@@ -745,8 +745,8 @@ public final class TaskExecutor {
         ControlMessage.Message.newBuilder()
           .setId(RuntimeIdManager.generateMessageId())
           .setListenerId(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID)
-          .setType(ControlMessage.MessageType.WorkStealingDataCollected)
-          .setWorkStealingDataCollected(ControlMessage.WorkStealingDataCollectMessage.newBuilder()
+          .setType(ControlMessage.MessageType.ParentTaskDataCollected)
+          .setParentTaskDataCollected(ControlMessage.ParentTaskDataCollectMsg.newBuilder()
             .setTaskId(taskId)
             .setPartitionSizeMap(ByteString.copyFrom(SerializationUtils.serialize(partitionSizeMap)))
             .build())

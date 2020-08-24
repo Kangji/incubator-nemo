@@ -18,7 +18,6 @@
  */
 package org.apache.nemo.runtime.executor.task;
 
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.Readable;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
@@ -30,6 +29,7 @@ import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Fetches data from a data source.
@@ -80,7 +80,7 @@ class SourceVertexDataFetcher extends DataFetcher {
   @Override
   Object fetchDataElementWithTrace(final String taskId,
                                    final MetricMessageSender metricMessageSender,
-                                   final MutableBoolean onHold) throws IOException {
+                                   final AtomicBoolean onHold) throws IOException {
     return fetchDataElement();
   }
 

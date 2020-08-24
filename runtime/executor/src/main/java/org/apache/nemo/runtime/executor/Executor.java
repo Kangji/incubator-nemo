@@ -19,7 +19,6 @@
 package org.apache.nemo.runtime.executor;
 
 import com.google.protobuf.ByteString;
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.nemo.common.Pair;
@@ -62,6 +61,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -97,7 +97,7 @@ public final class Executor {
   /**
    * For runtime optimizations.
    */
-  private final List<Pair<TaskExecutor, MutableBoolean>> listOfWorkingTaskExecutors;
+  private final List<Pair<TaskExecutor, AtomicBoolean>> listOfWorkingTaskExecutors;
   private final Map<String, Pair<AtomicInteger, AtomicInteger>> taskIdToIteratorInfo;
 
   @Inject
@@ -137,10 +137,14 @@ public final class Executor {
 
   // synchronized as well?
   private synchronized void onDataRequestReceived() {
-    LOG.error("data request from master");
+    LOG.error("data request from master: halt executors");
     // pause the task executors
-    listOfWorkingTaskExecutors.forEach(pair -> pair.right().setValue(true));
+    listOfWorkingTaskExecutors.forEach(pair -> pair.right().set(true));
     //listOfWorkingTaskExecutors.forEach(TaskExecutor::onRequestForProcessedData);
+  }
+
+  private synchronized void resumePausedTasks() {
+    listOfWorkingTaskExecutors.forEach(pair -> pair.right().set(false));
   }
 
   private synchronized void resumePausedTasksWithWorkStealing(final Map<String, Pair<Integer, Integer>> result) {
@@ -157,7 +161,7 @@ public final class Executor {
         currentInfo.right().set(startAndEndIndex.right());
       }
     }
-    listOfWorkingTaskExecutors.forEach(pair -> pair.right().setValue(false));
+    resumePausedTasks();
   }
 
   /**
@@ -193,10 +197,10 @@ public final class Executor {
           e.getPropertyValue(CompressionProperty.class).orElse(null),
           e.getPropertyValue(DecompressionProperty.class).orElse(null))));
 
-      final MutableBoolean onHold = new MutableBoolean(false);
+      final AtomicBoolean onHold = new AtomicBoolean(false);
       final TaskExecutor taskExecutor = new TaskExecutor(task, irDag, taskStateManager, intermediateDataIOFactory,
         broadcastManagerWorker, metricMessageSender, persistentConnectionToMasterMap, onHold);
-      Pair<TaskExecutor, MutableBoolean> taskExecutorPair = Pair.of(taskExecutor, onHold);
+      Pair<TaskExecutor, AtomicBoolean> taskExecutorPair = Pair.of(taskExecutor, onHold);
 
       listOfWorkingTaskExecutors.add(taskExecutorPair);
       taskIdToIteratorInfo.put(task.getTaskId(),
@@ -277,15 +281,19 @@ public final class Executor {
         case RequestMetricFlush:
           metricMessageSender.flush();
           break;
-        case RequestProcessedData:
+        case RequestCurrentlyProcessedData:
           metricMessageSender.flush();
           onDataRequestReceived();
+          break;
+        case ResumeTask:
+          resumePausedTasks();
           break;
         case SendWorkStealingResult:
           final ControlMessage.WorkStealingResultMsg workStealingResultMsg = message.getSendWorkStealingResult();
           final Map<String, Pair<Integer, Integer>> iteratorInformationMap =
             SerializationUtils.deserialize(workStealingResultMsg.getWorkStealingResult().toByteArray());
           resumePausedTasksWithWorkStealing(iteratorInformationMap);
+          break;
         default:
           throw new IllegalMessageException(
             new Exception("This message should not be received by an executor :" + message.getType()));

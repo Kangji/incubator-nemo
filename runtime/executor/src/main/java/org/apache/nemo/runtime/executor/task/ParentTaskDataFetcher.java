@@ -18,7 +18,6 @@
  */
 package org.apache.nemo.runtime.executor.task;
 
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.edge.executionproperty.BlockFetchFailureProperty;
@@ -35,6 +34,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -113,8 +113,9 @@ class ParentTaskDataFetcher extends DataFetcher {
   @Override
   Object fetchDataElementWithTrace(final String taskId,
                                    final MetricMessageSender metricMessageSender,
-                                   final MutableBoolean onHold) throws IOException {
+                                   final AtomicBoolean onHold) throws IOException {
     try {
+      // initialize
       if (firstFetch) {
         while (currentIteratorIndex < iteratorStartingIndex.get()) {
           advanceIterator();
@@ -126,13 +127,13 @@ class ParentTaskDataFetcher extends DataFetcher {
 
       while (true) {
         // This iterator has the element
-        if (!onHold.booleanValue()) {
+        if (!onHold.get()) {
           if (this.currentIterator.hasNext()) {
             return this.currentIterator.next();
           }
 
           // This iterator does not have the element
-          if (currentIteratorIndex == iteratorEndingIndex.get()) { // need to check if this condition is correct
+          if (currentIteratorIndex >= iteratorEndingIndex.get()) { // need to check if this condition is correct
             break;
           } else if (currentIteratorIndex < expectedNumOfIterators) {
             // Next iterator has the element
@@ -150,7 +151,7 @@ class ParentTaskDataFetcher extends DataFetcher {
             break;
           }
         } else {
-          LOG.error("Iterator on hold...");
+          LOG.error("Iterator on hold... this means that work stealing statistics are being collected.");
           Thread.sleep(1000);
         }
       }

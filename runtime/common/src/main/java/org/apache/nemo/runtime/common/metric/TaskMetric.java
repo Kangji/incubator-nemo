@@ -350,7 +350,7 @@ public class TaskMetric implements StateMetric<TaskState.State> {
       case "totalIteratorNumber":
         setTotalIteratorNumber(SerializationUtils.deserialize(metricValue));
         break;
-      case "taskPreparationTIme":
+      case "taskPreparationTime":
         setTaskPreparationTime(SerializationUtils.deserialize(metricValue));
         break;
       default:

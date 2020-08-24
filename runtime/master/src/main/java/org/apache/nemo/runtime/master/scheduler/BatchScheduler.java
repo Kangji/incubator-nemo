@@ -18,6 +18,8 @@
  */
 package org.apache.nemo.runtime.master.scheduler;
 
+import com.google.protobuf.ByteString;
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.Vertex;
@@ -44,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.inject.Inject;
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -299,54 +302,67 @@ public final class BatchScheduler implements Scheduler {
       if (skewedTasks.isEmpty()) {
         return;
       }
-      // things to do for now
-      // find and access task executor of skewed tasks
+
+      // skewed tasks are generated. Now, split tasks
       final Map<String, Integer> stageToNumOfTasks = new HashMap<>();
       for (String taskId : skewedTasks.keySet()) {
         final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
         if (!stageToNumOfTasks.containsKey(stageId)) {
           stageToNumOfTasks.put(stageId, 1);
         } else {
-          stageToNumOfTasks.compute(stageId, (existingKey, value) -> value + 1);
+          stageToNumOfTasks.computeIfPresent(stageId, (existingKey, value) -> value + 1);
         }
-        executorRegistry.findExecutorForTask(taskId).ifPresent(executor -> executor.isExecutorSlotAvailable());
       }
 
       List<Task> tasksToSchedule = new ArrayList<>(skewedTasks.size());
+      // hold updated iterator information
+      // string: taskId(original)
+      // pair.left() : iterator starting index: always 0
+      // pair.right() : iterator ending index: Integer.MAX_INT if non skewed task
       Map<String, Pair<Integer, Integer>> accumulatedResult = new HashMap<>();
 
+      // tasks are generated in "stage" based : loop on stages, not schedule group
       for (String stageId : stageToNumOfTasks.keySet()) {
-        // do workstealing for only once : this is because of the index based task state tracking system
-        stageIdToWorkStealingExecuted.put(stageId, true);
 
         Stage stageToSchedule = planStateManager.getPhysicalPlan().getStageDAG().getVertexById(stageId);
 
         // make new task ids and store that information in corresponding stage and planstatemanager
-        final Set<String> idsForWorkStealingTasks = new HashSet<>();
-        final Set<String> idsForOriginalTasks = new HashSet<>();
+        // for now, id logic for robber tasks are as follows:
+          // - same stage id (obvious)
+          // - same index number (need to fetch the same data as the victim task)
+          // - attempt number is replaced with "*", similar withe the block wildcard id.
+
+        //generate the robber tasks' id
+        final Set<String> idsForRobberTasks = new HashSet<>();
+        final Set<String> idsForVictimTasks = new HashSet<>();
         for (String taskId : skewedTasks.keySet()) {
           if (taskId.contains(stageId)) {
-            idsForOriginalTasks.add(taskId);
-            idsForWorkStealingTasks.add(RuntimeIdManager.generateWorkStealingTaskId(taskId));
+            idsForVictimTasks.add(taskId);
+            idsForRobberTasks.add(RuntimeIdManager.generateWorkStealingTaskId(taskId));
           }
-      }
-        planStateManager.getPhysicalPlan().getStageDAG()
-          .getVertexById(stageId).setWorkStealingTaskIds(idsForWorkStealingTasks);
-        planStateManager.addWorkStealingTasks(idsForWorkStealingTasks);
+        }
 
+        // update the work stealing tasks in Stage and PlanStateManager
+        planStateManager.getPhysicalPlan().getStageDAG()
+          .getVertexById(stageId).setWorkStealingTaskIds(idsForRobberTasks);
+        planStateManager.addWorkStealingTasks(idsForRobberTasks);
+
+        // house keeping stuffs needed for initializing tasks
+        // create and return Robber tasks
         final List<StageEdge> stageIncomingEdges =
           planStateManager.getPhysicalPlan().getStageDAG().getIncomingEdgesOf(stageToSchedule.getId());
         final List<StageEdge> stageOutgoingEdges =
           planStateManager.getPhysicalPlan().getStageDAG().getOutgoingEdgesOf(stageToSchedule.getId());
-
-        // Create and return tasks.
         final List<Map<String, Readable>> vertexIdToReadables = stageToSchedule.getVertexIdToReadables();
 
-        idsForOriginalTasks.forEach(taskId -> {
+        idsForVictimTasks.forEach(taskId -> {
           final Set<String> blockIds = BatchSchedulerUtils.getOutputBlockIds(planStateManager, taskId);
           blockManagerMaster.onProducerTaskScheduled(taskId, blockIds);
           final int taskIdx = RuntimeIdManager.getIndexFromTaskId(taskId);
-          final Pair<Integer, Integer> iteratorInfoForThisTask = skewedTasks.get(taskId);
+          final Pair<Integer, Integer> currentAndTotalIteratorIndex = skewedTasks.get(taskId);
+          // calculate the starting index of Robber task
+          final int iteratorStartingIndex = (int) Math.floor(
+            ((currentAndTotalIteratorIndex.right() + currentAndTotalIteratorIndex.left()) / 2) + 1);
           tasksToSchedule.add(new Task(
             planStateManager.getPhysicalPlan().getPlanId(),
             RuntimeIdManager.generateWorkStealingTaskId(taskId),
@@ -355,34 +371,31 @@ public final class BatchScheduler implements Scheduler {
             stageIncomingEdges,
             stageOutgoingEdges,
             vertexIdToReadables.get(taskIdx),
-            new AtomicInteger(iteratorInfoForThisTask.left()),
-            new AtomicInteger(iteratorInfoForThisTask.right())));
+            new AtomicInteger(iteratorStartingIndex), // index for robber tasks
+            new AtomicInteger(currentAndTotalIteratorIndex.right())));
         });
 
+        // accumulate the Victim tasks and non skewed tasks result
         for (String taskId : workStealingCandidates) {
-          if (idsForOriginalTasks.contains(taskId)) { // this is for skewed task
+          if (idsForVictimTasks.contains(taskId)) { // this is for skewed task
             Pair<Integer, Integer> currentAndTotalIteratorIndex = skewedTasks.get(taskId);
             accumulatedResult.put(taskId,
-              Pair.of(currentAndTotalIteratorIndex.left() + 1, currentAndTotalIteratorIndex.right()));
+              Pair.of(0, (int) Math.floor(
+                ((currentAndTotalIteratorIndex.right() + currentAndTotalIteratorIndex.left()) / 2) + 1)));
           } else { // this is for non skewed tasks
             accumulatedResult.put(taskId, Pair.of(0, Integer.MAX_VALUE));
           }
         }
+        // do work stealing for only once : this is because of the index based task state tracking system
+        // Need to be handled in the near future!
+        stageIdToWorkStealingExecuted.put(stageId, true);
       }
+      // notify the updated information to executors
+      sendWorkStealingResultToExecutor(accumulatedResult);
 
-      // now, update the combined iterator information (skewed + non skewed)
-
-      pendingTaskCollectionPointer.setToOverwrite(tasksToSchedule);
-
-      // Notify the dispatcher that a new collection is available.
-      taskDispatcher.onNewPendingTaskCollectionAvailable();
-
-      // make new task and allocate the splitted queue
-      // update plan
       // schedule new tasks
-      // done!
-      // do schedule!
-
+      pendingTaskCollectionPointer.setToOverwrite(tasksToSchedule);
+      taskDispatcher.onNewPendingTaskCollectionAvailable();
     }
   }
 
@@ -548,9 +561,6 @@ public final class BatchScheduler implements Scheduler {
     for (String stage : scheduleGroup) {
       remainingTasks += planStateManager.getNumberOfTasksRemainingInStage(stage); // ready + executing?
     }
-    //LOG.error("[HWARIM] isExecutorSlotAvailable: {}", executorStatus);
-    //LOG.error("[HWARIM] total number of slots: {}", totalNumberOfSlots);
-    //LOG.error("[HWARIM] number of remaining tasks in this stage: {}", remainingTasks);
     return executorStatus && (totalNumberOfSlots > remainingTasks);
   }
 
@@ -629,6 +639,14 @@ public final class BatchScheduler implements Scheduler {
       .collect(Collectors.toList());
   }
 
+  /**
+   * Detect skewed tasks.
+   * @param scheduleGroup current schedule group.
+   * @return  skewed task information.
+   *          key: taskId
+   *          value:  left: current(paused) iterator index
+   *                  right: total number of iterator
+   */
   private Map<String, Pair<Integer, Integer>> detectSkew(final List<String> scheduleGroup) {
     final Map<String, Pair<Integer, Integer>> taskIdToIteratorInformation = new HashMap<>();
     final Map<String, Long> taskIdToInitializationOverhead = new HashMap<>();
@@ -655,11 +673,11 @@ public final class BatchScheduler implements Scheduler {
     // get time taken to process the bytes
     Map<String, Long> taskIdToElapsedTime = getCurrentlyTakenExecutionTimeMsOfRunningTasks(scheduleGroup);
 
-    // get size of processed bytes of running tasks
-    final long startTime = System.currentTimeMillis();
-    // on this method, stop the currently working task executor
+    // request currently processed bytes of candidates.
+    // on this method, stop the currently working task executor.
     requestCurrentlyProcessedBytesOfRunningTasks();
 
+    // gather the arrived metric information
     for (String taskId : workStealingCandidates) {
       TaskMetric taskMetric = metricStore.getMetricWithId(TaskMetric.class, taskId);
       taskIdToProcessedBytes.put(taskId, taskMetric.getSerializedReadBytes());
@@ -672,16 +690,16 @@ public final class BatchScheduler implements Scheduler {
     LOG.error("task id to elapsed time: {}", taskIdToElapsedTime);
     // if there are no tasks left to optimize, return empty list
     if (taskIdToProcessedBytes.isEmpty()) {
-      LOG.error("maybe all finished.");
+      LOG.info("maybe all finished or not started at all.");
       return new HashMap<>();
     }
 
     // estimate the remaining time
     List<Pair<String, Long>> estimatedTimeToFinishPerTask = new ArrayList<>(taskIdToElapsedTime.size());
     for (String taskId : taskIdToProcessedBytes.keySet()) {
-      // if processed bytes are not available, ignore the task.
+      // if processed bytes are not available, do not detect skew.
       if (taskIdToProcessedBytes.get(taskId) <= 0) {
-        continue;
+        return new HashMap<>();
       }
       // if this task is almost finished, ignore it.
       Pair<Integer, Integer> iteratorInformation = taskIdToIteratorInformation.get(taskId);
@@ -692,7 +710,7 @@ public final class BatchScheduler implements Scheduler {
         / taskIdToProcessedBytes.get(taskId);
 
       // if the estimated left time is shorter than the initialization overhead, stop!
-      if (timeToFinishExecute < taskIdToInitializationOverhead.get(taskId)) {
+      if (timeToFinishExecute < taskIdToInitializationOverhead.get(taskId) * 2) {
         continue;
       }
       LOG.error("{} estimated time to finish {}", taskId, timeToFinishExecute);
@@ -716,26 +734,20 @@ public final class BatchScheduler implements Scheduler {
     LOG.error("skewed tasks: {}", skewedTasks);
     LOG.error("skewed tasks with iterator info : {}", skewedTasksWithIteratorInfo);
     return skewedTasksWithIteratorInfo;
-
-    // Need to think about
-    // 1. taskId가 아니라 task index정보만 가지고 있어도 충분한가? fail -> retry 의 과정을 거칠 테니 attempt만 다른 task 2개가
-    // 동시에 돌아갈 일은 거의 없다고 봐도 되겠지?
-    // 2. stage 기반이 아니라 scheduling group 기반으로 되어야 하는 것 아닌가?
-    // (이러면 구현해 놓은 코드 좀 많이 고쳐야 할 것 같긴 한데, 이게 더 맞는 방향인 것 같기도 하고, 잘 모르겠네)
   }
 
-  private void sendWorkStealingResultToExecutor() {
+  private void sendWorkStealingResultToExecutor(final Map<String, Pair<Integer, Integer>> result) {
     // driver sends message to executors
     // ask executors to flush metric
+    final byte[] serialized = SerializationUtils.serialize((Serializable) result);
     ControlMessage.Message message = ControlMessage.Message.newBuilder()
       .setId(RuntimeIdManager.generateMessageId())
       .setListenerId(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID)
-      .setType(ControlMessage.MessageType.RequestMetricFlush)
+      .setType(ControlMessage.MessageType.SendWorkStealingResult)
+      .setSendWorkStealingResult(ControlMessage.WorkStealingResultMsg.newBuilder()
+        .setWorkStealingResult(ByteString.copyFrom(serialized))
+        .build())
       .build();
     executorRegistry.viewExecutors(executors -> executors.forEach(executor -> executor.sendControlMessage(message)));
-    try {
-      Thread.sleep(1000); // wait for 1 sec
-    } catch (InterruptedException ignored) {
-    }
   }
 }

@@ -70,26 +70,27 @@ message DataCollectMessage {
 }
 
 enum MessageType {
-    TaskStateChanged = 0;
-    ScheduleTask = 1;
-    BlockStateChanged = 2;
-    RunTimePassMessage = 3;
-    RequestBlockLocation = 4;
-    BlockLocationInfo = 5;
-    ExecutorFailed = 6;
-    ExecutorDataCollected = 7;
-    MetricMessageReceived = 8;
-    RequestMetricFlush = 9;
-    MetricFlushed = 10;
-    RequestBroadcastVariable = 11;
-    InMasterBroadcastVariable = 12;
-    PipeInit = 13;
-    RequestPipeLoc = 14;
-    PipeLocInfo = 15;
-    WorkStealingDataCollected = 16;
-    RequestProcessedData = 17;
-    CurrentlyProcessedBytesCollected = 18;
-    SendWorkStealingResult = 19;
+  TaskStateChanged = 0;
+  ScheduleTask = 1;
+  BlockStateChanged = 2;
+  RunTimePassMessage = 3;
+  RequestBlockLocation = 4;
+  BlockLocationInfo = 5;
+  ExecutorFailed = 6;
+  ExecutorDataCollected = 7;
+  MetricMessageReceived = 8;
+  RequestMetricFlush = 9;
+  MetricFlushed = 10;
+  RequestBroadcastVariable = 11;
+  InMasterBroadcastVariable = 12;
+  PipeInit = 13;
+  RequestPipeLoc = 14;
+  PipeLocInfo = 15;
+  ParentTaskDataCollected = 16;
+  RequestCurrentlyProcessedData = 17;
+  CurrentlyProcessedBytesCollected = 18;
+  SendWorkStealingResult = 19;
+  ResumeTask = 20;
 }
 
 message Message {
@@ -111,10 +112,11 @@ message Message {
     optional PipeInitMessage pipeInitMsg = 16;
     optional RequestPipeLocationMessage requestPipeLocMsg = 17;
     optional PipeLocationInfoMessage pipeLocInfoMsg = 18;
-    optional WorkStealingDataCollectMessage workStealingDataCollected = 19;
-    optional RequestProcessedDataMsg requestProcessedDataMsg = 20;
+    optional ParentTaskDataCollectMsg ParentTaskDataCollected = 19;
+    optional RequestCurrentlyProcessedDataMsg requestCurrentlyProcessedDataMsg = 20;
     optional CurrentlyProcessedBytesCollectMsg currentlyProcessedBytesCollected = 21;
     optional WorkStealingResultMsg sendWorkStealingResult = 22;
+    optional ResumeTaskMsg resumeTaskMsg = 23;
 }
 
 // Messages from Master to Executors
@@ -265,12 +267,12 @@ message PipeLocationInfoMessage {
   required string executorId = 2;
 }
 
-message WorkStealingDataCollectMessage {
+message ParentTaskDataCollectMsg {
   required string taskId = 1;
   required bytes partitionSizeMap = 2;
 }
 
-message RequestProcessedDataMsg {
+message RequestCurrentlyProcessedDataMsg {
 }
 
 message CurrentlyProcessedBytesCollectMsg {
@@ -280,4 +282,7 @@ message CurrentlyProcessedBytesCollectMsg {
 
 message WorkStealingResultMsg {
   required bytes workStealingResult = 1;
+}
+
+message ResumeTaskMsg {
 }

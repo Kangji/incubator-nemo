@@ -470,9 +470,9 @@ public final class RuntimeMaster {
           .setDataCollected(ControlMessage.DataCollectMessage.newBuilder().setData(serializedData).build())
           .build());
         break;
-      case WorkStealingDataCollected:
+      case ParentTaskDataCollected:
         if (scheduler instanceof BatchScheduler) {
-          final ControlMessage.WorkStealingDataCollectMessage workStealingMsg = message.getWorkStealingDataCollected();
+          final ControlMessage.ParentTaskDataCollectMsg workStealingMsg = message.getParentTaskDataCollected();
           final String taskId = workStealingMsg.getTaskId();
           final Map<Integer, Long> partitionSizeMap = SerializationUtils
             .deserialize(workStealingMsg.getPartitionSizeMap().toByteArray());

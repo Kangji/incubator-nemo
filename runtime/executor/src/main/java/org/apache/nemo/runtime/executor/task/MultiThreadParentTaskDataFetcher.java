@@ -18,7 +18,6 @@
  */
 package org.apache.nemo.runtime.executor.task;
 
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.punctuation.Finishmark;
@@ -37,6 +36,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Task thread -> fetchDataElement() -> (((QUEUE))) <- List of iterators <- queueInsertionThreads
@@ -105,7 +105,7 @@ class MultiThreadParentTaskDataFetcher extends DataFetcher {
   @Override
   Object fetchDataElementWithTrace(final String taskId,
                                    final MetricMessageSender metricMessageSender,
-                                   final MutableBoolean onHold) throws IOException {
+                                   final AtomicBoolean onHold) throws IOException {
     return fetchDataElement();
   }
 
