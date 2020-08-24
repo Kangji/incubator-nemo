@@ -54,8 +54,9 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -85,7 +86,7 @@ public final class TaskExecutor {
 
   // Dynamic optimization
   private String idOfVertexPutOnHold;
-  private final ExecutorService workStealingExecutorThread;
+  private final ScheduledExecutorService workStealingExecutorThread;
   private final AtomicBoolean onHold;
 
   private final PersistentConnectionToMasterMap persistentConnectionToMasterMap;
@@ -137,7 +138,18 @@ public final class TaskExecutor {
       SerializationUtils.serialize(System.currentTimeMillis() - taskPrepareStarted));
 
     this.workStealingExecutorThread = Executors
-      .newSingleThreadExecutor(runnable -> new Thread("work stealing executor thread"));
+      .newSingleThreadScheduledExecutor(runnable -> new Thread("work stealing monitoring thread in executor"));
+    workStealingExecutorThread.scheduleAtFixedRate(() -> {
+      // for word count test
+      if (!task.getStageId().equals("Stage0")) {
+        LOG.error("[HWARIM] {} on Hold: {}", taskId, onHold.get());
+        LOG.error("[HWARIM] {} iterator information: start {}, end {}",
+          taskId, task.getIteratorStartingIndex().get(), task.getIteratorEndingIndex().get());
+      }
+    },
+      5000,
+      5000,
+      TimeUnit.MILLISECONDS);
   }
 
   // Get all of the intra-task edges + inter-task edges
