@@ -372,6 +372,7 @@ public final class PlanStateManager {
       // COMPLETE stage
       case COMPLETE:
       case ON_HOLD:
+        // work stealing enabled
         if (!physicalPlan.getStageDAG().getVertexById(stageId).getWorkStealingTaskIds().isEmpty()) {
           if (numOfCompletedTaskIndicesInThisStage
             == physicalPlan.getStageDAG().getVertexById(stageId).getTaskIndices().size()
