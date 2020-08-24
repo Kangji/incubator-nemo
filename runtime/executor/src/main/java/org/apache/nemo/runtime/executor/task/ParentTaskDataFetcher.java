@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.runtime.executor.task;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.edge.executionproperty.BlockFetchFailureProperty;
@@ -54,6 +55,7 @@ class ParentTaskDataFetcher extends DataFetcher {
   private long encodedBytes = 0;
   private int iteratorStartingIndex;
   private int iteratorEndingIndex;
+  private boolean onHold = false;
 
   ParentTaskDataFetcher(final IRVertex dataSource,
                         final InputReader inputReader,
@@ -110,10 +112,11 @@ class ParentTaskDataFetcher extends DataFetcher {
 
   @Override
   Object fetchDataElementWithTrace(final String taskId,
-                                   final MetricMessageSender metricMessageSender) throws IOException {
+                                   final MetricMessageSender metricMessageSender,
+                                   final MutableBoolean onHold) throws IOException {
     try {
       if (firstFetch) {
-        while(currentIteratorIndex < iteratorStartingIndex) {
+        while (currentIteratorIndex < iteratorStartingIndex) {
           advanceIterator();
         }
         fetchDataLazily();
@@ -123,29 +126,33 @@ class ParentTaskDataFetcher extends DataFetcher {
 
       while (true) {
         // This iterator has the element
-        if (this.currentIterator.hasNext()) {
-          return this.currentIterator.next();
-        }
+        if (!onHold.booleanValue()) {
+          if (this.currentIterator.hasNext()) {
+            return this.currentIterator.next();
+          }
 
-        // This iterator does not have the element
-        if (currentIteratorIndex == iteratorEndingIndex) { // need to check if this condition is correct
-          break;
-        } else if (currentIteratorIndex < expectedNumOfIterators) {
-          // Next iterator has the element
-          countBytes(currentIterator);
-          metricMessageSender.send("TaskMetric", taskId, "serializedReadBytes",
-            SerializationUtils.serialize(serBytes));
-          metricMessageSender.send("TaskMetric", taskId, "currentIteratorIndex",
-            SerializationUtils.serialize(currentIteratorIndex));
-          metricMessageSender.send("TaskMetric", taskId, "totalIteratorNumber",
-            SerializationUtils.serialize(expectedNumOfIterators));
-          advanceIterator();
-          continue;
+          // This iterator does not have the element
+          if (currentIteratorIndex == iteratorEndingIndex) { // need to check if this condition is correct
+            break;
+          } else if (currentIteratorIndex < expectedNumOfIterators) {
+            // Next iterator has the element
+            countBytes(currentIterator);
+            metricMessageSender.send("TaskMetric", taskId, "serializedReadBytes",
+              SerializationUtils.serialize(serBytes));
+            metricMessageSender.send("TaskMetric", taskId, "currentIteratorIndex",
+              SerializationUtils.serialize(currentIteratorIndex));
+            metricMessageSender.send("TaskMetric", taskId, "totalIteratorNumber",
+              SerializationUtils.serialize(expectedNumOfIterators));
+            advanceIterator();
+            continue;
+          } else {
+            // We've consumed all the iterators
+            break;
+          }
         } else {
-          // We've consumed all the iterators
-          break;
+          LOG.error("Iterator on hold...");
+          Thread.sleep(1000);
         }
-
       }
     } catch (final Throwable e) {
       // Any failure is caught and thrown as an IOException, so that the task is retried.
@@ -252,6 +259,14 @@ class ParentTaskDataFetcher extends DataFetcher {
     } catch (final IllegalStateException e) {
       LOG.error("Failed to get the number of bytes of encoded data - the data is not ready yet ", e);
     }
+  }
+
+  void setOnHold(final boolean onHold) {
+    this.onHold = onHold;
+  }
+
+  final boolean isDataFetcherOnHold() {
+    return onHold;
   }
 
   @Override

@@ -158,7 +158,7 @@ public final class RuntimeMaster {
 
     // Check for work stealing execution
     this.workStealingThread = Executors
-      .newSingleThreadScheduledExecutor(runnable -> new Thread(runnable, "WorkStealing thread"));
+      .newSingleThreadScheduledExecutor(runnable -> new Thread(runnable, "WorkStealing master thread"));
     this.workStealingThread.scheduleAtFixedRate(
       () -> this.runtimeMasterThread.submit(scheduler::onWorkStealingCheck),
       WORK_STEALING_CHECKING_PERIOD_MS,

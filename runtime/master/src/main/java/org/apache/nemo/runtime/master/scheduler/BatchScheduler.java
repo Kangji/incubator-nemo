@@ -103,9 +103,6 @@ public final class BatchScheduler implements Scheduler {
     this.blockManagerMaster = blockManagerMaster;
     this.executorRegistry = executorRegistry;
     this.planStateManager = planStateManager;
-    for (Stage stage : planStateManager.getPhysicalPlan().getStageDAG().getVertices()) {
-      stageIdToWorkStealingExecuted.putIfAbsent(stage.getId(), false);
-    }
   }
 
   ////////////////////////////////////////////////////////////////////// Methods for plan rewriting.
@@ -127,6 +124,9 @@ public final class BatchScheduler implements Scheduler {
   private void updatePlan(final PhysicalPlan newPhysicalPlan,
                           final int maxScheduleAttempt) {
     planStateManager.updatePlan(newPhysicalPlan, maxScheduleAttempt);
+    for (Stage stage : planStateManager.getPhysicalPlan().getStageDAG().getVertices()) {
+      stageIdToWorkStealingExecuted.putIfAbsent(stage.getId(), false);
+    }
     this.sortedScheduleGroups = newPhysicalPlan.getStageDAG().getVertices().stream()
       .collect(Collectors.groupingBy(Stage::getScheduleGroup))
       .entrySet().stream()

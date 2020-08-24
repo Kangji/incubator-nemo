@@ -19,8 +19,11 @@
 package org.apache.nemo.runtime.executor;
 
 import com.google.protobuf.ByteString;
+import org.apache.commons.lang.mutable.Mutable;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.coder.BytesDecoderFactory;
 import org.apache.nemo.common.coder.BytesEncoderFactory;
 import org.apache.nemo.common.coder.DecoderFactory;
@@ -71,6 +74,7 @@ public final class Executor {
    * To be used for a thread pool to execute tasks.
    */
   private final ExecutorService executorService;
+  private final ExecutorService workStealingManager;
 
   /**
    * In charge of this executor's intermediate data transfer.
@@ -91,7 +95,7 @@ public final class Executor {
   /**
    * For runtime optimizations.
    */
-  private final List<TaskExecutor> listOfWorkingTaskExecutors;
+  private final List<Pair<TaskExecutor, MutableBoolean>> listOfWorkingTaskExecutors;
 
   @Inject
   private Executor(@Parameter(JobConf.ExecutorId.class) final String executorId,
@@ -104,6 +108,9 @@ public final class Executor {
     this.executorId = executorId;
     this.executorService = Executors.newCachedThreadPool(new BasicThreadFactory.Builder()
       .namingPattern("TaskExecutor thread-%d")
+      .build());
+    this.workStealingManager = Executors.newCachedThreadPool(new BasicThreadFactory.Builder()
+      .namingPattern("workstealing manager-%d")
       .build());
     this.persistentConnectionToMasterMap = persistentConnectionToMasterMap;
     this.serializerManager = serializerManager;
@@ -127,7 +134,13 @@ public final class Executor {
   // synchronized as well?
   private synchronized void onDataRequestReceived() {
     LOG.error("data request from master");
-    listOfWorkingTaskExecutors.forEach(TaskExecutor::onRequestForProcessedData);
+    // pause the task executors
+    listOfWorkingTaskExecutors.forEach(pair -> pair.right().setValue(true));
+    //listOfWorkingTaskExecutors.forEach(TaskExecutor::onRequestForProcessedData);
+  }
+
+  private synchronized void onHoldSkewedTasks() {
+
   }
 
   /**
@@ -163,9 +176,11 @@ public final class Executor {
           e.getPropertyValue(CompressionProperty.class).orElse(null),
           e.getPropertyValue(DecompressionProperty.class).orElse(null))));
 
+      final MutableBoolean onHold = new MutableBoolean(false);
       final TaskExecutor taskExecutor = new TaskExecutor(task, irDag, taskStateManager, intermediateDataIOFactory,
-        broadcastManagerWorker, metricMessageSender, persistentConnectionToMasterMap);
-      listOfWorkingTaskExecutors.add(taskExecutor);
+        broadcastManagerWorker, metricMessageSender, persistentConnectionToMasterMap, onHold);
+
+      listOfWorkingTaskExecutors.add(Pair.of(taskExecutor, onHold));
       taskExecutor.execute();
       listOfWorkingTaskExecutors.remove(taskExecutor);
     } catch (final Exception e) {
@@ -244,6 +259,7 @@ public final class Executor {
         case RequestProcessedData:
           onDataRequestReceived();
           break;
+
         default:
           throw new IllegalMessageException(
             new Exception("This message should not be received by an executor :" + message.getType()));

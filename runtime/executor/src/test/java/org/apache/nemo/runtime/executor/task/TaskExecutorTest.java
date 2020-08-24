@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.runtime.executor.task;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.dag.DAGBuilder;
@@ -898,6 +899,6 @@ public final class TaskExecutorTest {
 
   private TaskExecutor getTaskExecutor(final Task task, final DAG<IRVertex, RuntimeEdge<IRVertex>> taskDag) {
     return new TaskExecutor(task, taskDag, taskStateManager, intermediateDataIOFactory, broadcastManagerWorker,
-      metricMessageSender, persistentConnectionToMasterMap);
+      metricMessageSender, persistentConnectionToMasterMap, new MutableBoolean(false));
   }
 }

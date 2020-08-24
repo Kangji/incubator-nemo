@@ -20,6 +20,7 @@ package org.apache.nemo.runtime.executor.task;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.nemo.common.Pair;
@@ -54,6 +55,8 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
@@ -82,6 +85,8 @@ public final class TaskExecutor {
 
   // Dynamic optimization
   private String idOfVertexPutOnHold;
+  private final ExecutorService workStealingExecutorThread;
+  private final MutableBoolean onHold;
 
   private final PersistentConnectionToMasterMap persistentConnectionToMasterMap;
 
@@ -102,7 +107,8 @@ public final class TaskExecutor {
                       final IntermediateDataIOFactory intermediateDataIOFactory,
                       final BroadcastManagerWorker broadcastManagerWorker,
                       final MetricMessageSender metricMessageSender,
-                      final PersistentConnectionToMasterMap persistentConnectionToMasterMap) {
+                      final PersistentConnectionToMasterMap persistentConnectionToMasterMap,
+                      final MutableBoolean onHold) {
     // Essential information
     final long taskPrepareStarted = System.currentTimeMillis();
     this.isExecuted = false;
@@ -119,6 +125,8 @@ public final class TaskExecutor {
 
     this.persistentConnectionToMasterMap = persistentConnectionToMasterMap;
 
+    this.onHold = onHold;
+
     // Prepare data structures
     final Pair<List<DataFetcher>, List<VertexHarness>> pair = prepare(task, irVertexDag, intermediateDataIOFactory);
     this.dataFetchers = pair.left();
@@ -127,6 +135,9 @@ public final class TaskExecutor {
     this.timeSinceLastExecution = System.currentTimeMillis();
     metricMessageSender.send("TaskMetric", taskId, "taskPreparationTime",
       SerializationUtils.serialize(System.currentTimeMillis() - taskPrepareStarted));
+
+    this.workStealingExecutorThread = Executors
+      .newSingleThreadExecutor(runnable -> new Thread("work stealing executor thread"));
   }
 
   // Get all of the intra-task edges + inter-task edges
@@ -459,7 +470,7 @@ public final class TaskExecutor {
       while (availableIterator.hasNext()) {
         final DataFetcher dataFetcher = availableIterator.next();
         try {
-          final Object element = dataFetcher.fetchDataElementWithTrace(taskId, metricMessageSender);
+          final Object element = dataFetcher.fetchDataElementWithTrace(taskId, metricMessageSender, onHold);
           onEventFromDataFetcher(element, dataFetcher);
           if (element instanceof Finishmark) {
             availableIterator.remove();

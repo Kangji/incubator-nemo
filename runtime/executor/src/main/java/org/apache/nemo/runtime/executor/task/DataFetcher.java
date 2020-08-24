@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.runtime.executor.task;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.runtime.executor.MetricMessageSender;
@@ -51,7 +52,8 @@ abstract class DataFetcher implements AutoCloseable {
   abstract Object fetchDataElement() throws IOException;
 
   abstract Object fetchDataElementWithTrace(String taskId,
-                                            MetricMessageSender metricMessageSender) throws IOException;
+                                            MetricMessageSender metricMessageSender,
+                                            MutableBoolean onHold) throws IOException;
 
   OutputCollector getOutputCollector() {
     return outputCollector;
