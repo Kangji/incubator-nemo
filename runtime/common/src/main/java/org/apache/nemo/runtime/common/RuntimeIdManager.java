@@ -185,6 +185,9 @@ public final class RuntimeIdManager {
    * @return the attempt.
    */
   public static int getAttemptFromTaskId(final String taskId) {
+    if (split(taskId)[2].equals("*")) {
+      return 0;
+    }
     return Integer.valueOf(split(taskId)[2]);
   }
 
