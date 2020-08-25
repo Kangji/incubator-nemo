@@ -123,14 +123,15 @@ final class TaskDispatcher {
     }
 
     final Collection<Task> taskList = taskListOptional.get();
-    LOG.error("taskList: {}", taskList); // workstealing tasks가 잘 되는지?
+    LOG.error("taskList: {}", taskList.stream().map(Task::getTaskId).collect(Collectors.toList())); // workstealing tasks가 잘 되는지?
     // in here, get stage Id from task Ids and snapshot SystemCurrentTimeMs
     // when the first task of each stage is launched
     final List<Task> couldNotSchedule = new ArrayList<>();
     for (final Task task : taskList) {
+      LOG.error("task id: {}", task.getTaskId());
       if (!planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY)) {
         // Guard against race conditions causing duplicate task launches
-        LOG.debug("Skipping {} as it is not READY", task.getTaskId());
+        LOG.error("Skipping {} as it is not READY", task.getTaskId());
         continue;
       }
 

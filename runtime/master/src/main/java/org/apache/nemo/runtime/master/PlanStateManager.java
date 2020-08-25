@@ -571,10 +571,18 @@ public final class PlanStateManager {
   }
 
   private TaskState getTaskStateHelper(final String taskId) {
-    return stageIdToTaskIdxToAttemptStates
-      .get(RuntimeIdManager.getStageIdFromTaskId(taskId))
-      .get(RuntimeIdManager.getIndexFromTaskId(taskId))
-      .get(RuntimeIdManager.getAttemptFromTaskId(taskId));
+    final boolean isWorkStealingTask = taskId.split("-")[2] == "*";
+    if (isWorkStealingTask) {
+      return stageIdToTaskIdxToWorkStealingAttemptStates
+        .get(RuntimeIdManager.getStageIdFromTaskId(taskId))
+        .get(RuntimeIdManager.getIndexFromTaskId(taskId))
+        .get(RuntimeIdManager.getAttemptFromTaskId(taskId));
+    } else {
+      return stageIdToTaskIdxToAttemptStates
+        .get(RuntimeIdManager.getStageIdFromTaskId(taskId))
+        .get(RuntimeIdManager.getIndexFromTaskId(taskId))
+        .get(RuntimeIdManager.getAttemptFromTaskId(taskId));
+    }
   }
 
   private boolean isTaskNotDone(final TaskState taskState) {
