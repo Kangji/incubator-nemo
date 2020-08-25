@@ -358,6 +358,7 @@ public final class TaskExecutor {
     if (!handleDataFetchers(dataFetchers)) {
       return;
     }
+    LOG.error("handling data fetchers complete");
     metricMessageSender.send(TASK_METRIC_ID, taskId, "boundedSourceReadTime",
       SerializationUtils.serialize(boundedSourceReadTime));
     metricMessageSender.send(TASK_METRIC_ID, taskId, "serializedReadBytes",
@@ -365,10 +366,12 @@ public final class TaskExecutor {
     metricMessageSender.send(TASK_METRIC_ID, taskId, "encodedReadBytes",
       SerializationUtils.serialize(encodedReadBytes));
 
+    LOG.error("finalizing vertex harness");
     // Phase 2: Finalize task-internal states and elements
     for (final VertexHarness vertexHarness : sortedHarnesses) {
       finalizeVertex(vertexHarness);
     }
+    LOG.error("Finalizing vertex harness done");
 
     metricMessageSender.send(TASK_METRIC_ID, taskId, "taskDuration",
       SerializationUtils.serialize(System.currentTimeMillis() - executionStartTime));
@@ -460,6 +463,7 @@ public final class TaskExecutor {
 
     // empty means we've consumed all task-external input data
     while (!availableFetchers.isEmpty() || !pendingFetchers.isEmpty()) {
+      LOG.error("handling data fetchers,,, iterator available for now");
       // We first fetch data from available data fetchers
       final Iterator<DataFetcher> availableIterator = availableFetchers.iterator();
 

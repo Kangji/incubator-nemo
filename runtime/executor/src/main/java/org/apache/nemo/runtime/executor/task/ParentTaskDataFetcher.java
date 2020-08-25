@@ -114,6 +114,7 @@ class ParentTaskDataFetcher extends DataFetcher {
   Object fetchDataElementWithTrace(final String taskId,
                                    final MetricMessageSender metricMessageSender,
                                    final AtomicBoolean onHold) throws IOException {
+    LOG.error("{} fetching data element with trace", taskId);
     try {
       // initialize
       if (firstFetch) {
