@@ -123,7 +123,7 @@ public final class Executor {
     this.taskIdToIteratorInfo = new ConcurrentHashMap();
 
     workStealingManager.scheduleAtFixedRate(() -> {
-      LOG.error("working!");
+      LOG.error("working! list size {}", listOfWorkingTaskExecutors.size());
         for (Pair<TaskExecutor, AtomicBoolean> pair : listOfWorkingTaskExecutors) {
           LOG.error("in loop");
           TaskExecutor taskExecutor = pair.left();
@@ -308,6 +308,7 @@ public final class Executor {
           final ControlMessage.WorkStealingResultMsg workStealingResultMsg = message.getSendWorkStealingResult();
           final Map<String, Pair<Integer, Integer>> iteratorInformationMap =
             SerializationUtils.deserialize(workStealingResultMsg.getWorkStealingResult().toByteArray());
+          LOG.error("received: {}", iteratorInformationMap);
           resumePausedTasksWithWorkStealing(iteratorInformationMap);
           break;
         default:
