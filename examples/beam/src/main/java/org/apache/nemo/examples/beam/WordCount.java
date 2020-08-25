@@ -62,7 +62,7 @@ public final class WordCount {
                                                    final String inputFilePath, final String outputFilePath) {
     final Pipeline p = Pipeline.create(options);
     final PCollection<String> result = GenericSourceSink.read(p, inputFilePath)
-      .apply(MapElements.<String, KV<String, Long>>via(new SimpleFunction<String, KV<String, Long>>() {
+      .apply(MapElements.via(new SimpleFunction<String, KV<String, Long>>() {
         @Override
         public KV<String, Long> apply(final String line) {
           final String[] words = line.split(" +");

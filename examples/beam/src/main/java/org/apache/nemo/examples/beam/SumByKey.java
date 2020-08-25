@@ -24,6 +24,7 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.transforms.Sum;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
@@ -60,23 +61,20 @@ public final class SumByKey {
     long start = System.currentTimeMillis();
 
     final PCollection<String> result = GenericSourceSink.read(p, inputFilePath)
-      .apply(MapElements.via(new SimpleFunction<String, KV<String, String>>() {
+      .apply(MapElements.via(new SimpleFunction<String, KV<String, Long>>() {
         @Override
-        public KV<String, String> apply(final String line) {
+        public KV<String, Long> apply(final String line) {
           final String[] words = line.split(" ");
-          String key = words[0];
-          String value = words[1];
-          return KV.of(key, value);
+          final String key = words[0];
+          final Long count = 1L;
+          return KV.of(key, count);
         }
       }))
-      .apply(GroupByKey.create())
-      .apply(MapElements.via(new SimpleFunction<KV<String, Iterable<String>>, String>() {
+      .apply(Sum.longsPerKey())
+      .apply(MapElements.<KV<String, Long>, String>via(new SimpleFunction<KV<String, Long>, String>() {
         @Override
-        public String apply(final KV<String, Iterable<String>> kv) {
-          final String key = kv.getKey();
-          List value = Lists.newArrayList(kv.getValue());
-          int sum = value.stream().mapToInt(number -> (int) number).sum();
-          return key + ", " + sum;
+        public String apply(final KV<String, Long> kv) {
+          return kv.getKey() + ": " + kv.getValue();
         }
       }));
     GenericSourceSink.write(result, outputFilePath);

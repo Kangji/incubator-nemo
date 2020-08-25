@@ -24,6 +24,7 @@ import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
 import org.apache.nemo.compiler.optimizer.policy.SamplingLargeShuffleSkewPolicy;
 import org.apache.nemo.examples.beam.policy.DataSkewPolicyParallelismFive;
+import org.apache.nemo.examples.beam.policy.DefaultPolicyParallelismFive;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,6 +64,13 @@ public final class PerKeyMedianITCase {
     }
   }
 
+  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  public void test() throws Exception {
+    JobLauncher.main(builder
+      .addJobId(PerKeyMedianITCase.class.getSimpleName())
+      .addOptimizationPolicy(DefaultPolicyParallelismFive.class.getCanonicalName())
+      .build());
+  }
   /**
    * Testing data skew dynamic optimization.
    *
