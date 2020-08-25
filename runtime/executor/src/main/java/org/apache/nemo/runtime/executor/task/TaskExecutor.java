@@ -173,7 +173,7 @@ public final class TaskExecutor {
    * @param intermediateDataIOFactory intermediate IO.
    * @return fetchers and harnesses.
    */
-  private Pair<List<DataFetcher>, List<VertexHarness>> prepgare(
+  private Pair<List<DataFetcher>, List<VertexHarness>> prepare(
     final Task task,
     final DAG<IRVertex, RuntimeEdge<IRVertex>> irVertexDag,
     final IntermediateDataIOFactory intermediateDataIOFactory) {
