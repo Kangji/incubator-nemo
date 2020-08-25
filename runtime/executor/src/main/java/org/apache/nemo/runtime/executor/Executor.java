@@ -123,7 +123,9 @@ public final class Executor {
     this.taskIdToIteratorInfo = new ConcurrentHashMap();
 
     workStealingManager.scheduleAtFixedRate(() -> {
+      LOG.error("working!");
         for (Pair<TaskExecutor, AtomicBoolean> pair : listOfWorkingTaskExecutors) {
+          LOG.error("in loop");
           TaskExecutor taskExecutor = pair.left();
           if (!taskExecutor.getTaskId().equals("Stage0")) {
             Task task = taskExecutor.getTask();
@@ -133,8 +135,8 @@ public final class Executor {
           }
         }
       },
-      5000,
-      5000,
+      1000,
+      1000,
       TimeUnit.MILLISECONDS);
   }
 

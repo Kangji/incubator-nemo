@@ -18,8 +18,9 @@
  */
 package org.apache.nemo.runtime.common.id;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A dynamic ID class for tasks.
@@ -41,7 +42,8 @@ public final class WorkerTaskId implements TaskId {
   private final ManagerTaskId parentTask;
   private final int workStealingIndex;
   private final int cloneIndex;
-  private final List<WorkerTaskId> clones;
+  private final List<WorkerTaskId> clones = new ArrayList<>(); // default 0
+  private final AtomicInteger cloneIndexGenerator = new AtomicInteger(0);
 
   /**
    * Default constructor.
@@ -80,5 +82,16 @@ public final class WorkerTaskId implements TaskId {
 
   public int getCloneIndex() {
     return cloneIndex;
+  }
+
+  public List<WorkerTaskId> getClones() {
+    return clones;
+  }
+
+  public WorkerTaskId addClone() {
+    WorkerTaskId clone = new WorkerTaskId(stageId, index, parentTask, workStealingIndex,
+      cloneIndexGenerator.getAndIncrement());
+    clones.add(clone);
+    return clone;
   }
 }
