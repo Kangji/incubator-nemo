@@ -160,13 +160,14 @@ public final class PlanStateManager {
 
   // for now, schedule work stealing tasks only once
   public synchronized void addWorkStealingTasks(final Set<String> workStealingTasks) {
-    LOG.debug("Adding work stealing tasks,,, {}", workStealingTasks);
+    LOG.error("Adding work stealing tasks,,, {}", workStealingTasks);
     for (String taskId : workStealingTasks) {
       final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
       final int taskIdx = RuntimeIdManager.getIndexFromTaskId(taskId);
       stageIdToTaskIdxToWorkStealingAttemptStates.putIfAbsent(stageId, new HashMap<>());
       List<TaskState> attemptStatesForThisTask = new ArrayList<>();
       attemptStatesForThisTask.add(new TaskState());
+      LOG.error("{} attempt state: {}", taskId, attemptStatesForThisTask.get(0).getStateMachine().getCurrentState());
       stageIdToTaskIdxToWorkStealingAttemptStates.get(stageId).putIfAbsent(taskIdx, attemptStatesForThisTask);
     }
   }
