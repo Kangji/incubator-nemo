@@ -343,9 +343,11 @@ public final class PlanStateManager {
     // Log not-yet-completed tasks for us humans to track progress
     final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
     final Map<Integer, List<TaskState>> taskStatesOfThisStage = stageIdToTaskIdxToAttemptStates.get(stageId);
+    final Map<Integer, List<TaskState>> workStealingTaskStatesOfThisStage =
+      stageIdToTaskIdxToWorkStealingAttemptStates.get(stageId);
     final int numOfRemainingTaskIndicesInThisStage = getNumberOfTasksRemainingInStage(stageId);
     final int numOfCompletedTaskIndicesInThisStage = taskStatesOfThisStage.size()
-      - numOfRemainingTaskIndicesInThisStage;
+      + workStealingTaskStatesOfThisStage.size() - numOfRemainingTaskIndicesInThisStage;
     if (newTaskState.equals(TaskState.State.COMPLETE)) {
       LOG.info("{} completed: {} Task(s) out of {} + {} are remaining in this stage",
         taskId, numOfRemainingTaskIndicesInThisStage, taskStatesOfThisStage.size(),
@@ -418,7 +420,7 @@ public final class PlanStateManager {
       .addEvent(getStageState(stageId), newStageState);
     metricStore.triggerBroadcast(StageMetric.class, stageId);
 
-    LOG.debug("Stage State Transition: id {} from {} to {}",
+    LOG.error("Stage State Transition: id {} from {} to {}",
       new Object[]{stageId, stageStateMachine.getCurrentState(), newStageState});
     try {
       stageStateMachine.setState(newStageState);
