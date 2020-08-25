@@ -285,10 +285,10 @@ public final class BatchScheduler implements Scheduler {
     List<Stage> scheduleGroup = BatchSchedulerUtils
       .selectEarliestSchedulableGroup(sortedScheduleGroups, planStateManager).orElse(new ArrayList<>());
     List<String> scheduleGroupInId = scheduleGroup.stream().map(Stage::getId).collect(Collectors.toList());
-    LOG.error("schedule group: {}", scheduleGroupInId);
     isWorkStealingConditionSatisfied.setValue(checkForWorkStealingBaseConditions(scheduleGroupInId));
 
     if (isWorkStealingConditionSatisfied.booleanValue()) {
+      LOG.error("schedule group: {}", scheduleGroupInId);
       taskIdToProcessedBytes.clear();
 
       final Map<String, Pair<Integer, Integer>> skewedTasks = detectSkew(scheduleGroupInId);
@@ -608,6 +608,7 @@ public final class BatchScheduler implements Scheduler {
   private void haltExecutors() {
     // driver sends message to executors
     // ask executors to flush metric
+    LOG.error("haulting executors...");
     ControlMessage.Message haltExecutorsMessage = ControlMessage.Message.newBuilder()
       .setId(RuntimeIdManager.generateMessageId())
       .setListenerId(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID)
