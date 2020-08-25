@@ -172,9 +172,11 @@ class ParentTaskDataFetcher extends DataFetcher {
 
   private void advanceIterator() throws IOException {
     // Take from iteratorQueue
+    LOG.error("advance iterator");
     final Object iteratorOrThrowable;
     try {
       iteratorOrThrowable = iteratorQueue.take(); // blocking call
+      LOG.error("iterator or throwable: {}", iteratorOrThrowable.toString());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IOException(e);
