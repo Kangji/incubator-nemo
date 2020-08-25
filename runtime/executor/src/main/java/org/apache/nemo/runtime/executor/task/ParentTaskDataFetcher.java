@@ -119,6 +119,7 @@ class ParentTaskDataFetcher extends DataFetcher {
       // initialize
       if (firstFetch) {
         fetchDataLazily();
+        advanceIterator();
         LOG.error("first fetch, current iterator index: {}", currentIteratorIndex);
         while (currentIteratorIndex < iteratorStartingIndex.get()) {
           advanceIterator();
