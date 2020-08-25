@@ -186,7 +186,8 @@ class ParentTaskDataFetcher extends DataFetcher {
       this.currentIterator = (DataUtil.IteratorWithNumBytes) iteratorOrThrowable;
       this.currentIteratorIndex++;
     }
-    LOG.error("iterator starting index: {}, ending index: {}", iteratorStartingIndex.get(), iteratorEndingIndex.get());
+    LOG.error("iterator starting index: {}, ending index: {}, current index: {}",
+      iteratorStartingIndex.get(), iteratorEndingIndex.get(), currentIteratorIndex);
   }
 
   private void handleIncomingBlock(final int index,

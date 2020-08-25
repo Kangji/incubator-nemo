@@ -605,16 +605,16 @@ public final class BatchScheduler implements Scheduler {
   }
 
 
-  private void requestCurrentlyProcessedBytesOfRunningTasks() {
+  private void haltExecutors() {
     // driver sends message to executors
     // ask executors to flush metric
-    ControlMessage.Message dataRequestMessage = ControlMessage.Message.newBuilder()
+    ControlMessage.Message haltExecutorsMessage = ControlMessage.Message.newBuilder()
       .setId(RuntimeIdManager.generateMessageId())
       .setListenerId(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID)
-      .setType(ControlMessage.MessageType.RequestCurrentlyProcessedData)
+      .setType(ControlMessage.MessageType.HaltExecutors)
       .build();
     executorRegistry.viewExecutors(executors -> executors.forEach(executor ->
-      executor.sendControlMessage(dataRequestMessage)));
+      executor.sendControlMessage(haltExecutorsMessage)));
     try {
       Thread.sleep(1000); // wait for 1 sec
     } catch (InterruptedException ignored) {
@@ -671,9 +671,6 @@ public final class BatchScheduler implements Scheduler {
     // get time taken to process the bytes
     Map<String, Long> taskIdToElapsedTime = getCurrentlyTakenExecutionTimeMsOfRunningTasks(scheduleGroup);
 
-    // request currently processed bytes of candidates.
-    // on this method, stop the currently working task executor.
-    requestCurrentlyProcessedBytesOfRunningTasks();
 
     // gather the arrived metric information
     boolean needToWait = true;
@@ -697,6 +694,7 @@ public final class BatchScheduler implements Scheduler {
       }
     }
 
+    haltExecutors();
 
     LOG.error("task id to processed bytes: {}", taskIdToProcessedBytes);
     LOG.error("task id to elapsed time: {}", taskIdToElapsedTime);

@@ -297,8 +297,8 @@ public final class Executor {
         case RequestMetricFlush:
           metricMessageSender.flush();
           break;
-        case RequestCurrentlyProcessedData:
-          metricMessageSender.flush();
+        case HaltExecutors:
+          //metricMessageSender.flush();    // 둘 다 살리면 여기서 무한루프 돌아감
           onDataRequestReceived();
           break;
         case ResumeTask:

@@ -87,7 +87,7 @@ enum MessageType {
   RequestPipeLoc = 14;
   PipeLocInfo = 15;
   ParentTaskDataCollected = 16;
-  RequestCurrentlyProcessedData = 17;
+  HaltExecutors = 17;
   CurrentlyProcessedBytesCollected = 18;
   SendWorkStealingResult = 19;
   ResumeTask = 20;
@@ -113,7 +113,7 @@ message Message {
     optional RequestPipeLocationMessage requestPipeLocMsg = 17;
     optional PipeLocationInfoMessage pipeLocInfoMsg = 18;
     optional ParentTaskDataCollectMsg ParentTaskDataCollected = 19;
-    optional RequestCurrentlyProcessedDataMsg requestCurrentlyProcessedDataMsg = 20;
+    optional HaltExecutorsMsg haltExecutorsMsg = 20;
     optional CurrentlyProcessedBytesCollectMsg currentlyProcessedBytesCollected = 21;
     optional WorkStealingResultMsg sendWorkStealingResult = 22;
     optional ResumeTaskMsg resumeTaskMsg = 23;
@@ -272,7 +272,7 @@ message ParentTaskDataCollectMsg {
   required bytes partitionSizeMap = 2;
 }
 
-message RequestCurrentlyProcessedDataMsg {
+message HaltExecutorsMsg {
 }
 
 message CurrentlyProcessedBytesCollectMsg {
