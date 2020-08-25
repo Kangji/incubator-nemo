@@ -21,6 +21,7 @@ package org.apache.nemo.runtime.common.plan;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.nemo.common.Cloneable;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.dag.Vertex;
 import org.apache.nemo.common.ir.Readable;
@@ -40,7 +41,7 @@ import java.util.Optional;
 /**
  * Stage.
  */
-public final class Stage extends Vertex {
+public final class Stage extends Vertex implements Cloneable<Stage> {
   private final List<Integer> taskIndices;
   private final DAG<IRVertex, RuntimeEdge<IRVertex>> irDag;
   private final byte[] serializedIRDag;
@@ -68,6 +69,25 @@ public final class Stage extends Vertex {
     this.serializedIRDag = SerializationUtils.serialize(irDag);
     this.executionProperties = executionProperties;
     this.vertexIdToReadables = vertexIdToReadables;
+  }
+
+  /**
+   * For cloning
+   * @param that stage to clone from.
+   */
+  public Stage(final Stage that) {
+    super(that.getId());
+    this.taskIndices = that.taskIndices;
+    this.irDag = that.irDag;
+    this.serializedIRDag = that.serializedIRDag;
+    this.executionProperties = new ExecutionPropertyMap<>(that.executionProperties.getId());
+    that.executionProperties.copyExecutionPropertiesTo(this.executionProperties);
+    this.vertexIdToReadables = that.vertexIdToReadables;
+  }
+
+  @Override
+  public Stage getClone() {
+    return new Stage(this);
   }
 
   /**

@@ -145,9 +145,12 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
                                                             final DAG<Stage, StageEdge> dagOfStages) {
     final List<Pair<String, DAG<Stage, StageEdge>>> result = new ArrayList<>();
     final List<Stage> topologicalStages = dagOfStages.getTopologicalSort();
-    LOG.error("Making physical plan for stages with {}",
-      topologicalStages.stream().map(Vertex::getId).collect(Collectors.toList()));
-    final Stage firstStage = topologicalStages.remove(0);
+    LOG.error("Making physical plan for stages with {}, for ranges {} to {}",
+      topologicalStages.stream().map(Vertex::getId).collect(Collectors.toList()),
+      parallelismDivisor, degreeOfConfigurationSpace);
+    final Stage firstStageToClone = topologicalStages.remove(0);
+
+    LOG.error("List is now empty?: {}", topologicalStages.isEmpty());
 
     // We only handle the space with smaller parallelism than the source, e.g. 512 to 2, 512 to 4, upto 512 to 512.
     IntStream.range(parallelismDivisor, degreeOfConfigurationSpace).forEachOrdered(i -> {
@@ -155,6 +158,7 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
         (totalCores * Math.pow(2, i));
 
       // process first stage.
+      final Stage firstStage = firstStageToClone;
       firstStage.getExecutionProperties().put(ParallelismProperty.of(parallelism));
       final DAG<Stage, StageEdge> firstStageDAG = new DAGBuilder<Stage, StageEdge>()
         .addVertex(firstStage).buildWithoutSourceSinkCheck();
@@ -180,7 +184,7 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
         });
         final DAG<Stage, StageEdge> restStageDAGBeforeOpt = restStageBuilder.buildWithoutSourceSinkCheck();
         final List<Pair<String, DAG<Stage, StageEdge>>> restStageDAGs =  // this is where recursion occurs
-          makePhysicalPlansForSimulation(0, i, restStageDAGBeforeOpt);
+          makePhysicalPlansForSimulation(0, i + 1, restStageDAGBeforeOpt);
         // recursively accumulated DAGs are each added onto the list.
         restStageDAGs.forEach(restStageDAGPair -> {
           final DAG<Stage, StageEdge> restStageDAG = restStageDAGPair.right();
@@ -191,7 +195,8 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
           });
 
           edgesToRestStage.forEach(fullDAGBuilder::connectVertices);
-          result.add(Pair.of(String.valueOf(i) + "-" + restStageDAGPair.left(),
+          LOG.error("Added {}", i + "-" + restStageDAGPair.left());
+          result.add(Pair.of(i + "-" + restStageDAGPair.left(),
             fullDAGBuilder.buildWithoutSourceSinkCheck()));
         });
       }

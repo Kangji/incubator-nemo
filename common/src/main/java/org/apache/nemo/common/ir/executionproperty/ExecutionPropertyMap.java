@@ -191,6 +191,13 @@ public final class ExecutionPropertyMap<T extends ExecutionProperty> implements 
   }
 
   /**
+   * @param that execution property map to copy the properties to.
+   */
+  public void copyExecutionPropertiesTo(final ExecutionPropertyMap<T> that) {
+    this.forEachProperties(that::put);
+  }
+
+  /**
    * @return {@link Stream} of execution properties.
    */
   public Stream<T> stream() {
