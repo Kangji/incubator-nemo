@@ -344,7 +344,7 @@ public final class PlanStateManager {
     final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
     final Map<Integer, List<TaskState>> taskStatesOfThisStage = stageIdToTaskIdxToAttemptStates.get(stageId);
     final Map<Integer, List<TaskState>> workStealingTaskStatesOfThisStage =
-      stageIdToTaskIdxToWorkStealingAttemptStates.get(stageId);
+      stageIdToTaskIdxToWorkStealingAttemptStates.getOrDefault(stageId, new HashMap<>());
     final int numOfRemainingTaskIndicesInThisStage = getNumberOfTasksRemainingInStage(stageId);
     final int numOfCompletedTaskIndicesInThisStage = taskStatesOfThisStage.size()
       + workStealingTaskStatesOfThisStage.size() - numOfRemainingTaskIndicesInThisStage;
