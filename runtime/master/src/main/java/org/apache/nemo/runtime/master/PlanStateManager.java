@@ -575,6 +575,7 @@ public final class PlanStateManager {
   private TaskState getTaskStateHelper(final String taskId) {
     final boolean isWorkStealingTask = taskId.split("-")[2] == "*";
     if (isWorkStealingTask) {
+      LOG.error("work stealing task state helper, {}", taskId);
       return stageIdToTaskIdxToWorkStealingAttemptStates
         .get(RuntimeIdManager.getStageIdFromTaskId(taskId))
         .get(RuntimeIdManager.getIndexFromTaskId(taskId))
