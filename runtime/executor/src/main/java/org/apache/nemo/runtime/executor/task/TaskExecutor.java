@@ -463,7 +463,7 @@ public final class TaskExecutor {
 
     // empty means we've consumed all task-external input data
     while (!availableFetchers.isEmpty() || !pendingFetchers.isEmpty()) {
-      LOG.error("handling data fetchers,,, iterator available for now");
+      //LOG.error("handling data fetchers,,, iterator available for now");
       // We first fetch data from available data fetchers
       final Iterator<DataFetcher> availableIterator = availableFetchers.iterator();
 

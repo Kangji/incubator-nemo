@@ -183,6 +183,7 @@ public final class BlockManagerWorker {
     final ExecutionPropertyMap<EdgeExecutionProperty> edgeProperties,
     final KeyRange keyRange) {
     // Let's see if a remote worker has it
+    LOG.error("reading block {}", blockIdWildcard);
     final CompletableFuture<ControlMessage.Message> blockLocationFuture;
     try {
       blockLocationFuture = blockLocationResponseCache.get(blockIdWildcard);

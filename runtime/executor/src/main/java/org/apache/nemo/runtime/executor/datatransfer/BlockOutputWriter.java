@@ -121,6 +121,7 @@ public final class BlockOutputWriter implements OutputWriter {
     } else {
       writtenBytes = -1; // no written bytes info.
     }
+    LOG.error("{}, {}, {}", blockToWrite.getId(), getExpectedRead(), persistence);
     blockManagerWorker.writeBlock(blockToWrite, blockStoreValue, getExpectedRead(), persistence);
   }
 
@@ -141,6 +142,7 @@ public final class BlockOutputWriter implements OutputWriter {
   }
 
   /**
+   * NEED TO MODIFY HERE
    * Get the expected number of data read according to the communication pattern of the edge and
    * the parallelism of destination vertex.
    *
@@ -150,7 +152,7 @@ public final class BlockOutputWriter implements OutputWriter {
     final Optional<DuplicateEdgeGroupPropertyValue> duplicateDataProperty =
       runtimeEdge.getPropertyValue(DuplicateEdgeGroupProperty.class);
     final int duplicatedDataMultiplier =
-      duplicateDataProperty.isPresent() ? duplicateDataProperty.get().getGroupSize() : 1;
+      duplicateDataProperty.isPresent() ? duplicateDataProperty.get().getGroupSize() : 2;
     final int readForABlock = CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
       runtimeEdge.getPropertyValue(CommunicationPatternProperty.class).orElseThrow(
         () -> new RuntimeException("No communication pattern on this edge.")))

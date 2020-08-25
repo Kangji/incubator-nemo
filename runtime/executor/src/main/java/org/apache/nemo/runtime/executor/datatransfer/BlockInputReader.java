@@ -36,6 +36,8 @@ import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.data.BlockManagerWorker;
 import org.apache.nemo.runtime.executor.data.DataUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,6 +50,7 @@ import java.util.function.Predicate;
  * Represents the input data transfer to a task.
  */
 public final class BlockInputReader implements InputReader {
+  private static final Logger LOG = LoggerFactory.getLogger(BlockInputReader.class);
   private final BlockManagerWorker blockManagerWorker;
   private final MetricMessageSender metricMessageSender;
   private final String dstTaskId;
@@ -169,6 +172,7 @@ public final class BlockInputReader implements InputReader {
    */
   private List<CompletableFuture<DataUtil.IteratorWithNumBytes>> readDataInRange(final Predicate<Integer> predicate) {
     assert (runtimeEdge instanceof StageEdge);
+    LOG.error("read data in range");
     final List<KeyRange> keyRangeList = ((StageEdge) runtimeEdge).getKeyRanges();
     final KeyRange hashRangeToRead = keyRangeList.get(dstTaskIndex);
     if (hashRangeToRead == null) {
