@@ -345,8 +345,9 @@ public final class PlanStateManager {
     final int numOfCompletedTaskIndicesInThisStage = taskStatesOfThisStage.size()
       - numOfRemainingTaskIndicesInThisStage;
     if (newTaskState.equals(TaskState.State.COMPLETE)) {
-      LOG.info("{} completed: {} Task(s) out of {} are remaining in this stage",
-        taskId, numOfRemainingTaskIndicesInThisStage, taskStatesOfThisStage.size());
+      LOG.info("{} completed: {} Task(s) out of {} + {} are remaining in this stage",
+        taskId, numOfRemainingTaskIndicesInThisStage, taskStatesOfThisStage.size(),
+        physicalPlan.getStageDAG().getVertexById(stageId).getWorkStealingTaskIds().size());
 
     }
 
