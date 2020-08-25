@@ -230,13 +230,6 @@ public final class BatchScheduler implements Scheduler {
     switch (newState) {
       case COMPLETE:
       case ON_HOLD:
-        //if (true) {
-        //  final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
-        //  if (checkForWorkStealingBaseConditions(stageId)) {
-        //    detectSkew(stageId);
-        //  }
-        //}
-        // If the stage has completed
         final String stageIdForTaskUponCompletion = RuntimeIdManager.getStageIdFromTaskId(taskId);
         if (planStateManager.getStageState(stageIdForTaskUponCompletion).equals(StageState.State.COMPLETE)
           && !planStateManager.isPlanDone()) {
