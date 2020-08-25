@@ -123,7 +123,8 @@ final class TaskDispatcher {
     }
 
     final Collection<Task> taskList = taskListOptional.get();
-    LOG.error("taskList: {}", taskList.stream().map(Task::getTaskId).collect(Collectors.toList())); // workstealing tasks가 잘 되는지?
+    LOG.error("taskList: {}", taskList.stream().map(Task::getTaskId).collect(Collectors.toList()));
+    // workstealing tasks가 잘 되는지?
     // in here, get stage Id from task Ids and snapshot SystemCurrentTimeMs
     // when the first task of each stage is launched
     final List<Task> couldNotSchedule = new ArrayList<>();

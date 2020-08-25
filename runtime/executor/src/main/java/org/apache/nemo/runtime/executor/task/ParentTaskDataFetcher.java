@@ -134,6 +134,7 @@ class ParentTaskDataFetcher extends DataFetcher {
 
           // This iterator does not have the element
           if (currentIteratorIndex >= iteratorEndingIndex.get()) { // need to check if this condition is correct
+            LOG.error("Terminating early because of work stealing");
             break;
           } else if (currentIteratorIndex < expectedNumOfIterators) {
             // Next iterator has the element
