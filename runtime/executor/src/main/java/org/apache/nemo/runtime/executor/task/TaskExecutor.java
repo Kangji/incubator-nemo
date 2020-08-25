@@ -173,7 +173,7 @@ public final class TaskExecutor {
    * @param intermediateDataIOFactory intermediate IO.
    * @return fetchers and harnesses.
    */
-  private Pair<List<DataFetcher>, List<VertexHarness>> prepare(
+  private Pair<List<DataFetcher>, List<VertexHarness>> prepgare(
     final Task task,
     final DAG<IRVertex, RuntimeEdge<IRVertex>> irVertexDag,
     final IntermediateDataIOFactory intermediateDataIOFactory) {
@@ -354,10 +354,10 @@ public final class TaskExecutor {
       SerializationUtils.serialize(executionStartTime - timeSinceLastExecution));
 
     // Phase 1: Consume task-external input data.
+    LOG.error("handling data fetchers...");
     if (!handleDataFetchers(dataFetchers)) {
       return;
     }
-
     metricMessageSender.send(TASK_METRIC_ID, taskId, "boundedSourceReadTime",
       SerializationUtils.serialize(boundedSourceReadTime));
     metricMessageSender.send(TASK_METRIC_ID, taskId, "serializedReadBytes",
