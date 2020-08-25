@@ -152,7 +152,7 @@ public final class BlockOutputWriter implements OutputWriter {
     final Optional<DuplicateEdgeGroupPropertyValue> duplicateDataProperty =
       runtimeEdge.getPropertyValue(DuplicateEdgeGroupProperty.class);
     final int duplicatedDataMultiplier =
-      duplicateDataProperty.isPresent() ? duplicateDataProperty.get().getGroupSize() : 2;
+      duplicateDataProperty.isPresent() ? duplicateDataProperty.get().getGroupSize() : 1;
     final int readForABlock = CommunicationPatternProperty.Value.ONE_TO_ONE.equals(
       runtimeEdge.getPropertyValue(CommunicationPatternProperty.class).orElseThrow(
         () -> new RuntimeException("No communication pattern on this edge.")))
