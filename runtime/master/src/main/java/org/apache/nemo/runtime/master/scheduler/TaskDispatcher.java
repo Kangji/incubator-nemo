@@ -133,6 +133,7 @@ final class TaskDispatcher {
       if (!planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY)) {
         // Guard against race conditions causing duplicate task launches
         LOG.error("Skipping {} as it is not READY", task.getTaskId());
+        LOG.error("{}", planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY));
         continue;
       }
 

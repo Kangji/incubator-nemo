@@ -170,6 +170,7 @@ public final class PlanStateManager {
       LOG.error("{} attempt state: {}", taskId, attemptStatesForThisTask.get(0).getStateMachine().getCurrentState());
       stageIdToTaskIdxToWorkStealingAttemptStates.get(stageId).putIfAbsent(taskIdx, attemptStatesForThisTask);
     }
+    LOG.error("{}", stageIdToTaskIdxToWorkStealingAttemptStates);
   }
 
   /**
