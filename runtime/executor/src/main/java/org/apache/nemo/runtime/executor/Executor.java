@@ -151,13 +151,14 @@ public final class Executor {
     // update iterator information
     // skewed tasks: set iterator value
     // non skewed tasks: do not change iterator
+    LOG.error("[HWARIM]result: {}", result);
     for (String taskId : result.keySet()) {
       Pair<Integer, Integer> startAndEndIndex = result.get(taskId);
       if (startAndEndIndex.left() == 0 && startAndEndIndex.right() == Integer.MAX_VALUE) {
         continue;
       } else {
         Pair<AtomicInteger, AtomicInteger> currentInfo = taskIdToIteratorInfo.get(taskId);
-        currentInfo.left().set(startAndEndIndex.left());
+        currentInfo.left().set(startAndEndIndex.left()); // null pointer exception here!
         currentInfo.right().set(startAndEndIndex.right());
       }
     }

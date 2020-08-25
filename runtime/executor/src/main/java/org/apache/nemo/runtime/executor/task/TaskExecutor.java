@@ -86,7 +86,6 @@ public final class TaskExecutor {
 
   // Dynamic optimization
   private String idOfVertexPutOnHold;
-  private final ScheduledExecutorService workStealingExecutorThread;
   private final AtomicBoolean onHold;
 
   private final PersistentConnectionToMasterMap persistentConnectionToMasterMap;
@@ -137,7 +136,7 @@ public final class TaskExecutor {
     metricMessageSender.send("TaskMetric", taskId, "taskPreparationTime",
       SerializationUtils.serialize(System.currentTimeMillis() - taskPrepareStarted));
 
-    this.workStealingExecutorThread = Executors
+    ScheduledExecutorService workStealingExecutorThread = Executors
       .newSingleThreadScheduledExecutor(runnable -> new Thread("work stealing monitoring thread in executor"));
     workStealingExecutorThread.scheduleAtFixedRate(() -> {
       // for word count test

@@ -356,6 +356,7 @@ public final class BatchScheduler implements Scheduler {
           // calculate the starting index of Robber task
           final int iteratorStartingIndex = (int) Math.floor(
             ((currentAndTotalIteratorIndex.right() + currentAndTotalIteratorIndex.left()) / 2) + 1);
+          LOG.error("{} iterator starting index: {}", taskId, iteratorStartingIndex);
           tasksToSchedule.add(new Task(
             planStateManager.getPhysicalPlan().getPlanId(),
             RuntimeIdManager.generateWorkStealingTaskId(taskId),
@@ -384,6 +385,7 @@ public final class BatchScheduler implements Scheduler {
         stageIdToWorkStealingExecuted.put(stageId, true);
       }
       // notify the updated information to executors
+      LOG.error("accumulated result: {}", accumulatedResult);
       sendWorkStealingResultToExecutor(accumulatedResult);
 
       // schedule new tasks
@@ -543,11 +545,14 @@ public final class BatchScheduler implements Scheduler {
   }
 
   private boolean checkForWorkStealingBaseConditions(final List<String> scheduleGroup) {
-    LOG.error("[HWARIM]checking for work stealing conditions in {}...", scheduleGroup);
-    if (scheduleGroup.stream().anyMatch(stageId -> stageIdToWorkStealingExecuted.get(stageId).equals(true))) {
+    if (scheduleGroup.isEmpty()) {
       return false;
     }
 
+    if (scheduleGroup.stream().anyMatch(stageId -> stageIdToWorkStealingExecuted.get(stageId).equals(true))) {
+      return false;
+    }
+    LOG.error("[HWARIM]checking for work stealing conditions in {}...", scheduleGroup);
     final boolean executorStatus = executorRegistry.isExecutorSlotAvailable();
     final int totalNumberOfSlots = executorRegistry.getTotalNumberOfExecutorSlots();
     int remainingTasks = 0;
@@ -606,7 +611,7 @@ public final class BatchScheduler implements Scheduler {
     ControlMessage.Message dataRequestMessage = ControlMessage.Message.newBuilder()
       .setId(RuntimeIdManager.generateMessageId())
       .setListenerId(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID)
-      .setType(ControlMessage.MessageType.RequestMetricFlush)
+      .setType(ControlMessage.MessageType.RequestCurrentlyProcessedData)
       .build();
     executorRegistry.viewExecutors(executors -> executors.forEach(executor ->
       executor.sendControlMessage(dataRequestMessage)));

@@ -160,6 +160,7 @@ public final class PlanStateManager {
 
   // for now, schedule work stealing tasks only once
   public synchronized void addWorkStealingTasks(final Set<String> workStealingTasks) {
+    LOG.debug("Adding work stealing tasks,,, {}", workStealingTasks);
     for (String taskId : workStealingTasks) {
       final String stageId = RuntimeIdManager.getStageIdFromTaskId(taskId);
       final int taskIdx = RuntimeIdManager.getIndexFromTaskId(taskId);

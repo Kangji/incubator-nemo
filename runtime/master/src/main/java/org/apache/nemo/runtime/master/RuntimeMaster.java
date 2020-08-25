@@ -81,7 +81,7 @@ public final class RuntimeMaster {
   private static final int METRIC_ARRIVE_TIMEOUT = 10000;
   private static final int REST_SERVER_PORT = 10101;
   private static final int SPECULATION_CHECKING_PERIOD_MS = 100;
-  private static final int WORK_STEALING_CHECKING_PERIOD_MS = 200;
+  private static final int WORK_STEALING_CHECKING_PERIOD_MS = 1000;
 
   private final ExecutorService runtimeMasterThread;
   private final ScheduledExecutorService speculativeTaskCloningThread;
@@ -159,7 +159,7 @@ public final class RuntimeMaster {
     // Check for work stealing execution
     this.workStealingThread = Executors
       .newSingleThreadScheduledExecutor(runnable -> new Thread(runnable, "WorkStealing master thread"));
-    this.workStealingThread.scheduleAtFixedRate(
+    this.workStealingThread.scheduleWithFixedDelay(
       () -> this.runtimeMasterThread.submit(scheduler::onWorkStealingCheck),
       WORK_STEALING_CHECKING_PERIOD_MS,
       WORK_STEALING_CHECKING_PERIOD_MS,
