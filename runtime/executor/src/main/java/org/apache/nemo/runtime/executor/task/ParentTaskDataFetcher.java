@@ -144,6 +144,7 @@ class ParentTaskDataFetcher extends DataFetcher {
               SerializationUtils.serialize(currentIteratorIndex));
             metricMessageSender.send("TaskMetric", taskId, "totalIteratorNumber",
               SerializationUtils.serialize(expectedNumOfIterators));
+            metricMessageSender.flush();
             advanceIterator();
             continue;
           } else {

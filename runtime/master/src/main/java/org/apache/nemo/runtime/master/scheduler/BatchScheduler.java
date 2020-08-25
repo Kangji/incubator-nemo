@@ -676,13 +676,22 @@ public final class BatchScheduler implements Scheduler {
     requestCurrentlyProcessedBytesOfRunningTasks();
 
     // gather the arrived metric information
-    for (String taskId : workStealingCandidates) {
-      TaskMetric taskMetric = metricStore.getMetricWithId(TaskMetric.class, taskId);
-      taskIdToProcessedBytes.put(taskId, taskMetric.getSerializedReadBytes());
-      taskIdToIteratorInformation.put(taskId, Pair.of(
-        taskMetric.getCurrentIteratorIndex(), taskMetric.getTotalIteratorNumber()));
-      taskIdToInitializationOverhead.put(taskId, taskMetric.getTaskPreparationTime());
+    boolean needToWait = true;
+    while (needToWait) {
+      needToWait = false;
+      for (String taskId : workStealingCandidates) {
+        TaskMetric taskMetric = metricStore.getMetricWithId(TaskMetric.class, taskId);
+        taskIdToProcessedBytes.put(taskId, taskMetric.getSerializedReadBytes());
+        if (taskMetric.getSerializedReadBytes() == -1) {
+          needToWait = true;
+          continue;
+        }
+        taskIdToIteratorInformation.put(taskId, Pair.of(
+          taskMetric.getCurrentIteratorIndex(), taskMetric.getTotalIteratorNumber()));
+        taskIdToInitializationOverhead.put(taskId, taskMetric.getTaskPreparationTime());
+      }
     }
+
 
     LOG.error("task id to processed bytes: {}", taskIdToProcessedBytes);
     LOG.error("task id to elapsed time: {}", taskIdToElapsedTime);

@@ -58,9 +58,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -76,7 +74,7 @@ public final class Executor {
    * To be used for a thread pool to execute tasks.
    */
   private final ExecutorService executorService;
-  private final ExecutorService workStealingManager;
+  private final ScheduledExecutorService workStealingManager;
 
   /**
    * In charge of this executor's intermediate data transfer.
@@ -112,8 +110,8 @@ public final class Executor {
     this.executorService = Executors.newCachedThreadPool(new BasicThreadFactory.Builder()
       .namingPattern("TaskExecutor thread-%d")
       .build());
-    this.workStealingManager = Executors.newCachedThreadPool(new BasicThreadFactory.Builder()
-      .namingPattern("workstealing manager-%d")
+    this.workStealingManager = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder()
+      .namingPattern("workstealing manager in executorSide")
       .build());
     this.persistentConnectionToMasterMap = persistentConnectionToMasterMap;
     this.serializerManager = serializerManager;
@@ -123,6 +121,21 @@ public final class Executor {
     messageEnvironment.setupListener(MessageEnvironment.EXECUTOR_MESSAGE_LISTENER_ID, new ExecutorMessageReceiver());
     this.listOfWorkingTaskExecutors = Collections.synchronizedList(new LinkedList<>());
     this.taskIdToIteratorInfo = new ConcurrentHashMap();
+
+    workStealingManager.scheduleAtFixedRate(() -> {
+        for (Pair<TaskExecutor, AtomicBoolean> pair : listOfWorkingTaskExecutors) {
+          TaskExecutor taskExecutor = pair.left();
+          if (!taskExecutor.getTaskId().equals("Stage0")) {
+            Task task = taskExecutor.getTask();
+            LOG.error("[HWARIM] {} on Hold: {}", task.getTaskId(), taskExecutor.getOnHoldValue());
+            LOG.error("[HWARIM] {} iterator information: start {}, end {}",
+              task.getTaskId(), task.getIteratorStartingIndex().get(), task.getIteratorEndingIndex().get());
+          }
+        }
+      },
+      5000,
+      5000,
+      TimeUnit.MILLISECONDS);
   }
 
   public String getExecutorId() {
@@ -283,8 +296,8 @@ public final class Executor {
           metricMessageSender.flush();
           break;
         case RequestCurrentlyProcessedData:
-          metricMessageSender.flush();
-          onDataRequestReceived();
+          //metricMessageSender.flush();
+          //onDataRequestReceived();
           break;
         case ResumeTask:
           resumePausedTasks();
