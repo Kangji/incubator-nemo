@@ -699,11 +699,6 @@ public final class BatchScheduler implements Scheduler {
 
     LOG.error("task id to processed bytes: {}", taskIdToProcessedBytes);
     LOG.error("task id to elapsed time: {}", taskIdToElapsedTime);
-    // if there are no tasks left to optimize, return empty list
-    if (taskIdToProcessedBytes.isEmpty()) {
-      LOG.info("maybe all finished or not started at all.");
-      return new HashMap<>();
-    }
 
     // estimate the remaining time
     List<Pair<String, Long>> estimatedTimeToFinishPerTask = new ArrayList<>(taskIdToElapsedTime.size());

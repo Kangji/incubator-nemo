@@ -63,7 +63,7 @@ public final class SumByKey {
         public KV<String, Long> apply(final String line) {
           final String[] words = line.split(" ");
           final String key = words[0];
-          final Long count = 1L;
+          final Long count = (long) words[1].charAt(0);
           return KV.of(key, count);
         }
       }))

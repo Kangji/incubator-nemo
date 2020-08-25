@@ -129,7 +129,6 @@ final class TaskDispatcher {
     // when the first task of each stage is launched
     final List<Task> couldNotSchedule = new ArrayList<>();
     for (final Task task : taskList) {
-      LOG.error("task id: {}", task.getTaskId());
       if (!planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY)) {
         // Guard against race conditions causing duplicate task launches
         LOG.error("Skipping {} as it is not READY", task.getTaskId());
