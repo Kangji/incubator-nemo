@@ -41,7 +41,6 @@ import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.master.metric.MetricStore;
 import org.apache.nemo.runtime.master.scheduler.SimulatedTaskExecutor;
 import org.apache.nemo.runtime.master.scheduler.SimulationScheduler;
-import org.apache.reef.tang.InjectionFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,8 +64,8 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
   private Integer totalCores;
   private static HashMap<String, Long> dataToDurationCache = new HashMap<>();
 
-  public StaticParallelismProphet(final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture) {
-    this.simulationScheduler = simulationSchedulerInjectionFuture.get();
+  public StaticParallelismProphet(final SimulationScheduler simulationScheduler) {
+    this.simulationScheduler = simulationScheduler;
     this.currentStageDAGReadyLatch = new CountDownLatch(1);
     this.totalCores = 64;  // todo: Fix later on.
   }

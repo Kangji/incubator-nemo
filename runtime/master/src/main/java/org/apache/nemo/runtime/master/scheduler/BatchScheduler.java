@@ -161,7 +161,7 @@ public final class BatchScheduler implements Scheduler {
 
     if (this.smartParallelismEnabled) {
       final StaticParallelismProphet prophet =
-        new StaticParallelismProphet(this.simulationSchedulerInjectionFuture);
+        new StaticParallelismProphet(this.simulationSchedulerInjectionFuture.get());
       prophet.setCurrentStageDAG(submittedPhysicalPlan.getStageDAG());
       final Map<String, Integer> calculationResult = prophet.calculate();
       submittedPhysicalPlan.getStageDAG().topologicalDo(stage -> {
