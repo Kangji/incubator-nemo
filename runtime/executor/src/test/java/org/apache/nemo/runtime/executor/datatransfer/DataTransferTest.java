@@ -150,6 +150,9 @@ public final class DataTransferTest {
     injector.bindVolatileInstance(MetricMessageHandler.class, mock(MetricMessageHandler.class));
     injector.bindVolatileParameter(JobConf.DAGDirectory.class, EMPTY_DAG_DIRECTORY);
     injector.bindVolatileParameter(JobConf.JobId.class, "jobId");
+    injector.bindVolatileParameter(JobConf.ExecutorJSONContents.class,
+      "[{\"type\":\"Transient\",\"memory_mb\":512,\"capacity\":5},"
+        + "{\"type\":\"Reserved\",\"memory_mb\":512,\"capacity\":5}]");
 
     // Necessary for wiring up the message environments
     injector.bindVolatileInstance(Scheduler.class, injector.getInstance(BatchScheduler.class));

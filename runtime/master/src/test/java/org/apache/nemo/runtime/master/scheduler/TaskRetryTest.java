@@ -20,6 +20,7 @@ package org.apache.nemo.runtime.master.scheduler;
 
 import org.apache.nemo.common.eventhandler.PubSubEventHandlerWrapper;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
@@ -249,6 +250,9 @@ public final class TaskRetryTest {
     injector.bindVolatileInstance(PubSubEventHandlerWrapper.class, mock(PubSubEventHandlerWrapper.class));
     injector.bindVolatileInstance(SchedulingConstraintRegistry.class, mock(SchedulingConstraintRegistry.class));
     injector.bindVolatileInstance(PlanRewriter.class, planRewriter);
+    injector.bindVolatileParameter(JobConf.ExecutorJSONContents.class,
+      "[{\"type\":\"Transient\",\"memory_mb\":512,\"capacity\":5},"
+        + "{\"type\":\"Reserved\",\"memory_mb\":512,\"capacity\":5}]");
     planStateManager = injector.getInstance(PlanStateManager.class);
     scheduler = injector.getInstance(BatchScheduler.class);
     blockManagerMaster = injector.getInstance(BlockManagerMaster.class);
