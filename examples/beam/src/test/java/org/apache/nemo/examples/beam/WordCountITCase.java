@@ -73,6 +73,16 @@ public final class WordCountITCase {
   }
 
   @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
+  public void testSmartParallelism() throws Exception {
+    JobLauncher.main(builder
+      .addResourceJson(executorResourceFileName)
+      .addJobId(WordCountITCase.class.getSimpleName())
+      .addOptimizationPolicy(DefaultPolicyParallelismFive.class.getCanonicalName())
+      .addArg("smart_parallelism_enabled", "true")
+      .build());
+  }
+
+  @Test(timeout = ExampleTestArgs.TIMEOUT, expected = Test.None.class)
   public void testLargeShuffle() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)

@@ -329,7 +329,7 @@ public final class JobConf extends ConfigurationModuleBuilder {
    * Specified whether or not to enable smart parallelism or not.
    */
   @NamedParameter(doc = "Boolean flag for enabling smart parallelism",
-    short_name = "smart_parallelism_enabled", default_value = "true")
+    short_name = "smart_parallelism_enabled", default_value = "false")
   public final class SmartParallelismEnabled implements Name<Boolean> {
   }
 

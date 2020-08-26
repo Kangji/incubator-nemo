@@ -111,6 +111,17 @@ public final class ArgBuilder {
   }
 
   /**
+   * Add an arbitrary argument.
+   * @param argName the name of the arg.
+   * @param argValue the value of the arg.
+   * @return the builder with the arg.
+   */
+  public ArgBuilder addArg(final String argName, final String argValue) {
+    args.add(Arrays.asList("-" + argName, argValue));
+    return this;
+  }
+
+  /**
    * @return the built arguments.
    */
   public String[] build() {

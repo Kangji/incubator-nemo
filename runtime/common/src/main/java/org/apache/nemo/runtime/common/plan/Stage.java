@@ -72,7 +72,7 @@ public final class Stage extends Vertex implements Cloneable<Stage> {
   }
 
   /**
-   * For cloning
+   * For cloning.
    * @param that stage to clone from.
    */
   public Stage(final Stage that) {

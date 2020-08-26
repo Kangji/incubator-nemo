@@ -446,6 +446,7 @@ public final class JobLauncher {
     cl.registerShortNameOfClass(JobConf.ScheduleSerThread.class);
     cl.registerShortNameOfClass(JobConf.MaxOffheapRatio.class);
     cl.registerShortNameOfClass(JobConf.ChunkSizeKb.class);
+    cl.registerShortNameOfClass(JobConf.SmartParallelismEnabled.class);
     cl.processCommandLine(args);
     return confBuilder.build();
   }

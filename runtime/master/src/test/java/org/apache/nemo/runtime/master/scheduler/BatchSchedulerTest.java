@@ -83,6 +83,9 @@ public final class BatchSchedulerTest {
     injector.bindVolatileInstance(BlockManagerMaster.class, mock(BlockManagerMaster.class));
     injector.bindVolatileInstance(PubSubEventHandlerWrapper.class, mock(PubSubEventHandlerWrapper.class));
     injector.bindVolatileInstance(MetricMessageHandler.class, mock(MetricMessageHandler.class));
+    injector.bindVolatileParameter(JobConf.ExecutorJSONContents.class,
+      "[{\"type\":\"Transient\",\"memory_mb\":512,\"capacity\":5},"
+        + "{\"type\":\"Reserved\",\"memory_mb\":512,\"capacity\":5}]");
     planStateManager = injector.getInstance(PlanStateManager.class);
     scheduler = injector.getInstance(BatchScheduler.class);
 
