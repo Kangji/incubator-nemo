@@ -25,6 +25,7 @@ import ml.dmlc.xgboost4j.java.DMatrix;
 import ml.dmlc.xgboost4j.java.XGBoost;
 import ml.dmlc.xgboost4j.java.XGBoostError;
 import org.apache.nemo.common.Pair;
+import org.apache.nemo.common.Util;
 import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.dag.Vertex;
@@ -61,7 +62,7 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
   private final CountDownLatch currentStageDAGReadyLatch;
   private DAG<Stage, StageEdge> currentStageDAG;
   private Integer totalCores;
-  private static HashMap<String, Long> stageIDToDurationCache = new HashMap<>();
+  private static HashMap<String, Long> dataToDurationCache = new HashMap<>();
 
   public StaticParallelismProphet(final SimulationScheduler simulationScheduler) {
     this.simulationScheduler = simulationScheduler;
@@ -73,11 +74,10 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
   public Map<String, Integer> calculate() {
     final Integer degreeOfConfigurationSpace = 7;
 
-    final List<PhysicalPlan> listOfPhysicalPlans = new ArrayList<>();  // list to fill up with physical plans.
     final DAG<Stage, StageEdge> dagOfStages = currentStageDAG;
 
     try {
-      LOG.error("Waiting for the DAG to be ready!");
+      LOG.info("Waiting for the DAG to be ready!");
       this.currentStageDAGReadyLatch.await();
     } catch (final InterruptedException e) {
       LOG.warn("interrupted.. ", e);
@@ -85,15 +85,18 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
       Thread.currentThread().interrupt();
     }
 
-    final List<Pair<String, DAG<Stage, StageEdge>>> stageDAGs =
+    final List<Map<String, Integer>> stageDAGMaps =
       makePhysicalPlansForSimulation(0, degreeOfConfigurationSpace, dagOfStages);
-    stageDAGs.forEach(stageDAGPair ->
-      listOfPhysicalPlans.add(new PhysicalPlan(stageDAGPair.left(), stageDAGPair.right())));
+    LOG.debug("StageDAG Maps: {}", stageDAGMaps);
+    final List<Pair<String, Long>> listOfParallelismToDurationPair = new ArrayList<>();
+    stageDAGMaps.forEach(map -> {
+      final PhysicalPlan plan = constructPhysicalPlan(currentStageDAG, map);
+      final Pair<String, Long> planIdAndDuration = this.launchSimulationForPlan(plan);
+      if (planIdAndDuration.right() > 0.5) {
+        listOfParallelismToDurationPair.add(planIdAndDuration);
+      }
+    });
 
-    final List<Pair<String, Long>> listOfParallelismToDurationPair = listOfPhysicalPlans.stream()
-      .map(this::launchSimulationForPlan)
-      .filter(pair -> pair.right() > 0.5)
-      .collect(Collectors.toList());
     final Pair<String, Long> pairWithMinDuration =
       Collections.min(listOfParallelismToDurationPair, Comparator.comparing(Pair::right));
 
@@ -140,77 +143,78 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
    * @param dagOfStages the dag of stages to refer to.
    * @return              Physical plans with consists of selected vertices with given parallelism.
    */
-  private List<Pair<String, DAG<Stage, StageEdge>>> makePhysicalPlansForSimulation(final int parallelismDivisor,
-                                                            final int degreeOfConfigurationSpace,
-                                                            final DAG<Stage, StageEdge> dagOfStages) {
-    final List<Pair<String, DAG<Stage, StageEdge>>> result = new ArrayList<>();
-    final List<Stage> topologicalStages = dagOfStages.getTopologicalSort();
-    LOG.error("Making physical plan for stages with {}, for ranges {} to {}",
-      topologicalStages.stream().map(Vertex::getId).collect(Collectors.toList()),
-      parallelismDivisor, degreeOfConfigurationSpace);
-    final Stage firstStageToClone = topologicalStages.remove(0);
+  private List<Map<String, Integer>> makePhysicalPlansForSimulation(final int parallelismDivisor,
+                                                                    final int degreeOfConfigurationSpace,
+                                                                    final DAG<Stage, StageEdge> dagOfStages) {
+    final List<String> topologicalStages = dagOfStages.getTopologicalSort()
+      .stream().map(Vertex::getId).collect(Collectors.toList());
+    return makePhysicalPlansForSimulation(parallelismDivisor, degreeOfConfigurationSpace, topologicalStages);
+  }
 
-    LOG.error("List is now empty?: {}", topologicalStages.isEmpty());
+  /**
+   * Make Physical plan which is to be launched in Simulation Scheduler in a recursive manner.
+   * @param parallelismDivisor the divisor for dividing the maximum parallelism with 2 to the power of the divisor.
+   * @param degreeOfConfigurationSpace the upper limit of the divisor.
+   * @param topologicalStages the stage IDs in the topologically sorted order.
+   * @return              Physical plans with consists of selected vertices with given parallelism.
+   */
+  private List<Map<String, Integer>> makePhysicalPlansForSimulation(final int parallelismDivisor,
+                                                              final int degreeOfConfigurationSpace,
+                                                              final List<String> topologicalStages) {
+    final List<Map<String, Integer>> result = new ArrayList<>();
+
+    LOG.debug("Making physical plan for stages with {}, for ranges {} to {}",
+      topologicalStages, parallelismDivisor, degreeOfConfigurationSpace);
+    final String firstStageId = topologicalStages.get(0);
 
     // We only handle the space with smaller parallelism than the source, e.g. 512 to 2, 512 to 4, upto 512 to 512.
     IntStream.range(parallelismDivisor, degreeOfConfigurationSpace).forEachOrdered(i -> {
       final int parallelism = (int)  // parallelism for the first stage
         (totalCores * Math.pow(2, i));
 
-      // process first stage.
-      final Stage firstStage = firstStageToClone;
-      firstStage.getExecutionProperties().put(ParallelismProperty.of(parallelism));
-      final DAG<Stage, StageEdge> firstStageDAG = new DAGBuilder<Stage, StageEdge>()
-        .addVertex(firstStage).buildWithoutSourceSinkCheck();
-
-      if (topologicalStages.isEmpty()) {
-        LOG.error("Reached the end! Adding {} with {}", i, firstStage.getId());
-        result.add(Pair.of(String.valueOf(i), firstStageDAG));
+      if (topologicalStages.size() == 1) {
+        LOG.debug("Reached the end! Adding {} with {}", firstStageId, parallelism);
+        final Map<String, Integer> map = new HashMap<>();
+        map.put(firstStageId, parallelism);
+        result.add(map);
       } else {  // we recursively apply the function to the rest of the stages.
-        LOG.error("recursion occurring!");
-        final DAGBuilder<Stage, StageEdge> restStageBuilder = new DAGBuilder<>();
-        // Below is used when we have to connect the rest back to the first.
-        final List<StageEdge> edgesToRestStage = new ArrayList<>();
-        topologicalStages.forEach(s -> {
-          // make a separate stage DAG for the rest of the stages.
-          restStageBuilder.addVertex(s);
-          dagOfStages.getIncomingEdgesOf(s).forEach(e -> {
-            if (restStageBuilder.contains(e.getSrc())) {
-              restStageBuilder.connectVertices(e);
-            } else {
-              edgesToRestStage.add(e);
-            }
-          });
-        });
-        final DAG<Stage, StageEdge> restStageDAGBeforeOpt = restStageBuilder.buildWithoutSourceSinkCheck();
-        final List<Pair<String, DAG<Stage, StageEdge>>> restStageDAGs =  // this is where recursion occurs
-          makePhysicalPlansForSimulation(0, i + 1, restStageDAGBeforeOpt);
+        LOG.debug("recursion occurring!");
+        final List<Map<String, Integer>> resultOfRest =  // this is where recursion occurs
+          makePhysicalPlansForSimulation(0, i + 1,
+            topologicalStages.subList(1, topologicalStages.size()));
         // recursively accumulated DAGs are each added onto the list.
-        restStageDAGs.forEach(restStageDAGPair -> {
-          final DAG<Stage, StageEdge> restStageDAG = restStageDAGPair.right();
-          final DAGBuilder<Stage, StageEdge> fullDAGBuilder = new DAGBuilder<>(firstStageDAG);
-          restStageDAG.topologicalDo(s -> {
-            fullDAGBuilder.addVertex(s);
-            restStageDAG.getIncomingEdgesOf(s).forEach(fullDAGBuilder::connectVertices);
-          });
 
-          edgesToRestStage.forEach(fullDAGBuilder::connectVertices);
-          LOG.error("Added {}", i + "-" + restStageDAGPair.left());
-          result.add(Pair.of(i + "-" + restStageDAGPair.left(),
-            fullDAGBuilder.buildWithoutSourceSinkCheck()));
-        });
+        resultOfRest.forEach(m -> m.put(firstStageId, parallelism));
+        result.addAll(resultOfRest);
       }
     });
     return result;
   }
 
+  private static PhysicalPlan constructPhysicalPlan(final DAG<Stage, StageEdge> dagOfStages,
+                                                            final Map<String, Integer> idToParallelism) {
+    final List<Stage> topologicalStages = dagOfStages.getTopologicalSort();
+    final DAGBuilder<Stage, StageEdge> stageDAGBuilder = new DAGBuilder<>();
+
+    topologicalStages.forEach(stage -> {
+      stage.getExecutionProperties().put(ParallelismProperty.of(idToParallelism.get(stage.getId())));
+      stageDAGBuilder.addVertex(stage);
+      dagOfStages.getIncomingEdgesOf(stage).forEach(stageDAGBuilder::connectVertices);
+    });
+
+    final DAG<Stage, StageEdge> stageDAG = stageDAGBuilder.buildWithoutSourceSinkCheck();
+    final String id = stageDAG.getTopologicalSort().stream()
+      .map(Stage::getId)
+      .map(idToParallelism::get)
+      .map(String::valueOf)
+      .collect(Collectors.joining("-"));
+    return new PhysicalPlan(id, stageDAG);
+  }
+
   public static long estimateDurationOf(final Task task,
                                         final JobMetric jobMetric,
                                         final DAG<IRVertex, RuntimeEdge<IRVertex>> stageIRDAG) {
-    final String taskStageID = task.getStageId();
-    if (stageIDToDurationCache.containsKey(taskStageID)) {
-      return stageIDToDurationCache.get(taskStageID);
-    }
+
 
     final String[] irDAGSummary = jobMetric.getIrDagSummary().split("_");
     final Integer sourceNum = Integer.valueOf(irDAGSummary[0].split("rv")[1]);
@@ -257,17 +261,37 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
     final Integer sourceDataFlowPush = incomingStageEdges.stream().anyMatch(e ->
       e.getDataFlowModel().equals(DataFlowProperty.Value.PUSH)) ? 1 : 0;
 
+    // Format the data to predict the result for.
+    final float[] data = new float[] {sourceNum, totalVerticesNum, totalEdgeNum, inputSize, numOfExecutors,
+      totalMemory, totalCores, taskParallelism, taskVertexCount, scheduleGroup,
+      isSource,
+      sourceCommunicationPatternShuffle, sourceCommunicationPatternOneToOne, sourceCommunicationPatternBroadcast,
+      sourceDataStoreMemoryStore, sourceDataStoreLocalFileStore, sourceDataStoreDisaggStore, sourceDataStorePipe,
+      sourceDataFlowPull, sourceDataFlowPush
+    };
+    final String dataString = IntStream.range(0, data.length)
+      .mapToObj(i -> String.valueOf(data[i]))
+      .collect(Collectors.joining("-"));
+
+    if (dataToDurationCache.containsKey(dataString)) {
+      return dataToDurationCache.get(dataString);
+    }
+
     try {
-      final String modelPath = "../../ml/task_duration_model/model/xgb.model";
+      final String projectRootPath = Util.fetchProjectRootPath();
+      final String modelPath = projectRootPath + "/ml/task_duration_model/model/xgb.model";
       final File file = new File(modelPath);
+      LOG.info("Model path: {}", file.getAbsolutePath());
       final Booster booster;
       if (file.exists()) {
         //reload model and data
+        LOG.info("Reloaded existing XGBoost model");
         booster = XGBoost.loadModel(modelPath);
       } else {
         // Learn model
-        final String trainPath = "../../ml/task_duration_model/dataset.txt.train";
-        final String testPath = "../../ml/task_duration_model/dataset.txt.test";
+        LOG.info("Learning a new XGBoost model..");
+        final String trainPath = projectRootPath + "/ml/task_duration_model/dataset.txt.train";
+        final String testPath = projectRootPath + "/ml/task_duration_model/dataset.txt.test";
         final DMatrix trainMat = new DMatrix(trainPath);
         final DMatrix testMat = new DMatrix(testPath);
 
@@ -289,25 +313,18 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
         booster = XGBoost.train(trainMat, params, round, watches, null, null);
 
         //save model to modelPath
-        final File path = new File("../../ml/task_duration_model/model");
+        final File path = new File(projectRootPath + "/ml/task_duration_model/model");
         if (!path.exists()) {
           path.mkdirs();
         }
         booster.saveModel(modelPath);
       }
 
-      // Format the data to predict the result for.
-      final float[] data = new float[] {sourceNum, totalVerticesNum, totalEdgeNum, inputSize, numOfExecutors,
-        totalMemory, totalCores, taskParallelism, taskVertexCount, scheduleGroup,
-        isSource,
-        sourceCommunicationPatternShuffle, sourceCommunicationPatternOneToOne, sourceCommunicationPatternBroadcast,
-        sourceDataStoreMemoryStore, sourceDataStoreLocalFileStore, sourceDataStoreDisaggStore, sourceDataStorePipe,
-        sourceDataFlowPull, sourceDataFlowPush
-      };
       final int nrow = 1;
       final int ncol = 20;
       final float missing = 0.0f;
       final DMatrix currentData = new DMatrix(data, nrow, ncol, missing);
+
       // Predict using the trained booster model.
       final float[][] predicts = booster.predict(currentData);
 
@@ -315,9 +332,9 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
         LOG.info("Prediction for {} is {}", task.getTaskId(), Arrays.toString(predict));
       }
 
-      final Long result = (long) predicts[0][0];
-      stageIDToDurationCache.putIfAbsent(taskStageID, result);
-      return result.longValue();
+      final long result = (long) predicts[0][0];
+      dataToDurationCache.putIfAbsent(dataString, result);
+      return result;
     } catch (final XGBoostError e) {
       throw new CompileTimeOptimizationException(e);
     }
