@@ -357,11 +357,7 @@ public final class SimulationScheduler implements Scheduler {
     planStateManager.onTaskStateChanged(taskId, newState);
     switch (newState) {
       case COMPLETE:
-        try {
-          BatchSchedulerUtils.onTaskExecutionComplete(executorRegistry, executorId, taskId);
-        } catch (RuntimeException e) {
-          LOG.warn("Runtime Exception: {}", e.getMessage());
-        }
+        BatchSchedulerUtils.onTaskExecutionComplete(executorRegistry, executorId, taskId);
         break;
       case SHOULD_RETRY:
         // SHOULD_RETRY from an executor means that the task ran into a recoverable failure

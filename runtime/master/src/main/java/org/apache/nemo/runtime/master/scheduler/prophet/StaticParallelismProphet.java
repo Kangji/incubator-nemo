@@ -126,7 +126,11 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
    */
   private synchronized Pair<String, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
     this.simulationScheduler.setTaskDurationEstimationMethod(SimulatedTaskExecutor.Type.ANALYTIC_ESTIMATION);
-    this.simulationScheduler.schedulePlan(physicalPlan, 1);
+    try {
+      this.simulationScheduler.schedulePlan(physicalPlan, 1);
+    } catch (final RuntimeException e) {
+      LOG.warn("Runtime Exception for scheduler: {}", e.getMessage());
+    }
     final MetricStore resultingMetricStore = this.simulationScheduler.collectMetricStore();
     final List<Pair<String, Long>> taskSizeRatioToDuration = new ArrayList<>();
     resultingMetricStore.getMetricMap(JobMetric.class).values().forEach(jobMetric -> {
