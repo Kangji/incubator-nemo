@@ -53,6 +53,12 @@ public final class SchedulingConstraintRegistry {
   }
 
   /**
+   * Constructor that does nothing.
+   */
+  public SchedulingConstraintRegistry() {
+  }
+
+  /**
    * Registers a {@link SchedulingConstraint}.
    *
    * @param policy the policy to register

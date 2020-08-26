@@ -138,6 +138,7 @@ public final class SimulatedTaskExecutor {
    * @param taskDurationEstimationMethod the estimation method variable to use for task duration estimation.
    */
   public void setTaskDurationEstimationMethod(final Type taskDurationEstimationMethod) {
+    LOG.info("Task duration estimation method set to {}", taskDurationEstimationMethod);
     this.taskDurationEstimationMethod = taskDurationEstimationMethod;
   }
 

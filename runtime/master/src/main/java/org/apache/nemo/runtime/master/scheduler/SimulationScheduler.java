@@ -134,7 +134,6 @@ public final class SimulationScheduler implements Scheduler {
 
   @Inject
   private SimulationScheduler(final PlanRewriter planRewriter,
-                              final SchedulingConstraintRegistry schedulingConstraintRegistry,
                               final BlockManagerMaster blockManagerMaster,
                               @Parameter(JobConf.ExecutorJSONContents.class) final String resourceSpecificationString,
                               @Parameter(JobConf.ScheduleSerThread.class) final int scheduleSerThread,
@@ -143,7 +142,7 @@ public final class SimulationScheduler implements Scheduler {
     this.blockManagerMaster = blockManagerMaster;
     this.pendingTaskCollectionPointer = PendingTaskCollectionPointer.newInstance();
     this.executorRegistry = ExecutorRegistry.newInstance();
-    this.schedulingConstraintRegistry = schedulingConstraintRegistry;
+    this.schedulingConstraintRegistry = new SchedulingConstraintRegistry();
     this.schedulingPolicy = new SimulationSchedulingPolicy();
     this.resourceSpecificationString = resourceSpecificationString;
     this.dagDirectory = dagDirectory;

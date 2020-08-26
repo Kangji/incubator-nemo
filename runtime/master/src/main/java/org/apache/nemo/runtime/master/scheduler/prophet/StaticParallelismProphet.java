@@ -89,13 +89,13 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
       makePhysicalPlansForSimulation(0, degreeOfConfigurationSpace, dagOfStages);
     LOG.debug("StageDAG Maps: {}", stageDAGMaps);
     final List<Pair<String, Long>> listOfParallelismToDurationPair = new ArrayList<>();
-    stageDAGMaps.forEach(map -> {
+    for (final Map<String, Integer> map : stageDAGMaps) {
       final PhysicalPlan plan = constructPhysicalPlan(currentStageDAG, map);
       final Pair<String, Long> planIdAndDuration = this.launchSimulationForPlan(plan);
       if (planIdAndDuration.right() > 0.5) {
         listOfParallelismToDurationPair.add(planIdAndDuration);
       }
-    });
+    }
 
     final Pair<String, Long> pairWithMinDuration =
       Collections.min(listOfParallelismToDurationPair, Comparator.comparing(Pair::right));
