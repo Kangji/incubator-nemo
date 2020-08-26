@@ -27,13 +27,14 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
+import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
 import org.apache.nemo.common.ir.vertex.utility.TaskSizeSplitterVertex;
 import org.apache.nemo.common.ir.vertex.utility.runtimepass.MessageAggregatorVertex;
 import org.apache.nemo.common.ir.vertex.utility.runtimepass.MessageGeneratorVertex;
-import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
-import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
 import org.apache.nemo.common.ir.vertex.utility.runtimepass.SignalVertex;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
@@ -68,6 +69,8 @@ public final class Util {
     final String nemoHome = System.getenv("NEMO_HOME");
     if (nemoHome != null && !nemoHome.isEmpty()) {
       return nemoHome;
+    } else if (new File("~/incubator-nemo").exists()) {
+      return "~/incubator-nemo";
     } else {
       return recursivelyFindLicense(Paths.get(System.getProperty("user.dir")));
     }
