@@ -674,25 +674,19 @@ public final class BatchScheduler implements Scheduler {
 
 
     // gather the arrived metric information
-    boolean needToWait = true;
-    long waitingStartTime = System.currentTimeMillis();
-    while (needToWait) {
-      needToWait = false;
-      for (String taskId : workStealingCandidates) {
-        TaskMetric taskMetric = metricStore.getMetricWithId(TaskMetric.class, taskId);
-        if (taskMetric.getSerializedReadBytes() == -1) {
-          needToWait = true;
-          break;
-        }
-        taskIdToProcessedBytes.put(taskId, taskMetric.getSerializedReadBytes());
-        taskIdToIteratorInformation.put(taskId, Pair.of(
-          taskMetric.getCurrentIteratorIndex(), taskMetric.getTotalIteratorNumber()));
-        taskIdToInitializationOverhead.put(taskId, taskMetric.getTaskPreparationTime());
+    for (String taskId : workStealingCandidates) {
+      TaskMetric taskMetric = metricStore.getMetricWithId(TaskMetric.class, taskId);
+      if (taskMetric.getSerializedReadBytes() == -1) {
+        continue;
       }
-      if (System.currentTimeMillis() - waitingStartTime > 1000) {
-        LOG.error("wait for 1 sec but information not gathered: quit");
-        return new HashMap<>();
-      }
+      taskIdToProcessedBytes.put(taskId, taskMetric.getSerializedReadBytes());
+      taskIdToIteratorInformation.put(taskId, Pair.of(
+        taskMetric.getCurrentIteratorIndex(), taskMetric.getTotalIteratorNumber()));
+      taskIdToInitializationOverhead.put(taskId, taskMetric.getTaskPreparationTime());
+    }
+
+    if (taskIdToProcessedBytes.size() <= workStealingCandidates.size() / 2) {
+      return new HashMap<>();
     }
 
     haltExecutors();
