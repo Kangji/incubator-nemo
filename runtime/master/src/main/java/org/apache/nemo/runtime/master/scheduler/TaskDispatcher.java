@@ -106,11 +106,11 @@ final class TaskDispatcher {
       }
 
       if (planStateManager.isPlanDone()) {
-        LOG.info("{} is complete.", planStateManager.getPlanId());
+        LOG.error("{} is complete.", planStateManager.getPlanId());
       } else {
-        LOG.info("{} is incomplete.", planStateManager.getPlanId());
+        LOG.error("{} is incomplete.", planStateManager.getPlanId());
       }
-      LOG.info("TaskDispatcher Terminated!");
+      LOG.error("TaskDispatcher Terminated!");
     }
   }
 
@@ -118,16 +118,17 @@ final class TaskDispatcher {
     final Optional<Collection<Task>> taskListOptional = pendingTaskCollectionPointer.getAndSetNull();
     if (!taskListOptional.isPresent()) {
       // Task list is empty
-      LOG.debug("PendingTaskCollectionPointer is empty. Awaiting for more Tasks...");
+      LOG.error("PendingTaskCollectionPointer is empty. Awaiting for more Tasks...");
       return;
     }
 
     final Collection<Task> taskList = taskListOptional.get();
+    LOG.error("Tasks length: {}", taskList.size());
     final List<Task> couldNotSchedule = new ArrayList<>();
     for (final Task task : taskList) {
       if (!planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY)) {
         // Guard against race conditions causing duplicate task launches
-        LOG.debug("Skipping {} as it is not READY", task.getTaskId());
+        LOG.error("Skipping {} as it is not READY", task.getTaskId());
         continue;
       }
 
@@ -149,7 +150,7 @@ final class TaskDispatcher {
           // update metadata first
           planStateManager.onTaskStateChanged(task.getTaskId(), TaskState.State.EXECUTING);
 
-          LOG.info("{} scheduled to {}", task.getTaskId(), selectedExecutor.getExecutorId());
+          LOG.error("{} scheduled to {}", task.getTaskId(), selectedExecutor.getExecutorId());
           // send the task
           selectedExecutor.onTaskScheduled(task);
         } else {
@@ -158,7 +159,7 @@ final class TaskDispatcher {
       });
     }
 
-    LOG.debug("All except {} were scheduled among {}", new Object[]{couldNotSchedule, taskList});
+    LOG.error("All except {} were scheduled among {}", new Object[]{couldNotSchedule, taskList});
     if (couldNotSchedule.size() > 0) {
       // Try these again, if no new task list has been set
       pendingTaskCollectionPointer.setIfNull(couldNotSchedule);

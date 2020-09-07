@@ -160,13 +160,13 @@ public final class BatchScheduler implements Scheduler {
   @Override
   public void schedulePlan(final PhysicalPlan submittedPhysicalPlan,
                            final int maxScheduleAttempt) {
-    LOG.info("Plan to schedule: {}", submittedPhysicalPlan.getPlanId());
+    LOG.error("Plan to schedule: {}", submittedPhysicalPlan.getPlanId());
 
     if (this.simulation) {
       final StaticParallelismProphet prophet =
         new StaticParallelismProphet(this.simulationSchedulerInjectionFuture.get());
       final Pair<String, Long> planIdToJobDuration = prophet.launchSimulationForPlan(submittedPhysicalPlan);
-      LOG.warn("Plan ID: {}, Duration: {}", planIdToJobDuration.left(), planIdToJobDuration.right());
+      LOG.error("Plan ID: {}, Duration: {}", planIdToJobDuration.left(), planIdToJobDuration.right());
       return;
     }
 
