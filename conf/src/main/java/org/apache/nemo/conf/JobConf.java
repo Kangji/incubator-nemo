@@ -326,6 +326,21 @@ public final class JobConf extends ConfigurationModuleBuilder {
   }
 
   /**
+   * Parallelism.
+   */
+  @NamedParameter(doc = "desired number of parallelism", short_name = "parallelism", default_value = "1")
+  public final class Parallelism implements Name<Integer> {
+  }
+
+  /**
+   * Specified whether or not to just run simulation.
+   */
+  @NamedParameter(doc = "Boolean flag for enabling smart parallelism",
+    short_name = "simulation", default_value = "false")
+  public final class Simulation implements Name<Boolean> {
+  }
+
+  /**
    * Specified whether or not to enable smart parallelism or not.
    */
   @NamedParameter(doc = "Boolean flag for enabling smart parallelism",

@@ -76,6 +76,7 @@ public final class BatchScheduler implements Scheduler {
   private final PlanStateManager planStateManager;  // A component that manages the state of the plan.
 
   private final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture;
+  private final boolean simulation;
   private final boolean smartParallelismEnabled;
 
   /**
@@ -96,6 +97,7 @@ public final class BatchScheduler implements Scheduler {
                          final ExecutorRegistry executorRegistry,
                          final PlanStateManager planStateManager,
                          final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture,
+                         @Parameter(JobConf.Simulation.class) final Boolean simulation,
                          @Parameter(JobConf.SmartParallelismEnabled.class) final Boolean smartParallelismEnabled) {
     this.planRewriter = planRewriter;
     this.taskDispatcher = taskDispatcher;
@@ -104,6 +106,7 @@ public final class BatchScheduler implements Scheduler {
     this.executorRegistry = executorRegistry;
     this.planStateManager = planStateManager;
     this.simulationSchedulerInjectionFuture = simulationSchedulerInjectionFuture;
+    this.simulation = simulation;
     this.smartParallelismEnabled = smartParallelismEnabled;
   }
 
@@ -158,6 +161,14 @@ public final class BatchScheduler implements Scheduler {
   public void schedulePlan(final PhysicalPlan submittedPhysicalPlan,
                            final int maxScheduleAttempt) {
     LOG.info("Plan to schedule: {}", submittedPhysicalPlan.getPlanId());
+
+    if (this.simulation) {
+      final StaticParallelismProphet prophet =
+        new StaticParallelismProphet(this.simulationSchedulerInjectionFuture.get());
+      final Pair<String, Long> planIdToJobDuration = prophet.launchSimulationForPlan(submittedPhysicalPlan);
+      LOG.warn("Plan ID: {}, Duration: {}", planIdToJobDuration.left(), planIdToJobDuration.right());
+      return;
+    }
 
     if (this.smartParallelismEnabled) {
       final StaticParallelismProphet prophet =

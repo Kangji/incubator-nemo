@@ -124,7 +124,7 @@ public final class StaticParallelismProphet implements Prophet<String, Integer> 
    * @return                  Pair of Integer and Long. Integer value indicates the simulated parallelism, and
    *                          Long value is simulated job(=stage) duration.
    */
-  private synchronized Pair<String, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
+  public synchronized Pair<String, Long> launchSimulationForPlan(final PhysicalPlan physicalPlan) {
     this.simulationScheduler.setTaskDurationEstimationMethod(SimulatedTaskExecutor.Type.ANALYTIC_ESTIMATION);
     try {
       this.simulationScheduler.schedulePlan(physicalPlan, 1);

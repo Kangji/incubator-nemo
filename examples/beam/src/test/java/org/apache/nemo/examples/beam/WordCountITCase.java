@@ -76,7 +76,7 @@ public final class WordCountITCase {
   public void testSmartParallelism() throws Exception {
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
-      .addJobId(WordCountITCase.class.getSimpleName())
+      .addJobId(WordCountITCase.class.getSimpleName() + "_smart_parallelism")
       .addOptimizationPolicy(DefaultPolicyParallelismFive.class.getCanonicalName())
       .addArg("smart_parallelism_enabled", "true")
       .build());

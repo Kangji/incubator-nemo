@@ -31,6 +31,7 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
+import org.apache.nemo.compiler.optimizer.policy.CustomParallelismPolicy;
 import org.apache.nemo.compiler.optimizer.policy.Policy;
 import org.apache.nemo.compiler.optimizer.policy.XGBoostPolicy;
 import org.apache.nemo.conf.JobConf;
@@ -53,6 +54,7 @@ public final class NemoOptimizer implements Optimizer {
   private final String environmentTypeStr;
   private final String executorInfoContents;
   private final ClientRPC clientRPC;
+  private final int parallelism;
 
   private final Map<UUID, Integer> cacheIdToParallelism = new HashMap<>();
   private int irDagCount = 0;
@@ -70,10 +72,12 @@ public final class NemoOptimizer implements Optimizer {
                         @Parameter(JobConf.OptimizationPolicy.class) final String policyName,
                         @Parameter(JobConf.EnvironmentType.class) final String environmentTypeStr,
                         @Parameter(JobConf.ExecutorJSONContents.class) final String executorInfoContents,
+                        @Parameter(JobConf.Parallelism.class) final int parallelism,
                         final ClientRPC clientRPC) {
     this.dagDirectory = dagDirectory;
     this.environmentTypeStr = OptimizerUtils.filterEnvironmentTypeString(environmentTypeStr);
     this.executorInfoContents = executorInfoContents;
+    this.parallelism = parallelism;
     this.clientRPC = clientRPC;
 
     try {
@@ -83,6 +87,10 @@ public final class NemoOptimizer implements Optimizer {
       }
     } catch (final Exception e) {
       throw new CompileTimeOptimizationException(e);
+    }
+
+    if (optimizationPolicy instanceof CustomParallelismPolicy) {
+      ((CustomParallelismPolicy) optimizationPolicy).injectParameters(parallelism);
     }
   }
 

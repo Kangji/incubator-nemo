@@ -232,7 +232,7 @@ public final class SimulationScheduler implements Scheduler {
     final Long jobDuration = this.simulatedTaskExecutorMap.values().stream()
       .mapToLong(SimulatedTaskExecutor::getElapsedTime)
       .max().orElse(0);
-    LOG.info("Simulation of {} is complete with job duration of {}!", submittedPhysicalPlan.getPlanId(), jobDuration);
+    LOG.warn("Simulation of {} is complete with job duration of {}!", submittedPhysicalPlan.getPlanId(), jobDuration);
     this.metricStore.getOrCreateMetric(JobMetric.class, submittedPhysicalPlan.getPlanId()).setJobDuration(jobDuration);
     executorRegistry.viewExecutors(executors -> executors.forEach(executor -> metricCountDownLatch.countDown()));
   }
