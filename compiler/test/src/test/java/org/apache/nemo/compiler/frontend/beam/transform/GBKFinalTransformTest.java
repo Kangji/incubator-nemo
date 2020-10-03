@@ -27,6 +27,8 @@ import static org.apache.beam.sdk.values.WindowingStrategy.AccumulationMode.ACCU
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 
+// Still in progress. More tests to be added.
+
 public class GBKFinalTransformTest extends TestCase {
   private static final Logger LOG = LoggerFactory.getLogger(GroupByKeyAndWindowDoFnTransformTest.class.getName());
   private final static Coder key_coder = StringUtf8Coder.of();
