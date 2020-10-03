@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.runtime.executor.task;
 
+import org.apache.nemo.common.ir.AbstractOutputCollector;
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.punctuation.Finishmark;
@@ -176,7 +177,7 @@ class MultiThreadParentTaskDataFetcher extends DataFetcher {
    * Just adds the emitted watermark to the element queue.
    * It receives the watermark from InputWatermarkManager.
    */
-  private final class WatermarkCollector implements OutputCollector {
+  private final class WatermarkCollector extends AbstractOutputCollector {
     @Override
     public void emit(final Object output) {
       throw new IllegalStateException("Should not be called");

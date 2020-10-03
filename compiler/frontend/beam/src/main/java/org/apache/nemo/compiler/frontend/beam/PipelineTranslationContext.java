@@ -275,8 +275,9 @@ final class PipelineTranslationContext {
     if (srcTransform instanceof FlattenTransform) {
       return CommunicationPatternProperty.Value.ONE_TO_ONE;
     }
-    if (dstTransform instanceof GroupByKeyAndWindowDoFnTransform
-      || dstTransform instanceof GroupByKeyTransform) {
+    if (dstTransform instanceof GBKPartialTransform
+      || dstTransform instanceof GroupByKeyTransform
+      || dstTransform instanceof GBKFinalTransform) {
       return CommunicationPatternProperty.Value.SHUFFLE;
     }
     if (dstTransform instanceof CreateViewTransform) {

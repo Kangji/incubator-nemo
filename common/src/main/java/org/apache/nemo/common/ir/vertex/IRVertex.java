@@ -35,6 +35,7 @@ import java.util.Optional;
  */
 public abstract class IRVertex extends Vertex implements Cloneable<IRVertex> {
   private final ExecutionPropertyMap<VertexExecutionProperty> executionProperties;
+  public boolean isStateful = false;
 
   /**
    * Constructor of IRVertex.

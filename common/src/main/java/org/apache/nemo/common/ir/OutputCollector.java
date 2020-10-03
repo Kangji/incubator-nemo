@@ -30,6 +30,9 @@ import java.io.Serializable;
  * @param <O> output type.
  */
 public interface OutputCollector<O> extends Serializable {
+  // for offloadig
+  void setInputTimestamp(long timestamp);
+  long getInputTimestamp();
   /**
    * Single-destination emit.
    *

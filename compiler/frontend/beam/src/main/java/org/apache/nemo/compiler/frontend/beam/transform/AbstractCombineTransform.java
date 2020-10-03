@@ -1,3 +1,5 @@
+package org.apache.nemo.compiler.frontend.beam.transform;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -16,7 +18,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.compiler.frontend.beam.transform;
 
 import org.apache.beam.runners.core.*;
 import org.apache.beam.runners.core.construction.SerializablePipelineOptions;
@@ -27,7 +28,9 @@ import org.apache.beam.sdk.transforms.DoFnSchemaInformation;
 import org.apache.beam.sdk.transforms.display.DisplayData;
 import org.apache.beam.sdk.transforms.reflect.DoFnInvoker;
 import org.apache.beam.sdk.transforms.reflect.DoFnInvokers;
+import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.util.WindowedValue;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.sdk.values.WindowingStrategy;
@@ -45,11 +48,10 @@ import java.util.Map;
 /**
  * This is a base class for Beam DoFn Transforms.
  *
- * @param <InputT> input type.
- * @param <InterT> intermediate type.
+ * @param <InputT>  input type.
  * @param <OutputT> output type.
  */
-public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
+public abstract class AbstractCombineTransform<InputT, OutputT> implements
   Transform<WindowedValue<InputT>, WindowedValue<OutputT>> {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractDoFnTransform.class.getName());
 
@@ -57,18 +59,18 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
   private final List<TupleTag<?>> additionalOutputTags;
   private final Map<Integer, PCollectionView<?>> sideInputs;
   private final WindowingStrategy<?, ?> windowingStrategy;
-  private final DoFn<InterT, OutputT> doFn;
+  private final DoFn<InputT, OutputT> doFn;
   private final SerializablePipelineOptions serializedOptions;
   private final Coder<InputT> inputCoder;
   private final Map<TupleTag<?>, Coder<?>> outputCoders;
 
   private transient OutputCollector<WindowedValue<OutputT>> outputCollector;
-  private transient DoFnRunner<InterT, OutputT> doFnRunner;
+  private transient DoFnRunner<InputT, OutputT> doFnRunner;
 
   // null when there is no side input.
-  private transient PushbackSideInputDoFnRunner<InterT, OutputT> pushBackRunner;
+  private transient PushbackSideInputDoFnRunner<InputT, OutputT> pushBackRunner;
 
-  private transient DoFnInvoker<InterT, OutputT> doFnInvoker;
+  private transient DoFnInvoker<InputT, OutputT> doFnInvoker;
   private transient DoFnRunners.OutputManager outputManager;
   private transient InMemorySideInputReader sideInputReader;
 
@@ -78,29 +80,29 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
   // or elapsed time > bundleMillis, we finish the current bundle and start a new one
   private transient long bundleSize;
   private transient long bundleMillis;
-  private transient long prevBundleStartTime;
-  private transient long currBundleCount = 0;
-  private transient boolean bundleFinished = true;
+  private long prevBundleStartTime;
+  private long currBundleCount = 0;
+  private boolean bundleFinished = true;
   private final DisplayData displayData;
-
-  private transient Context context;
 
   private final DoFnSchemaInformation doFnSchemaInformation;
 
   private final Map<String, PCollectionView<?>> sideInputMapping;
+
   /**
    * AbstractDoFnTransform constructor.
-   * @param doFn doFn
-   * @param inputCoder input coder
-   * @param outputCoders output coders
-   * @param mainOutputTag main output tag
+   *
+   * @param doFn                 doFn
+   * @param inputCoder           input coder
+   * @param outputCoders         output coders
+   * @param mainOutputTag        main output tag
    * @param additionalOutputTags additional output tags
-   * @param windowingStrategy windowing strategy
-   * @param sideInputs side inputs
-   * @param options pipeline options
-   * @param displayData display data.
+   * @param windowingStrategy    windowing strategy
+   * @param sideInputs           side inputs
+   * @param options              pipeline options
+   * @param displayData          display data.
    */
-  public AbstractDoFnTransform(final DoFn<InterT, OutputT> doFn,
+  public AbstractCombineTransform(final DoFn<InputT, OutputT> doFn,
                                final Coder<InputT> inputCoder,
                                final Map<TupleTag<?>, Coder<?>> outputCoders,
                                final TupleTag<OutputT> mainOutputTag,
@@ -126,6 +128,7 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
 
   /**
    * Getter function for side inputs.
+   *
    * @return the side inputs
    */
   final Map<Integer, PCollectionView<?>> getSideInputs() {
@@ -134,6 +137,7 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
 
   /**
    * Getter function for output manager.
+   *
    * @return the output manager.
    */
   final DoFnRunners.OutputManager getOutputManager() {
@@ -142,6 +146,7 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
 
   /**
    * Getter function for windowing strategy.
+   *
    * @return the windowing strategy.
    */
   final WindowingStrategy getWindowingStrategy() {
@@ -150,6 +155,7 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
 
   /**
    * Getter function for output tag.
+   *
    * @return main output tag.
    */
   final TupleTag<OutputT> getMainOutputTag() {
@@ -158,22 +164,26 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
 
   /**
    * Getter function for DoFn runner.
+   *
    * @return DoFn runner.
    */
-  final DoFnRunner<InterT, OutputT> getDoFnRunner() {
-    return doFnRunner;
+  /**
+  final ReduceFnRunner<?, InputT, OutputT, ? extends BoundedWindow> getreduceRunner() {
+    return reduceRunner;
   }
-
+   */
   /**
    * Getter function for push back runner.
+   *
    * @return push back runner.
    */
-  final PushbackSideInputDoFnRunner<InterT, OutputT> getPushBackRunner() {
+  final PushbackSideInputDoFnRunner<InputT, OutputT> getPushBackRunner() {
     return pushBackRunner;
   }
 
   /**
    * Getter function for side input reader.
+   *
    * @return side input reader.
    */
   final InMemorySideInputReader getSideInputReader() {
@@ -182,6 +192,7 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
 
   /**
    * Getter function for DoFn.
+   *
    * @return DoFn.
    */
   public final DoFn getDoFn() {
@@ -191,7 +202,7 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
   /**
    * Checks whether the bundle is finished or not.
    * Starts the bundle if it is done.
-   *
+   * <p>
    * TODO #263: Partial Combining for Beam Streaming
    * We may want to use separate methods for doFnRunner/pushBackRunner
    * (same applies to the other bundle-related methods)
@@ -226,10 +237,6 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
     }
   }
 
-  public Context getContext() {
-    return context;
-  }
-
   /**
    * Finish bundle without checking for conditions.
    */
@@ -249,12 +256,11 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
     // deserialize pipeline option
     final NemoPipelineOptions options = serializedOptions.get().as(NemoPipelineOptions.class);
     this.outputCollector = wrapOutputCollector(oc);
-    this.context = context;
-
-
-    this.prevBundleStartTime = System.currentTimeMillis();
-    this.currBundleCount = 0;
-    this.bundleFinished = true;
+    // Overriden. Provides GroupbyWindowSetNewFn object
+    final DoFn wrappedDoFn = wrapDoFn(doFn);
+    // invoker
+    doFnInvoker = DoFnInvokers.invokerFor(wrappedDoFn);
+    doFnInvoker.invokeSetup();
 
     this.bundleMillis = options.getMaxBundleTimeMills();
     this.bundleSize = options.getMaxBundleSize();
@@ -271,17 +277,12 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
       public StateInternals stateInternals() {
         throw new UnsupportedOperationException("Not support stateInternals in DoFnTransform");
       }
+
       @Override
       public TimerInternals timerInternals() {
         throw new UnsupportedOperationException("Not support timerInternals in DoFnTransform");
       }
     };
-
-    final DoFn wrappedDoFn = wrapDoFn(doFn);
-
-    // invoker
-    doFnInvoker = DoFnInvokers.invokerFor(wrappedDoFn);
-    doFnInvoker.invokeSetup();
 
     // DoFnRunners.simpleRunner takes care of all the hard stuff of running the DoFn
     // and that this approach is the standard used by most of the Beam runners
@@ -299,13 +300,16 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
       doFnSchemaInformation,
       sideInputMapping);
 
+    doFnRunner = wrapDoFnRunner(doFnRunner, stepContext);
+
     pushBackRunner = sideInputs.isEmpty()
       ? null
-      : SimplePushbackSideInputDoFnRunner.<InterT, OutputT>create(doFnRunner, sideInputs.values(), sideInputReader);
+      : SimplePushbackSideInputDoFnRunner.<InputT, OutputT>create(doFnRunner, sideInputs.values(), sideInputReader);
   }
 
   /**
    * Getter function for output collector.
+   *
    * @return output collector.
    */
   public final OutputCollector<WindowedValue<OutputT>> getOutputCollector() {
@@ -319,27 +323,36 @@ public abstract class AbstractDoFnTransform<InputT, InterT, OutputT> implements
     doFnInvoker.invokeTeardown();
   }
 
+  public DoFnRunner getDoFnRunner() {
+    return doFnRunner;
+  }
+
   @Override
-  public final String toString() {
+  public String toString() {
     return this.getClass().getSimpleName() + " / " + displayData.toString().replace(":", " / ");
   }
 
   /**
    * An abstract function that wraps the original doFn.
+   *
    * @param originalDoFn the original doFn.
    * @return wrapped doFn.
    */
-  abstract DoFn wrapDoFn(final DoFn originalDoFn);
+  abstract DoFn wrapDoFn(DoFn originalDoFn);
 
   /**
    * An abstract function that wraps the original output collector.
+   *
    * @param oc the original outputCollector.
    * @return wrapped output collector.
    */
-  abstract OutputCollector wrapOutputCollector(final OutputCollector oc);
+  abstract OutputCollector wrapOutputCollector(OutputCollector oc);
 
   /**
    * An abstract function that is called before close.
    */
   abstract void beforeClose();
+
+  abstract DoFnRunner<InputT, OutputT> wrapDoFnRunner(
+    DoFnRunner<InputT, OutputT> currRunner, StepContext stepContext);
 }

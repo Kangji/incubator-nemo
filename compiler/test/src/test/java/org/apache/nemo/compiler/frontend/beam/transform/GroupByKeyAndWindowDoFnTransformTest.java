@@ -97,6 +97,7 @@ public final class GroupByKeyAndWindowDoFnTransformTest {
         SystemReduceFn.buffering(NULL_INPUT_CODER),
         DisplayData.none());
 
+
     final Instant ts1 = new Instant(1);
     final Instant ts2 = new Instant(100);
     final Instant ts3 = new Instant(300);
@@ -131,15 +132,14 @@ public final class GroupByKeyAndWindowDoFnTransformTest {
     final Transform.Context context = mock(Transform.Context.class);
     final TestOutputCollector<KV<String, Iterable<String>>> oc = new TestOutputCollector();
     doFnTransform.prepare(context, oc);
-
     doFnTransform.onData(WindowedValue.of(
       KV.of("1", "hello"), ts1, slidingWindows.assignWindows(ts1), PaneInfo.NO_FIRING));
-
     doFnTransform.onData(WindowedValue.of(
       KV.of("1", "world"), ts2, slidingWindows.assignWindows(ts2), PaneInfo.NO_FIRING));
 
     doFnTransform.onData(WindowedValue.of(
       KV.of("2", "hello"), ts3, slidingWindows.assignWindows(ts3), PaneInfo.NO_FIRING));
+
 
     doFnTransform.onWatermark(watermark);
 
@@ -155,6 +155,7 @@ public final class GroupByKeyAndWindowDoFnTransformTest {
     // windowed result for key 2
     assertEquals(Arrays.asList(window0), oc.outputs.get(1).getWindows());
     checkOutput(KV.of("2", Arrays.asList("hello")), oc.outputs.get(1).getValue());
+
 
     assertEquals(2, oc.outputs.size());
     assertEquals(1, oc.watermarks.size());
@@ -288,8 +289,13 @@ public final class GroupByKeyAndWindowDoFnTransformTest {
 
     doFnTransform.onData(WindowedValue.of(
       KV.of("1", "hello"), new Instant(1), window.assignWindow(new Instant(1)), PaneInfo.NO_FIRING));
-
     // early firing is not related to the watermark progress
+    // Early firing waiting for 1 sec
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
     doFnTransform.onWatermark(new Watermark(2));
     assertEquals(1, oc.outputs.size());
     assertEquals(EARLY, oc.outputs.get(0).getPane().getTiming());
