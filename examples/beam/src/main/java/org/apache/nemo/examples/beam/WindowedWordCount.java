@@ -30,6 +30,8 @@ import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 
+import java.util.Random;
+
 /**
  * A Windowed WordCount application.
  */
@@ -42,7 +44,7 @@ public final class WindowedWordCount {
 
   public static final String INPUT_TYPE_BOUNDED = "bounded";
   public static final String INPUT_TYPE_UNBOUNDED = "unbounded";
-  private static final String SPLITTER = "!";
+  public static final Random RAND = new Random();
 
 
   /**
@@ -62,8 +64,21 @@ public final class WindowedWordCount {
           @ProcessElement
           public void processElement(@Element final String elem,
                                      final OutputReceiver<String> out) {
-            final String[] splitt = elem.split(SPLITTER);
-            out.outputWithTimestamp(splitt[0], new Instant(Long.valueOf(splitt[1])));
+            final String[] splitt = elem.split(" +");
+            final String substring1 = splitt[0] + " " + splitt[1] + " " + splitt[2];
+            final long timestamp;
+            if (splitt.length > 3 && Long.parseLong(splitt[3]) > 1000000000000L) {
+              timestamp = Long.parseLong(splitt[3]);
+            } else {
+              if (splitt.length > 3 && Long.parseLong(splitt[3]) < 1000000000L) {
+                timestamp = System.currentTimeMillis() - (Long.parseLong(splitt[3]) * RAND.nextInt(1000000));
+              } else if (splitt.length > 3 && Long.parseLong(splitt[3]) < 1000000000000L) {
+                timestamp = System.currentTimeMillis() - (Long.parseLong(splitt[3]));
+              } else {
+                timestamp = 1599000000000L + RAND.nextInt();
+              }
+            }
+            out.outputWithTimestamp(substring1, new Instant(timestamp));
           }
         }))
         .apply(MapElements.<String, KV<String, Long>>via(new SimpleFunction<String, KV<String, Long>>() {
