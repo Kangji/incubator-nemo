@@ -22,9 +22,11 @@ import org.apache.beam.runners.core.InMemoryTimerInternals;
 import org.apache.beam.runners.core.TimerInternals;
 import org.apache.beam.runners.core.TimerInternalsFactory;
 import org.apache.beam.sdk.state.TimeDomain;
+import org.apache.nemo.common.LFUCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.*;
+
+import java.util.Map;
 
 /**
  * InMemoryTimerInternalsFactory.
@@ -32,7 +34,7 @@ import java.util.*;
  */
 public final class InMemoryTimerInternalsFactory<K> implements TimerInternalsFactory<K> {
   private static final Logger LOG = LoggerFactory.getLogger(InMemoryTimerInternalsFactory.class.getName());
-  private Map<K, InMemoryTimerInternals> timerInternalsMap = new HashMap<>();
+  private Map<K, InMemoryTimerInternals> timerInternalsMap = new LFUCache<>(10000, 0.1f);
 
   @Override
   public String toString() {
