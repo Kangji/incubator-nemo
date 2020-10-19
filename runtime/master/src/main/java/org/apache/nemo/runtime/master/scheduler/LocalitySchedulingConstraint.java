@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.runtime.master.scheduler;
 
+import org.apache.nemo.common.exception.SchedulingException;
 import org.apache.nemo.common.ir.Readable;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.DuplicateEdgeGroupProperty;
@@ -46,10 +47,13 @@ import java.util.stream.Collectors;
 @AssociatedProperty(ResourceLocalityProperty.class)
 public final class LocalitySchedulingConstraint implements SchedulingConstraint {
   private final BlockManagerMaster blockManagerMaster;
+  private final ExecutorRegistry registry;
 
   @Inject
-  private LocalitySchedulingConstraint(final BlockManagerMaster blockManagerMaster) {
+  private LocalitySchedulingConstraint(final BlockManagerMaster blockManagerMaster,
+                                       final ExecutorRegistry registry) {
     this.blockManagerMaster = blockManagerMaster;
+    this.registry = registry;
   }
 
   /**
@@ -85,6 +89,7 @@ public final class LocalitySchedulingConstraint implements SchedulingConstraint 
               throw new RuntimeException(e);
             }
           })
+          .map(registry::executorIdToNodeName)
           .collect(Collectors.toList());
       }
     }
@@ -114,10 +119,10 @@ public final class LocalitySchedulingConstraint implements SchedulingConstraint 
       } catch (final UnsupportedOperationException e) {
         return true;
       } catch (final Exception e) {
-        throw new RuntimeException(e);
+        throw new SchedulingException(e);
       }
 
-      if (sourceLocations.size() == 0) {
+      if (sourceLocations.isEmpty()) {
         return true;
       }
 
@@ -130,7 +135,7 @@ public final class LocalitySchedulingConstraint implements SchedulingConstraint 
         return true;
       } else {
         // There is a known location(s), so we schedule to it(them).
-        return intermediateLocations.contains(executor.getExecutorId());
+        return intermediateLocations.contains(executor.getNodeName());
       }
     }
   }

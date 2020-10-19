@@ -69,6 +69,7 @@ public final class StreamingScheduler implements Scheduler {
     this.executorRegistry = executorRegistry;
     this.planStateManager = planStateManager;
     this.pipeManagerMaster = pipeManagerMaster;
+    pipeManagerMaster.initiate();
   }
 
   @Override

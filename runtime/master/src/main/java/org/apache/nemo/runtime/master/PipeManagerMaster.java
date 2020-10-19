@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Phaser;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -50,6 +52,8 @@ public final class PipeManagerMaster {
   private final Map<Pair<String, Long>, Lock> runtimeEdgeSrcIndexToLock;
   private final Map<Pair<String, Long>, Condition> runtimeEdgeSrcIndexToCondition;
   private final ExecutorService waitForPipe;
+  private final Phaser active;
+  private final AtomicInteger phase;
 
   /**
    * Constructor.
@@ -64,9 +68,18 @@ public final class PipeManagerMaster {
     this.runtimeEdgeSrcIndexToLock = new ConcurrentHashMap<>();
     this.runtimeEdgeSrcIndexToCondition = new ConcurrentHashMap<>();
     this.waitForPipe = Executors.newCachedThreadPool();
+    this.active = new Phaser(1);
+    this.phase = new AtomicInteger(this.active.getPhase());
+  }
+
+  public void initiate() {
+    this.active.arrive();
+    this.phase.set(this.active.getPhase());
   }
 
   public void onTaskScheduled(final String edgeId, final long srcIndex) {
+    active.register();
+    active.arriveAndDeregister(); // Move on to phase 1 after scheduling all tasks.
     final Pair<String, Long> keyPair = Pair.of(edgeId, srcIndex);
     if (null != runtimeEdgeSrcIndexToLock.put(keyPair, new ReentrantLock())) {
       throw new IllegalStateException(keyPair.toString());
@@ -74,6 +87,38 @@ public final class PipeManagerMaster {
     if (null != runtimeEdgeSrcIndexToCondition.put(keyPair, runtimeEdgeSrcIndexToLock.get(keyPair).newCondition())) {
       throw new IllegalStateException(keyPair.toString());
     }
+  }
+
+  /**
+   * Get location of the pipe source.
+   * @param edgeId the stage edge id.
+   * @param srcIndex the index number for the task.
+   * @return the location described as an executor id.
+   */
+  public String getLocation(final String edgeId, final long srcIndex) {
+    final Pair<String, Long> keyPair = Pair.of(edgeId, srcIndex);
+    return getLocation(keyPair);
+  }
+
+  /**
+   * Get location of the pipe source.
+   * @param keyPair the key pair given, consisted of the stage edge id and the index number.
+   * @return the location described as an executor id.
+   */
+  private String getLocation(final Pair<String, Long> keyPair) {
+    while (!runtimeEdgeSrcIndexToExecutor.containsKey(keyPair)) {
+      this.active.register();  // Make sure that the key exists before looking for the location.
+      this.active.arriveAndAwaitAdvance();
+      this.phase.set(this.active.getPhase());
+    }
+    return runtimeEdgeSrcIndexToExecutor.get(keyPair);
+  }
+
+  /**
+   * @return if the pipe manager master is active.
+   */
+  public boolean isActive() {
+    return this.active.getPhase() > 0;
   }
 
   /**
@@ -95,6 +140,9 @@ public final class PipeManagerMaster {
             if (null != runtimeEdgeSrcIndexToExecutor.put(keyPair, pipeInitMessage.getExecutorId())) {
               throw new RuntimeException(keyPair.toString());
             }
+            if (active.getUnarrivedParties() > 0 && phase.getAndIncrement() == active.getPhase()) {
+              active.arriveAndDeregister();  // if the getLocation method is waiting, signal it.
+            }
             runtimeEdgeSrcIndexToCondition.get(keyPair).signalAll();
           } finally {
             lock.unlock();
@@ -104,8 +152,6 @@ public final class PipeManagerMaster {
         default:
           throw new IllegalMessageException(new Exception(message.toString()));
       }
-
-
     }
 
     @Override
@@ -126,7 +172,7 @@ public final class PipeManagerMaster {
                 runtimeEdgeSrcIndexToCondition.get(keyPair).await();
               }
 
-              final String location = runtimeEdgeSrcIndexToExecutor.get(keyPair);
+              final String location = getLocation(keyPair);
               if (location == null) {
                 throw new IllegalStateException(keyPair.toString());
               }
