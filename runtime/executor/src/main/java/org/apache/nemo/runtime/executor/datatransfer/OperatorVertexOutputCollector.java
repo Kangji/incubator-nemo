@@ -70,6 +70,7 @@ public final class OperatorVertexOutputCollector<O> implements OutputCollector<O
   }
 
   private void emit(final OperatorVertex vertex, final O output) {
+    LOG.error("{} : emitting {} to {}, {}", Thread.currentThread(), output, vertex, vertex.getTransform());
     vertex.getTransform().onData(output);
   }
 
