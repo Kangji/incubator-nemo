@@ -21,6 +21,7 @@ package org.apache.nemo.common;
 
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * LFU cache implementation based on http://dhruvbird.com/lfu.pdf, with some notable differences:
@@ -48,10 +49,9 @@ import java.util.*;
 public final class LFUCache<Key, Value> implements Map<Key, Value> {
 
   private final Map<Key, CacheNode<Key, Value>> cache;
-  private final LinkedHashSet[] frequencyList;
+  private final LinkedHashSet<CacheNode<Key, Value>>[] frequencyList;
   private int lowestFrequency;
   private int maxFrequency;
-  //
   private final int maxCacheSize;
   private final float evictionFactor;
 
@@ -59,7 +59,7 @@ public final class LFUCache<Key, Value> implements Map<Key, Value> {
     if (evictionFactor <= 0 || evictionFactor >= 1) {
       throw new IllegalArgumentException("Eviction factor must be greater than 0 and lesser than or equal to 1");
     }
-    this.cache = new HashMap<Key, CacheNode<Key, Value>>(maxCacheSize);
+    this.cache = new HashMap<>(maxCacheSize);
     this.frequencyList = new LinkedHashSet[maxCacheSize];
     this.lowestFrequency = 0;
     this.maxFrequency = maxCacheSize - 1;
@@ -76,7 +76,7 @@ public final class LFUCache<Key, Value> implements Map<Key, Value> {
         doEviction();
       }
       LinkedHashSet<CacheNode<Key, Value>> nodes = frequencyList[0];
-      currentNode = new CacheNode(k, v, 0);
+      currentNode = new CacheNode<>(k, v, 0);
       nodes.add(currentNode);
       cache.put(k, currentNode);
       lowestFrequency = 0;
@@ -155,9 +155,7 @@ public final class LFUCache<Key, Value> implements Map<Key, Value> {
   }
 
   public Collection<Value> values() {
-    final Map<Key, Value> hashMap = new HashMap<>();
-    cache.values().forEach(cn -> hashMap.put(cn.k, cn.v));
-    return hashMap.values();
+    return cache.values().stream().map(cn -> cn.v).collect(Collectors.toList());
   }
 
   public Set<Entry<Key, Value>> entrySet() {
@@ -179,13 +177,12 @@ public final class LFUCache<Key, Value> implements Map<Key, Value> {
   }
 
   public boolean containsValue(final Object o) {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
+    return cache.values().stream().map(cn -> cn.v).anyMatch(value -> value.equals(o));
   }
-
 
   private void initFrequencyList() {
     for (int i = 0; i <= maxFrequency; i++) {
-      frequencyList[i] = new LinkedHashSet<CacheNode<Key, Value>>();
+      frequencyList[i] = new LinkedHashSet<>();
     }
   }
 
