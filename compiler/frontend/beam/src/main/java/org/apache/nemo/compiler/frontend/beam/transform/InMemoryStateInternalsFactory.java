@@ -18,11 +18,13 @@
  */
 package org.apache.nemo.compiler.frontend.beam.transform;
 
-import org.apache.beam.runners.core.*;
+import org.apache.beam.runners.core.InMemoryStateInternals;
+import org.apache.beam.runners.core.StateInternals;
+import org.apache.beam.runners.core.StateInternalsFactory;
+import org.apache.nemo.common.LFUCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -31,7 +33,7 @@ import java.util.Map;
  */
 public final class InMemoryStateInternalsFactory<K> implements StateInternalsFactory<K> {
   private static final Logger LOG = LoggerFactory.getLogger(InMemoryStateInternalsFactory.class.getName());
-  private final Map<K, StateInternals> stateInternalMap = new HashMap<>();
+  private final Map<K, StateInternals> stateInternalMap = new LFUCache<>(10000, 0.1f);
 
   @Override
   public String toString() {
