@@ -17,13 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
- import paramiko
+import paramiko
 from tqdm import tqdm
 import os, getpass, json, datetime
 import threading
 
 
- def collect_candidates(list):
+def collect_candidates(list):
   if len(list) == 1:
     return []
   else:
@@ -32,20 +32,20 @@ import threading
     return ['{}/{}'.format(src, dst) for dst in dsts] + collect_candidates(dsts)
 
 
- def qperf(candidate, username, key, busy_nodes, result):
+def qperf(candidate, username, key, busy_nodes, result):
   ssh = paramiko.SSHClient()
   ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-   hostname, hostname2 = candidate.split('/')
+  hostname, hostname2 = candidate.split('/')
 
-   ssh.connect(hostname, username=username, pkey = key)
+  ssh.connect(hostname, username=username, pkey=key)
   ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('qperf')
 
-   ssh.connect(hostname2, username=username, pkey = key)
+  ssh.connect(hostname2, username=username, pkey=key)
   ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('qperf -v -uu {} tcp_bw tcp_lat quit'.format(hostname))
   # print('analysis complete for connection {}'.format(candidate))
 
-   lines = ssh_stdout.readlines()
+  lines = ssh_stdout.readlines()
   busy_nodes.remove(hostname)
   busy_nodes.remove(hostname2)
   """
@@ -72,47 +72,47 @@ import threading
   ssh.close()
 
 
- slaves_path = os.path.join(os.environ["HOME"], "hadoop", "etc", "hadoop", "slaves")
+slaves_path = os.path.join(os.environ["HOME"], "hadoop", "etc", "hadoop", "slaves")
 with open(slaves_path, 'r') as fp:
   slaves = fp.read().splitlines()
 
- candidates = collect_candidates(sorted(slaves))
+candidates = collect_candidates(sorted(slaves))
 
- busy_nodes = []
+busy_nodes = []
 threads = []
 
- path = os.path.join(os.environ["HOME"], ".ssh", "id_rsa")
+path = os.path.join(os.environ["HOME"], ".ssh", "id_rsa")
 key = paramiko.RSAKey.from_private_key_file(path)
 username = getpass.getuser()
 result = {}
 
- print("Starting analysis:")
+print("Starting analysis:")
 
- pbar = tqdm(total=len(candidates))
+pbar = tqdm(total=len(candidates))
 while candidates:
   candidate = candidates.pop()
   hostname, hostname2 = candidate.split('/')
 
-   if hostname in busy_nodes or hostname2 in busy_nodes:
+  if hostname in busy_nodes or hostname2 in busy_nodes:
     candidates.insert(0, candidate)
 
-   # OPEN CASES FOR OPTIMIZATION:
+  # OPEN CASES FOR OPTIMIZATION:
   # elif ...:
 
-   else:
+  else:
     busy_nodes.append(hostname)
     busy_nodes.append(hostname2)
 
-     thr = threading.Thread(target=qperf, args=(candidate, username, key, busy_nodes, result), kwargs={})
+    thr = threading.Thread(target=qperf, args=(candidate, username, key, busy_nodes, result), kwargs={})
     threads.append(thr)
     thr.start()
     pbar.update(1)
 pbar.close()
 
- for thr in threads:
+for thr in threads:
   thr.join()
 
- # print(result)
+# print(result)
 result['slaves'] = '/'.join(slaves)
 result['timestamp'] = str(datetime.datetime.now())
 with open('result.json', 'w') as fp:

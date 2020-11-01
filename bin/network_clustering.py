@@ -17,13 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
- import json
+import json
 from scipy.cluster.hierarchy import dendrogram, linkage
 
- with open('result.json') as json_file:
+with open('result.json') as json_file:
   dic = json.load(json_file)
 
- # Sort according to node ids
+# Sort according to node ids
 sorted_dic = {k: v for k, v in sorted([a for a in dic.items() if 'latency' in a[1] and 'bw' in a[1]], key=lambda a: (a[0].split('/')[0], a[0].split('/')[1]))}
 slaves = sorted(dic['slaves'].split('/'))
 # Upper triangle of the connection graph
@@ -31,21 +31,21 @@ dist = [int(v['latency'].split()[0])/int(v['bw'].split()[0]) for v in sorted_dic
 # Use library to generate the linkage matrix
 Z = linkage(dist)
 
- # Visualize result
+# Visualize result
 # from matplotlib import pyplot as plt
 # fig = plt.figure(figsize=(25, 10))
 # dn = dendrogram(Z, labels=slaves)
 # plt.show()
 
- labeldict = {idx: v for idx, v in enumerate(slaves)}
+labeldict = {idx: (v, 0) for idx, v in enumerate(slaves)}
 for item in Z:
-  labeldict[len(labeldict)] = str(labeldict[item[0]]) + '+' + str(labeldict[item[1]])
+  labeldict[len(labeldict)] = (str(labeldict[item[0]][0]) + '+' + str(labeldict[item[1]][0]), "{:.8f}".format(item[2]))
 
- with open('labeldict.json', 'w') as fp:
+with open('labeldict.json', 'w') as fp:
   json.dump(labeldict, fp)
 
 
- # def closest_clusters_between(source, destination, labeldict):
+# def closest_clusters_between(source, destination, labeldict):
 #   for v in labeldict.values():
 #     lst = v.split('+')
 #     if source in lst and destination in lst:
