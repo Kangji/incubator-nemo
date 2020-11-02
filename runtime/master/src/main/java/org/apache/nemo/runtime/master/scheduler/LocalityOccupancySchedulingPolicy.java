@@ -20,6 +20,7 @@
 package org.apache.nemo.runtime.master.scheduler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.exception.SchedulingException;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
@@ -89,26 +90,29 @@ public final class LocalityOccupancySchedulingPolicy implements SchedulingPolicy
   /**
    * Extract the candidate executors from the source data locations of the intermediate data.
    * @param dataSourceExecutors source executors.
-   * @return
+   * @return the executor representer of the candidate node.
    */
   private static ExecutorRepresenter candidateDataLocation(final List<String> dataSourceExecutors,
                                                            final Collection<ExecutorRepresenter> executors,
                                                            final Double avgOccupancy) {
     try {
       ObjectMapper mapper = new ObjectMapper();
-      final Map<String, String> map = mapper.readValue(
+      final Map<String, ArrayList<String>> map = mapper.readValue(
         new File(Util.fetchProjectRootPath() + "/bin/labeldict.json"), Map.class);
 
-      final List<List<String>> list = new ArrayList<>();
-      map.forEach((k, v) -> list.add(Arrays.asList(v.split("\\+"))));
+      // Pair.left is the list of nodes, Pair.right is the ratio of the distance, from the last distance.
+      // Ex. if the ratio is 2, that group of nodes have 2x distance compared to the last group of nodes.
+      final List<Pair<List<String>, Float>> list = new ArrayList<>();
+      map.forEach((k, v) -> list.add(Pair.of(Arrays.asList(v.get(0).split("\\+")), Float.valueOf(v.get(1)))));
 
-      for (final List<String> candidates: list) {
+      for (final Pair<List<String>, Float> candidates: list) {
         LOG.error("checking for {} in {}", dataSourceExecutors, candidates);
-        if (candidates.containsAll(dataSourceExecutors) && executors.stream()
-          .filter(e -> candidates.contains(e.getNodeName()))
+        if (candidates.left().containsAll(dataSourceExecutors) && executors.stream()
+          .filter(e -> candidates.left().contains(e.getNodeName()))
           .anyMatch(e -> e.getNumOfRunningTasks() < avgOccupancy)) {
+          // TODO: make use of ratio, candidates.right().
           return executors.stream()
-            .filter(executor -> candidates.contains(executor.getNodeName()))
+            .filter(executor -> candidates.left().contains(executor.getNodeName()))
             .min(Comparator.comparingInt(ExecutorRepresenter::getNumOfRunningTasks))
             .orElseThrow(() -> new RuntimeException("No such executor"));
         }
