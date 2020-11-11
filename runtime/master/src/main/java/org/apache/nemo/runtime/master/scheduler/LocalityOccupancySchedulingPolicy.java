@@ -20,7 +20,6 @@
 package org.apache.nemo.runtime.master.scheduler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.exception.SchedulingException;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
@@ -36,6 +35,7 @@ import javax.inject.Inject;
 import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * This policy chooses a set of Executors, considering the locality and the minimum running tasks.
@@ -57,33 +57,35 @@ public final class LocalityOccupancySchedulingPolicy implements SchedulingPolicy
 
   @Override
   public ExecutorRepresenter selectExecutor(final Collection<ExecutorRepresenter> executors, final Task task) {
-    final OptionalInt minOccupancy =
-      executors.stream()
-        .mapToInt(ExecutorRepresenter::getNumOfRunningTasks)
-        .min();
-    final OptionalDouble avgOccupancy =
-      executors.stream()
-        .mapToInt(ExecutorRepresenter::getNumOfRunningTasks)
-        .average();
-
-    if (!minOccupancy.isPresent() || !avgOccupancy.isPresent()) {
-      throw new SchedulingException("Cannot find min/max occupancy");
+    if (executors.isEmpty()) {
+      throw new SchedulingException("No executors available for scheduling");
     }
 
     if (pipeManagerMaster.isActive()) {
+      final OptionalDouble avgOccupancy =
+        executors.stream()
+          .mapToInt(ExecutorRepresenter::getNumOfRunningTasks)
+          .average();
+
       LOG.error("Using PipeManagerMaster!!");
       final List<String> dataLocationExecutorNodeNames = task.getTaskIncomingEdges().stream()
         .map(e -> pipeManagerMaster.getLocation(e.getId(), RuntimeIdManager.getIndexFromTaskId(task.getTaskId())))
         .map(registry::executorIdToNodeName)
         .collect(Collectors.toList());
 
-      return candidateDataLocation(dataLocationExecutorNodeNames, executors, avgOccupancy.getAsDouble());
+      return candidateDataLocation(dataLocationExecutorNodeNames, executors, avgOccupancy
+        .orElseThrow(() -> new SchedulingException("Cannot find average occupancy of the given executors")));
 
     } else {
+      final OptionalInt minOccupancy =
+        executors.stream()
+          .mapToInt(ExecutorRepresenter::getNumOfRunningTasks)
+          .min();
+
       return executors.stream()
         .filter(executor -> executor.getNumOfRunningTasks() == minOccupancy.getAsInt())
         .findFirst()
-        .orElseThrow(() -> new SchedulingException("No such executor"));
+        .orElseThrow(() -> new SchedulingException("No executor found with the minimum occupancy"));
     }
   }
 
@@ -102,28 +104,69 @@ public final class LocalityOccupancySchedulingPolicy implements SchedulingPolicy
 
       // Pair.left is the list of nodes, Pair.right is the ratio of the distance, from the last distance.
       // Ex. if the ratio is 2, that group of nodes have 2x distance compared to the last group of nodes.
-      final List<Pair<List<String>, Float>> list = new ArrayList<>();
-      map.forEach((k, v) -> list.add(Pair.of(Arrays.asList(v.get(0).split("\\+")), Float.valueOf(v.get(1)))));
+      final List<List<String>> list = new ArrayList<>();
+      map.forEach((k, v) ->
+        list.add(groupsToListOfNodes(map, v.get(0).split("\\+"))));
 
-      for (final Pair<List<String>, Float> candidates: list) {
+      for (final List<String> candidates: list) {
         LOG.error("checking for {} in {}", dataSourceExecutors, candidates);
-        if (candidates.left().containsAll(dataSourceExecutors) && executors.stream()
-          .filter(e -> candidates.left().contains(e.getNodeName()))
-          .anyMatch(e -> e.getNumOfRunningTasks() < avgOccupancy)) {
-          // TODO: make use of ratio, candidates.right().
-          return executors.stream()
-            .filter(executor -> candidates.left().contains(executor.getNodeName()))
-            .min(Comparator.comparingInt(ExecutorRepresenter::getNumOfRunningTasks))
-            .orElseThrow(() -> new RuntimeException("No such executor"));
+        if (candidates.containsAll(dataSourceExecutors)) {
+          final Integer idx = list.indexOf(candidates);
+          return handleDataTransferFor(map, idx.toString(), executors, 10F);
         }
       }
 
       // Just return the one with the min occupancy.
       return executors.stream()
         .min(Comparator.comparingInt(ExecutorRepresenter::getNumOfRunningTasks))
-        .orElseThrow(() -> new RuntimeException("No such executor"));
+        .orElseThrow(() -> new RuntimeException("Executor doesn't exist"));
     } catch (final Exception e) {
       throw new SchedulingException(e);
     }
+  }
+
+  private static ExecutorRepresenter handleDataTransferFor(final Map<String, ArrayList<String>> map,
+                                                           final String key,
+                                                           final Collection<ExecutorRepresenter> executors,
+                                                           final Float threshold) {
+    final ArrayList<String> group = map.get(key);
+    if (group.get(1).equals("0")) {
+      return executors.stream()
+        .filter(executor -> executor.getNodeName().equals(group.get(0)))
+        .min(Comparator.comparingInt(ExecutorRepresenter::getNumOfRunningTasks))
+        .orElseThrow(() -> new RuntimeException("No such executor"));
+    }
+
+    final ArrayList<ExecutorRepresenter> candidates = new ArrayList<>();
+    for (final String idx: group.get(0).split("\\+")) {
+      final ArrayList<String> childGroup = map.get(idx);
+      if (childGroup.get(0).matches("\\d+")
+        && Float.parseFloat(group.get(1)) > Float.parseFloat(childGroup.get(1)) * threshold) {
+        candidates.add(handleDataTransferFor(map, childGroup.get(0), executors, threshold));
+      } else {
+        candidates.addAll(executors.stream()
+          .filter(executor -> groupsToListOfNodes(map, childGroup.get(0).split("\\+")).contains(executor.getNodeName()))
+          .collect(Collectors.toList()));
+      }
+    }
+    final ExecutorRepresenter candidate = candidates.stream()
+      .min(Comparator.comparingInt(ExecutorRepresenter::getNumOfRunningTasks))
+      .orElseThrow(() -> new RuntimeException("Executors were not chosen"));
+    // TODO: handle the data transfer to candidate
+    return candidate;
+  }
+
+  private static List<String> groupsToListOfNodes(final Map<String, ArrayList<String>> map,
+                                                  final String[] splittedGroups) {
+    if (splittedGroups.length == 1 && splittedGroups[0].matches("\\D+")) {
+      return Arrays.asList(splittedGroups);
+    }
+    return Arrays.stream(splittedGroups).flatMap(group -> {
+      if (group.matches("\\d+")) {
+        return groupsToListOfNodes(map, map.get(group).get(0).split("\\+")).stream();
+      } else {
+        return Stream.of(group);
+      }
+    }).collect(Collectors.toList());
   }
 }
