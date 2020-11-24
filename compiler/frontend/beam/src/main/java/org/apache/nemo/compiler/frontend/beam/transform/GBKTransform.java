@@ -45,9 +45,12 @@ import java.util.*;
  * @param <InputT> input type
  * @param <OutputT> output type
  */
-public final class GBKTransform<K, InputT, OutputT>
+public class GBKTransform<K, InputT, OutputT>
   extends AbstractDoFnTransform<KV<K, InputT>, KeyedWorkItem<K, InputT>, KV<K, OutputT>> {
   private static final Logger LOG = LoggerFactory.getLogger(GBKTransform.class.getName());
+  final PipelineOptions options;
+  final DoFnSchemaInformation doFnSchemaInformation;
+  final DisplayData displayData;
   private final SystemReduceFn reduceFn;
   private transient InMemoryTimerInternalsFactory<K> inMemoryTimerInternalsFactory;
   private transient InMemoryStateInternalsFactory<K> inMemoryStateInternalsFactory;
@@ -55,8 +58,6 @@ public final class GBKTransform<K, InputT, OutputT>
   private Watermark prevOutputWatermark = new Watermark(Long.MIN_VALUE);
   private Watermark inputWatermark = new Watermark(Long.MIN_VALUE);
   private boolean dataReceived = false;
-  private transient OutputCollector originOc;
-  private final boolean isPartialCombining;
 
   public GBKTransform(final Coder<KV<K, InputT>> inputCoder,
                       final Map<TupleTag<?>, Coder<?>> outputCoders,
@@ -65,8 +66,7 @@ public final class GBKTransform<K, InputT, OutputT>
                       final PipelineOptions options,
                       final SystemReduceFn reduceFn,
                       final DoFnSchemaInformation doFnSchemaInformation,
-                      final DisplayData displayData,
-                      final boolean isPartialCombining) {
+                      final DisplayData displayData) {
     super(null,
       inputCoder,
       outputCoders,
@@ -78,8 +78,10 @@ public final class GBKTransform<K, InputT, OutputT>
       displayData,
       doFnSchemaInformation,
       Collections.emptyMap()); /* does not have side inputs */
+    this.options = options;
+    this.doFnSchemaInformation = doFnSchemaInformation;
+    this.displayData = displayData;
     this.reduceFn = reduceFn;
-    this.isPartialCombining = isPartialCombining;
   }
 
   /**
@@ -116,7 +118,6 @@ public final class GBKTransform<K, InputT, OutputT>
   /** Wrapper function of output collector. */
   @Override
   OutputCollector wrapOutputCollector(final OutputCollector oc) {
-    originOc = oc;
     return new GBKOutputCollector(oc);
   }
 
@@ -263,11 +264,13 @@ public final class GBKTransform<K, InputT, OutputT>
     }
   }
 
-  /** Accessor for isPartialCombining. */
-  public boolean getIsPartialCombining() {
-    return isPartialCombining;
+  /**
+   * Accessor for reduceFn.
+   * @return the reduceFn function.
+   */
+  public SystemReduceFn getReduceFn() {
+    return reduceFn;
   }
-
 
   /** Wrapper class for {@link OutputCollector}. */
   public class GBKOutputCollector implements OutputCollector<WindowedValue<KV<K, OutputT>>> {

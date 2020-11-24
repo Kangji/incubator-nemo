@@ -44,6 +44,11 @@ public final class FinalCombineFn<AccumT, Output> extends Combine.CombineFn<Accu
   }
 
   @Override
+  public Coder<AccumT> getAccumulatorCoder(final CoderRegistry registry, final Coder<AccumT> ac) {
+    return accumCoder;
+  }
+
+  @Override
   public AccumT createAccumulator() {
     return originFn.createAccumulator();
   }
@@ -52,11 +57,6 @@ public final class FinalCombineFn<AccumT, Output> extends Combine.CombineFn<Accu
   public AccumT addInput(final AccumT accumulator, final AccumT input) {
     final AccumT result = originFn.mergeAccumulators(Arrays.asList(accumulator, input));
     return result;
-  }
-
-  @Override
-  public Coder<AccumT> getAccumulatorCoder(final CoderRegistry registry, final Coder<AccumT> ac) {
-    return accumCoder;
   }
 
   @Override

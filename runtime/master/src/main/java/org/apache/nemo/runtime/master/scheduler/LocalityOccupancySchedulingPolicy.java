@@ -152,7 +152,7 @@ public final class LocalityOccupancySchedulingPolicy implements SchedulingPolicy
     final ExecutorRepresenter candidate = candidates.stream()
       .min(Comparator.comparingInt(ExecutorRepresenter::getNumOfRunningTasks))
       .orElseThrow(() -> new RuntimeException("Executors were not chosen"));
-    // TODO: handle the data transfer to candidate
+    // TOODO: handle the data transfer to candidate
     return candidate;
   }
 

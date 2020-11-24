@@ -35,6 +35,7 @@ import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.executionproperty.ResourceSpecification;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.LoopVertex;
+import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
@@ -797,6 +798,10 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     fromSplitterToOutside.forEach(builder::connectVertices);
 
     modifiedDAG = builder.build();
+  }
+
+  public void insert(final OperatorVertex combineVertex) {
+
   }
 
   /**
