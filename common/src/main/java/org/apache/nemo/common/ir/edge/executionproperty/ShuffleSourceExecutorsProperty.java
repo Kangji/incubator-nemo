@@ -19,11 +19,11 @@
 
 package org.apache.nemo.common.ir.edge.executionproperty;
 
-import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 
 import java.util.ArrayList;
 
-public final class ShuffleSourceExecutorsProperty extends VertexExecutionProperty<ArrayList<String>> {
+public final class ShuffleSourceExecutorsProperty extends EdgeExecutionProperty<ArrayList<String>> {
 
   /**
    * Default constructor.

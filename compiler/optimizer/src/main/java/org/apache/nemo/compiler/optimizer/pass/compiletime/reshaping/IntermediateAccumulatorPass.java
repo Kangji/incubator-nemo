@@ -21,12 +21,15 @@ package org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
+import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.compiler.frontend.beam.transform.CombineTransform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A pass that inserts an intermediate accumulator in between combiners and reducers.
@@ -36,11 +39,17 @@ import java.util.List;
 public final class IntermediateAccumulatorPass extends ReshapingPass {
   private static final Logger LOG = LoggerFactory.getLogger(IntermediateAccumulatorPass.class.getName());
 
+  private final ArrayList<String> sourceExecutors;
+  private final ArrayList<String> intermediateExecutors;
+
   /**
    * Default constructor.
    */
-  public IntermediateAccumulatorPass() {
+  public IntermediateAccumulatorPass(final ArrayList<String> sourceExecutors,
+                                     final ArrayList<String> intermediateExecutors) {
     super(IntermediateAccumulatorPass.class);
+    this.sourceExecutors = sourceExecutors;
+    this.intermediateExecutors = intermediateExecutors;
   }
 
   @Override
@@ -49,18 +58,21 @@ public final class IntermediateAccumulatorPass extends ReshapingPass {
       if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof CombineTransform
         && ((CombineTransform<?, ?, ?, ?>) ((OperatorVertex) v).getTransform()).isFinalCombining()) {
         // Insert an intermediate GBKTransform before the final combining vertex
-        final List<IREdge> incomingEdges = irdag.getIncomingEdgesOf(v);
+        final List<IREdge> incomingShuffleEdges = irdag.getIncomingEdgesOf(v).stream()
+          .filter(e -> CommunicationPatternProperty.Value.SHUFFLE
+            .equals(e.getPropertyValue(CommunicationPatternProperty.class)
+              .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE)))
+          .collect(Collectors.toList());
+
         final CombineTransform<?, ?, ?, ?> finalCombineStreamTransform =
           (CombineTransform<?, ?, ?, ?>) ((OperatorVertex) v).getTransform();
         final CombineTransform<?, ?, ?, ?> intermediateCombineStreamTransform =
           CombineTransform.getIntermediateCombineTransformOf(finalCombineStreamTransform);
 
-
-
         final OperatorVertex intermediateCombineOperatorVertex = new OperatorVertex(intermediateCombineStreamTransform);
-        irdag.insert();
-
-      }
+        irdag.insert(intermediateCombineOperatorVertex, incomingShuffleEdges, sourceExecutors, intermediateExecutors);
+      } // else if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof GBKTransform) {
+      // }
     });
     return irdag;
   }

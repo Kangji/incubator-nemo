@@ -800,8 +800,45 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     modifiedDAG = builder.build();
   }
 
-  public void insert(final OperatorVertex combineVertex) {
+  public void insert(final OperatorVertex combineVertex, final List<IREdge> shuffleEdges,
+                     final ArrayList<String> sourceExecutors, final ArrayList<String> intermediateExecutors) {
+    // Create a completely new DAG with the vertex inserted.
+    final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
 
+    builder.addVertex(combineVertex);
+    final Integer newParallelism = shuffleEdges.stream()
+      .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(1))
+      .max()
+      .orElse(1);
+    combineVertex.setProperty(ParallelismProperty.of(newParallelism));
+
+    modifiedDAG.topologicalDo(v -> {
+      builder.addVertex(v);
+      modifiedDAG.getIncomingEdgesOf(v).forEach(e -> {
+        if (shuffleEdges.contains(e)) {
+          // MATCH!
+
+          // Edge to the combineVertex
+          final IREdge toCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, e.getSrc(), combineVertex);
+          e.copyExecutionPropertiesTo(toCV);
+          toCV.setProperty(ShuffleSourceExecutorsProperty.of(sourceExecutors));
+
+          // Edge from the combineVertex
+          final IREdge fromCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, combineVertex, e.getDst());
+          e.copyExecutionPropertiesTo(fromCV);
+          fromCV.setProperty(ShuffleSourceExecutorsProperty.of(intermediateExecutors));
+
+          // Connect the new edges
+          builder.connectVertices(toCV);
+          builder.connectVertices(fromCV);
+        } else {
+          // Simply connect vertices as before
+          builder.connectVertices(e);
+        }
+      });
+    });
+
+    modifiedDAG = builder.build();
   }
 
   /**
