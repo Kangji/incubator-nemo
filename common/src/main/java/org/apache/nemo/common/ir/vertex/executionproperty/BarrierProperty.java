@@ -17,30 +17,31 @@
  * under the License.
  */
 
-package org.apache.nemo.common.ir.edge.executionproperty;
+package org.apache.nemo.common.ir.vertex.executionproperty;
 
-import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
+import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
-import java.util.ArrayList;
-
-public final class ShuffleSourceExecutorsProperty extends EdgeExecutionProperty<ArrayList<String>> {
-
+/**
+ * Vertices tagged with the barrier property triggers a runtime pass prior to the execution of the vertex.
+ * Also see {@link org.apache.nemo.common.ir.vertex.utility.runtimepass.SignalVertex}, which has to be refactored.
+ */
+public final class BarrierProperty extends VertexExecutionProperty<String> {
   /**
    * Default constructor.
-   * @param value value of the execution property.
+   *
+   * @param value the class name of the runtime pass to trigger before executing the vertex.
    */
-  private ShuffleSourceExecutorsProperty(final ArrayList<String> value) {
+  public BarrierProperty(final String value) {
     super(value);
   }
 
   /**
-   * Static method for constructing the execution property.
+   * Static method for constructing {@link BarrierProperty}.
    *
-   * @param value the list of executors to get the data from. Leave empty to make it effectless.
-   * @return the new execution property
+   * @param value the class name of the runtime pass to trigger before executing the vertex.
+   * @return the execution property.
    */
-  public static ShuffleSourceExecutorsProperty of(final ArrayList<String> value) {
-    return new ShuffleSourceExecutorsProperty(value);
+  public static BarrierProperty of(final String value) {
+    return new BarrierProperty(value);
   }
-
 }

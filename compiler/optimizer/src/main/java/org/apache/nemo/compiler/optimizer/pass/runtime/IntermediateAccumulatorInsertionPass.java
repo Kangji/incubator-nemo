@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping;
+package org.apache.nemo.compiler.optimizer.pass.runtime;
 
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
@@ -36,24 +37,17 @@ import java.util.stream.Collectors;
  * This pass is currently specific for BEAM applications, and has no effect on other applications.
  * This pass can be extended to other applications for it to take better effect.
  */
-public final class IntermediateAccumulatorPass extends ReshapingPass {
-  private static final Logger LOG = LoggerFactory.getLogger(IntermediateAccumulatorPass.class.getName());
-
-  private final ArrayList<String> sourceExecutors;
-  private final ArrayList<String> intermediateExecutors;
+public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Pair<ArrayList<String>, ArrayList<String>>> {
+  private static final Logger LOG = LoggerFactory.getLogger(IntermediateAccumulatorInsertionPass.class.getName());
 
   /**
    * Default constructor.
    */
-  public IntermediateAccumulatorPass(final ArrayList<String> sourceExecutors,
-                                     final ArrayList<String> intermediateExecutors) {
-    super(IntermediateAccumulatorPass.class);
-    this.sourceExecutors = sourceExecutors;
-    this.intermediateExecutors = intermediateExecutors;
+  public IntermediateAccumulatorInsertionPass() {
   }
 
   @Override
-  public IRDAG apply(final IRDAG irdag) {
+  public IRDAG apply(final IRDAG irdag, final Message<Pair<ArrayList<String>, ArrayList<String>>> pairMessage) {
     irdag.topologicalDo(v -> {
       if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof CombineTransform
         && ((CombineTransform<?, ?, ?, ?>) ((OperatorVertex) v).getTransform()).isFinalCombining()) {
@@ -68,6 +62,9 @@ public final class IntermediateAccumulatorPass extends ReshapingPass {
           (CombineTransform<?, ?, ?, ?>) ((OperatorVertex) v).getTransform();
         final CombineTransform<?, ?, ?, ?> intermediateCombineStreamTransform =
           CombineTransform.getIntermediateCombineTransformOf(finalCombineStreamTransform);
+
+        final ArrayList<String> sourceExecutors = pairMessage.getMessageValue().left();
+        final ArrayList<String> intermediateExecutors = pairMessage.getMessageValue().right();
 
         final OperatorVertex intermediateCombineOperatorVertex = new OperatorVertex(intermediateCombineStreamTransform);
         irdag.insert(intermediateCombineOperatorVertex, incomingShuffleEdges, sourceExecutors, intermediateExecutors);

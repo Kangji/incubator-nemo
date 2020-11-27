@@ -30,7 +30,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSiteProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSiteParallelismMapProperty;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,13 +48,13 @@ import java.util.*;
  * <h3>Assumptions</h3>
  * This pass assumes no skew in input or intermediate data, so that the number of Task assigned to a node
  * is proportional to the data size handled by the node.
- * Also, this pass assumes stages with empty map as {@link ResourceSiteProperty} are assigned to nodes evenly.
+ * Also, this pass assumes stages with empty map as {@link ResourceSiteParallelismMapProperty} are assigned to nodes evenly.
  * For example, if source splits are not distributed evenly, any source location-aware scheduling policy will
  * assign TaskGroups unevenly.
  * Also, this pass assumes network bandwidth to be the bottleneck. Each node should have enough capacity to run
  * TaskGroups immediately as scheduler attempts to schedule a TaskGroup.
  */
-@Annotates(ResourceSiteProperty.class)
+@Annotates(ResourceSiteParallelismMapProperty.class)
 @Requires(ParallelismProperty.class)
 public final class ResourceSitePass extends AnnotatingPass {
 
@@ -76,7 +76,7 @@ public final class ResourceSitePass extends AnnotatingPass {
   @Override
   public IRDAG apply(final IRDAG dag) {
     if (bandwidthSpecificationString.isEmpty()) {
-      dag.topologicalDo(irVertex -> irVertex.setProperty(ResourceSiteProperty.of(EMPTY_MAP)));
+      dag.topologicalDo(irVertex -> irVertex.setProperty(ResourceSiteParallelismMapProperty.of(EMPTY_MAP)));
     } else {
       assignNodeShares(dag, BandwidthSpecification.fromJsonString(bandwidthSpecificationString));
     }
@@ -116,20 +116,20 @@ public final class ResourceSitePass extends AnnotatingPass {
       final Collection<IREdge> inEdges = dag.getIncomingEdgesOf(irVertex);
       final int parallelism = irVertex.getPropertyValue(ParallelismProperty.class)
         .orElseThrow(() -> new RuntimeException("Parallelism property required"));
-      if (inEdges.size() == 0) {
+      if (inEdges.isEmpty()) {
         // This vertex is root vertex.
         // Fall back to setting even distribution
-        irVertex.setProperty(ResourceSiteProperty.of(EMPTY_MAP));
+        irVertex.setProperty(ResourceSiteParallelismMapProperty.of(EMPTY_MAP));
       } else if (isOneToOneEdge(inEdges)) {
         final Optional<HashMap<String, Integer>> property = inEdges.iterator().next().getSrc()
-          .getPropertyValue(ResourceSiteProperty.class);
-        irVertex.setProperty(ResourceSiteProperty.of(property.get()));
+          .getPropertyValue(ResourceSiteParallelismMapProperty.class);
+        irVertex.setProperty(ResourceSiteParallelismMapProperty.of(property.get()));
       } else {
         // This IRVertex has shuffle inEdge(s), or has multiple inEdges.
         final Map<String, Integer> parentLocationShares = new HashMap<>();
         for (final IREdge edgeToIRVertex : dag.getIncomingEdgesOf(irVertex)) {
           final IRVertex parentVertex = edgeToIRVertex.getSrc();
-          final Map<String, Integer> parentShares = parentVertex.getPropertyValue(ResourceSiteProperty.class).get();
+          final Map<String, Integer> parentShares = parentVertex.getPropertyValue(ResourceSiteParallelismMapProperty.class).get();
           final int parentParallelism = parentVertex.getPropertyValue(ParallelismProperty.class)
             .orElseThrow(() -> new RuntimeException("Parallelism property required"));
           final Map<String, Integer> shares = parentShares.isEmpty() ? getEvenShares(bandwidthSpecification.getNodes(),
@@ -153,7 +153,7 @@ public final class ResourceSitePass extends AnnotatingPass {
           shares.put(nodeName, shares.get(nodeName) + 1);
           remainder--;
         }
-        irVertex.setProperty(ResourceSiteProperty.of(shares));
+        irVertex.setProperty(ResourceSiteParallelismMapProperty.of(shares));
       }
     });
   }

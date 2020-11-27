@@ -173,11 +173,11 @@ public final class IRDAGChecker {
         return success(); // No need to check, if the parallelism is not set yet
       }
 
-      final Optional<Integer> resourceSiteSize = v.getPropertyValue(ResourceSiteProperty.class)
+      final Optional<Integer> resourceSiteSize = v.getPropertyValue(ResourceSiteParallelismMapProperty.class)
         .map(rs -> rs.values().stream().mapToInt(Integer::intValue).sum());
       if (resourceSiteSize.isPresent() && !parallelism.equals(resourceSiteSize)) {
         return failure("Parallelism must equal to sum of site nums",
-          v, ParallelismProperty.class, ResourceSiteProperty.class);
+          v, ParallelismProperty.class, ResourceSiteParallelismMapProperty.class);
       }
 
       final Optional<HashSet<Integer>> antiAffinitySet = v.getPropertyValue(ResourceAntiAffinityProperty.class);

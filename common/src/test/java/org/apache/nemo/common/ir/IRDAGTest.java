@@ -165,14 +165,14 @@ public class IRDAGTest {
     final HashMap<String, Integer> goodSite = new HashMap<>();
     goodSite.put("SiteA", 1);
     goodSite.put("SiteB", MIN_THREE_SOURCE_READABLES - 1);
-    firstOperatorVertex.setProperty(ResourceSiteProperty.of(goodSite));
+    firstOperatorVertex.setProperty(ResourceSiteParallelismMapProperty.of(goodSite));
     mustPass();
 
     // must fail
     final HashMap<String, Integer> badSite = new HashMap<>();
     badSite.put("SiteA", 1);
     badSite.put("SiteB", MIN_THREE_SOURCE_READABLES - 2); // sum is smaller than parallelism
-    firstOperatorVertex.setProperty(ResourceSiteProperty.of(badSite));
+    firstOperatorVertex.setProperty(ResourceSiteParallelismMapProperty.of(badSite));
     mustFail();
   }
 

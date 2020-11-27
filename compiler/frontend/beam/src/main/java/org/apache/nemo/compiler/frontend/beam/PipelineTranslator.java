@@ -394,6 +394,7 @@ final class PipelineTranslator {
         (Combine.CombineFn) combineFn, accumulatorCoder);
       final CombineFnBase.GlobalCombineFn finalCombineFn = new FinalCombineFn(
         (Combine.CombineFn) combineFn, accumulatorCoder);
+
       final SystemReduceFn partialSystemReduceFn =
         SystemReduceFn.combining(
           inputCoder.getKeyCoder(),
@@ -416,6 +417,7 @@ final class PipelineTranslator {
             KvCoder.of(inputCoder.getKeyCoder(), accumulatorCoder),
             null, mainInput.getWindowingStrategy()));
       final TupleTag<?> partialMainOutputTag = new TupleTag<>();
+
       final CombineTransform partialCombineStreamTransform =
         new CombineTransform(inputCoder,
           Collections.singletonMap(partialMainOutputTag, KvCoder.of(inputCoder.getKeyCoder(), accumulatorCoder)),
@@ -432,19 +434,7 @@ final class PipelineTranslator {
           false);
 
       final CombineTransform finalCombineStreamTransform =
-        new CombineTransform(inputCoder,
-          Collections.singletonMap(partialMainOutputTag, KvCoder.of(inputCoder.getKeyCoder(), accumulatorCoder)),
-          getOutputCoders(pTransform),
-          Iterables.getOnlyElement(beamNode.getOutputs().keySet()),
-          mainInput.getWindowingStrategy(),
-          ctx.getPipelineOptions(),
-          partialSystemReduceFn,
-          intermediateSystemReduceFn,
-          finalSystemReduceFn,
-          DoFnSchemaInformation.create(),
-          DisplayData.from(beamNode.getTransform()),
-          false,
-          true);
+        CombineTransform.getFinalCombineTransformOf(partialCombineStreamTransform);
 
       partialCombine = new OperatorVertex(partialCombineStreamTransform);
       finalCombine = new OperatorVertex(finalCombineStreamTransform);
