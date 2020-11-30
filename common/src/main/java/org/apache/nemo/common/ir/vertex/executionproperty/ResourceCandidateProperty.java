@@ -16,33 +16,33 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.nemo.common.ir.vertex.executionproperty;
 
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 
 /**
- * Map between node name and the number of parallelism which will run on the node.
- * TODO #169: Use sites (not node names) in ResourceSiteProperty
+ * List of node names to limit the scheduling of the tasks of the vertex to.
  */
-public final class ResourceSiteParallelismMapProperty extends VertexExecutionProperty<HashMap<String, Integer>> {
+public final class ResourceCandidateProperty extends VertexExecutionProperty<ArrayList<String>> {
+
   /**
    * Default constructor.
-   *
-   * @param value the map from location to the number of Task that must be executed on the node
+   * @param value value of the execution property.
    */
-  public ResourceSiteParallelismMapProperty(final HashMap<String, Integer> value) {
+  public ResourceCandidateProperty(final ArrayList<String> value) {
     super(value);
   }
 
   /**
-   * Static method for constructing {@link ResourceSiteParallelismMapProperty}.
+   * Static method for constructing {@link ResourceCandidateProperty}.
    *
-   * @param value the map from location to the number of Task that must be executed on the node
-   * @return the execution property
+   * @param value the list of executors to schedule the tasks of the vertex on. Leave empty to make it effectless.
+   * @return the new execution property
    */
-  public static ResourceSiteParallelismMapProperty of(final HashMap<String, Integer> value) {
-    return new ResourceSiteParallelismMapProperty(value);
+  public static ResourceCandidateProperty of(final ArrayList<String> value) {
+    return new ResourceCandidateProperty(value);
   }
 }

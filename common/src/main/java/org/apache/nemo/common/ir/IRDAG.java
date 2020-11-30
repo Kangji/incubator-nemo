@@ -39,7 +39,7 @@ import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSiteProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceCandidateProperty;
 import org.apache.nemo.common.ir.vertex.utility.TaskSizeSplitterVertex;
 import org.apache.nemo.common.ir.vertex.utility.runtimepass.MessageAggregatorVertex;
 import org.apache.nemo.common.ir.vertex.utility.runtimepass.MessageGeneratorVertex;
@@ -822,12 +822,12 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
           // Edge to the combineVertex
           final IREdge toCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, e.getSrc(), combineVertex);
           e.copyExecutionPropertiesTo(toCV);
-          toCV.getSrc().setProperty(ResourceSiteProperty.of(sourceExecutors));
+          toCV.getSrc().setProperty(ResourceCandidateProperty.of(sourceExecutors));
 
           // Edge from the combineVertex
           final IREdge fromCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, combineVertex, e.getDst());
           e.copyExecutionPropertiesTo(fromCV);
-          combineVertex.setProperty(ResourceSiteProperty.of(intermediateExecutors));
+          combineVertex.setProperty(ResourceCandidateProperty.of(intermediateExecutors));
 
           // Connect the new edges
           builder.connectVertices(toCV);

@@ -25,7 +25,7 @@ import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
  * <p>
  * Changing the parallelism requires also changing other execution properties that refer to task offsets.
  * Such execution properties include:
- * {@link ResourceSiteParallelismMapProperty}
+ * {@link ResourceSiteProperty}
  * {@link ResourceAntiAffinityProperty}
  * {@link org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty}
  * {@link org.apache.nemo.common.ir.edge.executionproperty.PartitionSetProperty}

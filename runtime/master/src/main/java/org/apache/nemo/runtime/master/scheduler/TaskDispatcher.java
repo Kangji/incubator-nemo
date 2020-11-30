@@ -19,6 +19,7 @@
 package org.apache.nemo.runtime.master.scheduler;
 
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.PlanStateManager;
@@ -127,8 +128,13 @@ final class TaskDispatcher {
     for (final Task task : taskList) {
       if (!planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY)) {
         // Guard against race conditions causing duplicate task launches
-        LOG.debug("Skipping {} as it is not READY", task.getTaskId());
+        LOG.warn("Skipping task {} as it is not READY", task.getTaskId());
         continue;
+      }
+
+      final Optional<String> barrierProperty = task.getPropertyValue(BarrierProperty.class);
+      if (barrierProperty.isPresent()) {
+        barrierProperty.get()
       }
 
       executorRegistry.viewExecutors(executors -> {

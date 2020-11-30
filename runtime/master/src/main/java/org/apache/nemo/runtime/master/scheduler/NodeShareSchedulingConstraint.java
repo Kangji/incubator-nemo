@@ -19,7 +19,7 @@
 package org.apache.nemo.runtime.master.scheduler;
 
 import org.apache.nemo.common.ir.executionproperty.AssociatedProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSiteParallelismMapProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceSiteProperty;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
@@ -28,9 +28,9 @@ import javax.inject.Inject;
 import java.util.*;
 
 /**
- * This constraint is to follow {@link ResourceSiteParallelismMapProperty}.
+ * This constraint is to follow {@link ResourceSiteProperty}.
  */
-@AssociatedProperty(ResourceSiteParallelismMapProperty.class)
+@AssociatedProperty(ResourceSiteProperty.class)
 public final class NodeShareSchedulingConstraint implements SchedulingConstraint {
 
   @Inject
@@ -54,7 +54,7 @@ public final class NodeShareSchedulingConstraint implements SchedulingConstraint
 
   @Override
   public boolean testSchedulability(final ExecutorRepresenter executor, final Task task) {
-    final Map<String, Integer> propertyValue = task.getPropertyValue(ResourceSiteParallelismMapProperty.class)
+    final Map<String, Integer> propertyValue = task.getPropertyValue(ResourceSiteProperty.class)
       .orElseThrow(() -> new RuntimeException("ResourceSiteProperty expected"));
     if (propertyValue.isEmpty()) {
       return true;

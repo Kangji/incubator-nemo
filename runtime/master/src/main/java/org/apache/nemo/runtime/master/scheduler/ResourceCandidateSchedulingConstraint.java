@@ -16,49 +16,38 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.nemo.runtime.master.scheduler;
 
+import net.jcip.annotations.ThreadSafe;
 import org.apache.nemo.common.ir.executionproperty.AssociatedProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourceAntiAffinityProperty;
-import org.apache.nemo.runtime.common.RuntimeIdManager;
+import org.apache.nemo.common.ir.vertex.executionproperty.ResourceCandidateProperty;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
 
-import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.Optional;
 
 /**
- * Check if any of the tasks running on the executor, and the task to schedule are both in the anti-affinity group.
- * The constraint says that it is not schedule-able if so.
+ * Check if the executor is listed up as a candidate on the resource candidate property.
  */
 @ThreadSafe
 @DriverSide
-@AssociatedProperty(ResourceAntiAffinityProperty.class)
-public final class AntiAffinitySchedulingConstraint implements SchedulingConstraint {
+@AssociatedProperty(ResourceCandidateProperty.class)
+public final class ResourceCandidateSchedulingConstraint implements SchedulingConstraint {
   /**
    * Default constructor.
    */
   @Inject
-  AntiAffinitySchedulingConstraint() {
+  ResourceCandidateSchedulingConstraint() {
   }
 
   @Override
   public boolean testSchedulability(final ExecutorRepresenter executor, final Task task) {
-    for (final Task runningTask : executor.getRunningTasks()) {
-      if (isInAntiAffinityGroup(runningTask) && isInAntiAffinityGroup(task)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private boolean isInAntiAffinityGroup(final Task task) {
-    final int taskIdx = RuntimeIdManager.getIndexFromTaskId(task.getTaskId());
-    final Optional<HashSet<Integer>> indices =
-      task.getPropertyValue(ResourceAntiAffinityProperty.class);
-    return indices.isPresent() && indices.get().contains(taskIdx);
+    final Optional<ArrayList<String>> executorCandidates = task.getPropertyValue(ResourceCandidateProperty.class);
+    return executorCandidates.isPresent() && !executorCandidates.get().isEmpty()
+      && executorCandidates.get().contains(executor.getNodeName());
   }
 }
