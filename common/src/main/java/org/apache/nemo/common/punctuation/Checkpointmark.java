@@ -16,30 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.common.ir.vertex.transform;
+package org.apache.nemo.common.punctuation;
 
-import org.apache.nemo.common.punctuation.Checkpointmark;
-import org.apache.nemo.common.punctuation.Watermark;
+public final class Checkpointmark {
+  private static int checkpointID = 0;
 
-/**
- * This transform does not emit watermarks.
- * It may be a transform for batch operation that emits collected data when calling {@link Transform#close()}.
- *
- * @param <I> input type
- * @param <O> output type
- */
-public abstract class NoWatermarkEmitTransform<I, O> implements Transform<I, O> {
-
-  /**
-   * @param watermark watermark
-   */
-  @Override
-  public final void onWatermark(final Watermark watermark) {
-    // do nothing
+  private Checkpointmark() {
+    this.checkpointID = checkpointID++;
   }
 
-  @Override
-  public final void onCheckpointmark(final Checkpointmark checkpointmark) {
-    // do nothing
+  public static Checkpointmark generateCheckpointmark() {
+    return new Checkpointmark();
+  }
+
+  public int getCheckpointID() {
+    return checkpointID;
   }
 }

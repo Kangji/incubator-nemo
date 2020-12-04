@@ -31,6 +31,7 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.sdk.values.WindowingStrategy;
 import org.apache.nemo.common.ir.OutputCollector;
+import org.apache.nemo.common.ir.vertex.transform.StatefulTransform;
 import org.apache.nemo.common.punctuation.Watermark;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
@@ -46,7 +47,7 @@ import java.util.*;
  * @param <OutputT> output type
  */
 public final class GBKTransform<K, InputT, OutputT>
-  extends AbstractDoFnTransform<KV<K, InputT>, KeyedWorkItem<K, InputT>, KV<K, OutputT>> {
+  extends AbstractDoFnTransform<KV<K, InputT>, KeyedWorkItem<K, InputT>, KV<K, OutputT>> implements StatefulTransform {
   private static final Logger LOG = LoggerFactory.getLogger(GBKTransform.class.getName());
   private final SystemReduceFn reduceFn;
   private transient InMemoryTimerInternalsFactory<K> inMemoryTimerInternalsFactory;

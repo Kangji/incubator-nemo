@@ -19,6 +19,7 @@
 package org.apache.nemo.common.ir.vertex.transform;
 
 import org.apache.nemo.common.ir.OutputCollector;
+import org.apache.nemo.common.punctuation.Checkpointmark;
 import org.apache.nemo.common.punctuation.Watermark;
 
 import java.io.Serializable;
@@ -56,6 +57,15 @@ public interface Transform<I, O> extends Serializable {
    * @param watermark watermark
    */
   void onWatermark(Watermark watermark);
+
+  /**
+   * On checkpoint mark received.
+   */
+  void onCheckpointmark(Checkpointmark checkpointmark);
+
+  /**
+   *
+   */
 
   /**
    * Close the transform.

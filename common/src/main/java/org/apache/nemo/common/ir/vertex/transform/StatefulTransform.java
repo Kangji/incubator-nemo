@@ -19,27 +19,18 @@
 package org.apache.nemo.common.ir.vertex.transform;
 
 import org.apache.nemo.common.punctuation.Checkpointmark;
-import org.apache.nemo.common.punctuation.Watermark;
 
-/**
- * This transform does not emit watermarks.
- * It may be a transform for batch operation that emits collected data when calling {@link Transform#close()}.
- *
- * @param <I> input type
- * @param <O> output type
+/** Represents a stateful transform. When receiving a checkpoint barrier, it aligns checkpoint barriers and checkpoint
+ * its state.
+ * @param <I> Input type
+ * @param <O> Output type
  */
-public abstract class NoWatermarkEmitTransform<I, O> implements Transform<I, O> {
+public interface StatefulTransform<I, O> extends Transform<I, O> {
 
-  /**
-   * @param watermark watermark
-   */
-  @Override
-  public final void onWatermark(final Watermark watermark) {
-    // do nothing
+  // Process Checkpointmark. If it has received the expected number of checkpointmarks, checkpoint. If not, stop processing from t
+  void onCheckpointmark(Checkpointmark checkpointMark) {
+
   }
 
-  @Override
-  public final void onCheckpointmark(final Checkpointmark checkpointmark) {
-    // do nothing
-  }
+  void
 }
