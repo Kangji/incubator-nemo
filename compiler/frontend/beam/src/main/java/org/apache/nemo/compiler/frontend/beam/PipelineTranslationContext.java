@@ -278,7 +278,7 @@ final class PipelineTranslationContext {
     // If GBKTransform represents a partial CombinePerKey transformation, we do NOT need to shuffle its input,
     // since its output will be shuffled before going through a final CombinePerKey transformation.
     if ((dstTransform instanceof CombineTransform
-      && !((CombineTransform<?, ?, ?>) dstTransform).getIsPartialCombining())
+      && !((CombineTransform<?, ?, ?, ?>) dstTransform).isFirstCombining())
       || dstTransform instanceof GroupByKeyTransform) {
       return CommunicationPatternProperty.Value.SHUFFLE;
     }

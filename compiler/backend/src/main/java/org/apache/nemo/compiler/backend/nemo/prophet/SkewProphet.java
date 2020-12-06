@@ -21,6 +21,7 @@ package org.apache.nemo.compiler.backend.nemo.prophet;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +40,7 @@ public final class SkewProphet implements Prophet<Object, Long> {
     final Map<Object, Long> aggregatedData = new HashMap<>();
     messageEntries.forEach(entry -> {
       final String key = entry.getKey();
-      final long partitionSize = SerializationUtils.deserialize(entry.getValue());
+      final long partitionSize = SerializationUtils.deserialize(Base64.getDecoder().decode(entry.getValue()));
       if (aggregatedData.containsKey(key)) {
         aggregatedData.compute(key, (originalKey, originalValue) -> originalValue + partitionSize);
       } else {

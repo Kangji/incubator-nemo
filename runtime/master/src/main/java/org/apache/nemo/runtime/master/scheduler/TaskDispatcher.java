@@ -170,7 +170,8 @@ final class TaskDispatcher {
 
           data.add(ControlMessage.RunTimePassMessageEntry.newBuilder()
             .setKey(IntermediateAccumulatorInsertionPass.EXECUTOR_SOURCE_KEY)
-            .setValue(SerializationUtils.serialize(dataLocationExecutorNodeNames)).build());
+            .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(dataLocationExecutorNodeNames)))
+            .build());
         }
 
         planRewriter.accumulate(messageId, targetEdges, data);

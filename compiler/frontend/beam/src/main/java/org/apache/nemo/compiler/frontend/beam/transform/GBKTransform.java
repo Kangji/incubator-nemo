@@ -48,9 +48,9 @@ import java.util.*;
 public class GBKTransform<K, InputT, OutputT>
   extends AbstractDoFnTransform<KV<K, InputT>, KeyedWorkItem<K, InputT>, KV<K, OutputT>> {
   private static final Logger LOG = LoggerFactory.getLogger(GBKTransform.class.getName());
-  final PipelineOptions options;
-  final DoFnSchemaInformation doFnSchemaInformation;
-  final DisplayData displayData;
+  private final PipelineOptions options;
+  private final DoFnSchemaInformation doFnSchemaInformation;
+  private final DisplayData displayData;
   private final SystemReduceFn reduceFn;
   private transient InMemoryTimerInternalsFactory<K> inMemoryTimerInternalsFactory;
   private transient InMemoryStateInternalsFactory<K> inMemoryStateInternalsFactory;
@@ -90,7 +90,7 @@ public class GBKTransform<K, InputT, OutputT>
    * @return GroupAlsoByWindowViaWindowSetNewDoFn
    */
   @Override
-  protected DoFn wrapDoFn(final DoFn doFn) {
+  protected final DoFn wrapDoFn(final DoFn doFn) {
     if (inMemoryStateInternalsFactory == null) {
       this.inMemoryStateInternalsFactory = new InMemoryStateInternalsFactory<>();
     } else {
@@ -117,7 +117,7 @@ public class GBKTransform<K, InputT, OutputT>
 
   /** Wrapper function of output collector. */
   @Override
-  OutputCollector wrapOutputCollector(final OutputCollector oc) {
+  final OutputCollector wrapOutputCollector(final OutputCollector oc) {
     return new GBKOutputCollector(oc);
   }
 
@@ -126,7 +126,7 @@ public class GBKTransform<K, InputT, OutputT>
    * @param element input data element.
    */
   @Override
-  public void onData(final WindowedValue<KV<K, InputT>> element) {
+  public final void onData(final WindowedValue<KV<K, InputT>> element) {
     dataReceived = true;
     try {
       checkAndInvokeBundle();
@@ -147,7 +147,7 @@ public class GBKTransform<K, InputT, OutputT>
    * @param watermark watermark
    */
   @Override
-  public void onWatermark(final Watermark watermark) throws RuntimeException {
+  public final void onWatermark(final Watermark watermark) throws RuntimeException {
     if (watermark.getTimestamp() <= inputWatermark.getTimestamp()) {
       throw new RuntimeException(
         "Received watermark " + watermark.getTimestamp()
@@ -172,7 +172,7 @@ public class GBKTransform<K, InputT, OutputT>
    * in order to emit all data.
    */
   @Override
-  protected void beforeClose() {
+  protected final void beforeClose() {
     // Finish any pending windows by advancing the input watermark to timestamp max value.
     inputWatermark = new Watermark(BoundedWindow.TIMESTAMP_MAX_VALUE.getMillis());
     // Trigger all the remaining timers that have not been fired yet.
@@ -268,8 +268,32 @@ public class GBKTransform<K, InputT, OutputT>
    * Accessor for reduceFn.
    * @return the reduceFn function.
    */
-  public SystemReduceFn getReduceFn() {
+  public final SystemReduceFn getReduceFn() {
     return reduceFn;
+  }
+
+  /**
+   * Accessor of options.
+   * @return the pipeline options.
+   */
+  public final PipelineOptions getOptions() {
+    return options;
+  }
+
+  /**
+   * Accessor of doFnSchemaInformation.
+   * @return the doFnSchemaInformation.
+   */
+  public final DoFnSchemaInformation getDoFnSchemaInformation() {
+    return doFnSchemaInformation;
+  }
+
+  /**
+   * Accessor of display data.
+   * @return the display data.
+   */
+  public final DisplayData getDisplayData() {
+    return displayData;
   }
 
   /** Wrapper class for {@link OutputCollector}. */

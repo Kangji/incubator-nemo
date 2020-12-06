@@ -49,7 +49,7 @@ public final class MessageAggregatorVertex<K, V, O> extends OperatorVertex {
                                  final MessageAggregatorFunction<K, V, O> userFunction) {
     super(new MessageAggregatorTransform<>(initialStateSupplier, userFunction));
     final Integer runtimeOptimizationMessageID = IdManager.generateMessageId();
-    this.setPropertyPermanently(MessageIdVertexProperty.of(runtimeOptimizationMessageID);
+    this.setPropertyPermanently(MessageIdVertexProperty.of(runtimeOptimizationMessageID));
     this.setProperty(ParallelismProperty.of(1));
   }
 

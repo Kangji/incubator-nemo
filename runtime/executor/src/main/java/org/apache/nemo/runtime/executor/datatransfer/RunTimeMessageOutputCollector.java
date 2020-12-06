@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -72,7 +73,7 @@ public final class RunTimeMessageOutputCollector<O> implements OutputCollector<O
           ControlMessage.RunTimePassMessageEntry.newBuilder()
             // TODO #325: Add (de)serialization for non-string key types in data metric collection
             .setKey(key == null ? NULL_KEY : String.valueOf(key))
-            .setValue(SerializationUtils.serialize(size))
+            .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(size)))
             .build())
       );
     } else {
@@ -80,7 +81,7 @@ public final class RunTimeMessageOutputCollector<O> implements OutputCollector<O
         ControlMessage.RunTimePassMessageEntry.newBuilder()
           // TODO #325: Add (de)serialization for non-string key types in data metric collection
           .setKey(DTS_KEY)
-          .setValue(SerializationUtils.serialize(null))
+          .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(null)))
           .build());
     }
     connectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID)

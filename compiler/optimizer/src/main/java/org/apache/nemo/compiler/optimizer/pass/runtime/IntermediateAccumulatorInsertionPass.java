@@ -108,7 +108,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
       .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(1))
       .max()
       .orElse(1);
-    // parallelism of the new vertex is set to 2/3 of the max value of parallelisms of its shuffle source vertices if > 5.
+    // parallelism of the new vertex is set to 2/3 of the max value of parallelisms of its shuffle source vertices.
     final int parallelism = newParallelism > 5 ? newParallelism * 2 / 3 : newParallelism;
 
     // Note that if there is no previous number of sets, we use the number of data source executors.

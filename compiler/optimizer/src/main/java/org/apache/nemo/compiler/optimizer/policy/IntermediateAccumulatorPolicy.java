@@ -27,7 +27,7 @@ import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 /**
  * A policy to perform intermediate data accumulation in shuffle edges (e.g. WAN networks).
  */
-public class IntermediateAccumulatorPolicy implements Policy {
+public final class IntermediateAccumulatorPolicy implements Policy {
   public static final PolicyBuilder BUILDER =
     new PolicyBuilder()
       .registerRunTimePass(new IntermediateAccumulatorInsertionPass(), new IntermediateAccumulatorAnnotatingPass());

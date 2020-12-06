@@ -33,7 +33,14 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-public class CombineTransform<K, InputT, AccumT, OutputT> extends GBKTransform {
+/**
+ * Combine transform that combines the results during the group by key.
+ * @param <K> the type of the key.
+ * @param <InputT> the type of the input values.
+ * @param <AccumT> the type of the accumulators.
+ * @param <OutputT> the type of the output.
+ */
+public final class CombineTransform<K, InputT, AccumT, OutputT> extends GBKTransform {
   private static final Logger LOG = LoggerFactory.getLogger(CombineTransform.class.getName());
   private final boolean isFinalCombining;
   private final boolean isFirstCombining;
@@ -90,27 +97,42 @@ public class CombineTransform<K, InputT, AccumT, OutputT> extends GBKTransform {
     return isFinalCombining;
   }
 
+  /**
+   * Get the partial combine transform of the combine transform.
+   * @param ct the combine transform.
+   * @return the partial combine transform for the combine transform.
+   */
   public static CombineTransform getPartialCombineTransformOf(final CombineTransform ct) {
     return new CombineTransform(ct.inputCoder, ct.accumulatorOutputCoder, ct.outputCoders,
-      ct.getMainOutputTag(), ct.getWindowingStrategy(), ct.options,
+      ct.getMainOutputTag(), ct.getWindowingStrategy(), ct.getOptions(),
       ct.combineFn, ct.intermediateCombineFn, ct.finalReduceFn,
-      ct.doFnSchemaInformation, ct.displayData,
+      ct.getDoFnSchemaInformation(), ct.getDisplayData(),
       true, false);
   }
 
+  /**
+   * Get the intermediate combine transform of the combine transform.
+   * @param ct the combine transform.
+   * @return the intermediate combine transform for the combine transform.
+   */
   public static CombineTransform getIntermediateCombineTransformOf(final CombineTransform ct) {
     return new CombineTransform(ct.inputCoder, ct.accumulatorOutputCoder, ct.outputCoders,
-      ct.getMainOutputTag(), ct.getWindowingStrategy(), ct.options,
+      ct.getMainOutputTag(), ct.getWindowingStrategy(), ct.getOptions(),
       ct.combineFn, ct.intermediateCombineFn, ct.finalReduceFn,
-      ct.doFnSchemaInformation, ct.displayData,
+      ct.getDoFnSchemaInformation(), ct.getDisplayData(),
       false, false);
   }
 
+  /**
+   * Get the final combine transform of the combine transform.
+   * @param ct the combine transform.
+   * @return the final combine transform for the combine transform.
+   */
   public static CombineTransform getFinalCombineTransformOf(final CombineTransform ct) {
     return new CombineTransform(ct.inputCoder, ct.accumulatorOutputCoder, ct.outputCoders,
-      ct.getMainOutputTag(), ct.getWindowingStrategy(), ct.options,
+      ct.getMainOutputTag(), ct.getWindowingStrategy(), ct.getOptions(),
       ct.combineFn, ct.intermediateCombineFn, ct.finalReduceFn,
-      ct.doFnSchemaInformation, ct.displayData,
+      ct.getDoFnSchemaInformation(), ct.getDisplayData(),
       false, true);
   }
 }
