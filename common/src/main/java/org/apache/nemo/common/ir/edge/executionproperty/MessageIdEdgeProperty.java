@@ -24,6 +24,7 @@ import java.util.HashSet;
 
 /**
  * Vertices and edges with the same MessageId are subject to the same run-time optimization.
+ * Note that the MessageIds are created upon the creation of vertices that are subject to the optimization.
  */
 public final class MessageIdEdgeProperty extends EdgeExecutionProperty<HashSet<Integer>> {
   /**

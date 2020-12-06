@@ -41,13 +41,11 @@ public final class SchedulingConstraintRegistry {
   @Inject
   private SchedulingConstraintRegistry(
     final ContainerTypeAwareSchedulingConstraint containerTypeAwareSchedulingConstraint,
-    final ResourceCandidateSchedulingConstraint resourceCandidateSchedulingConstraint,
     final FreeSlotSchedulingConstraint freeSlotSchedulingConstraint,
     final LocalitySchedulingConstraint localitySchedulingConstraint,
     final AntiAffinitySchedulingConstraint antiAffinitySchedulingConstraint,
     final NodeShareSchedulingConstraint nodeShareSchedulingConstraint) {
     registerSchedulingConstraint(containerTypeAwareSchedulingConstraint);
-    registerSchedulingConstraint(resourceCandidateSchedulingConstraint);
     registerSchedulingConstraint(freeSlotSchedulingConstraint);
     registerSchedulingConstraint(localitySchedulingConstraint);
     registerSchedulingConstraint(antiAffinitySchedulingConstraint);

@@ -22,6 +22,7 @@ import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
 /**
  * Vertices and edges with the same MessageId belong to the same run-time optimization.
+ * IR Edges are annotated with the message IDs of the vertices to optimize.
  */
 public final class MessageIdVertexProperty extends VertexExecutionProperty<Integer> {
   /**

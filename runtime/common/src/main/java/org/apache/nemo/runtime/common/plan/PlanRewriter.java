@@ -18,6 +18,9 @@
  */
 package org.apache.nemo.runtime.common.plan;
 
+import org.apache.nemo.runtime.common.comm.ControlMessage;
+
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -34,5 +37,5 @@ public interface PlanRewriter {
    * @param messageId of the rewrite.
    * @param data      to accumulate.
    */
-  void accumulate(int messageId, Set<StageEdge> targetEdges, Object data);
+  void accumulate(int messageId, Set<StageEdge> targetEdges, List<ControlMessage.RunTimePassMessageEntry> data);
 }

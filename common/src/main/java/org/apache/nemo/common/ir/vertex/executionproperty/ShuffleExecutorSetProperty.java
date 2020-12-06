@@ -21,28 +21,28 @@ package org.apache.nemo.common.ir.vertex.executionproperty;
 
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
- * List of node names to limit the scheduling of the tasks of the vertex to.
+ * List of set of node names to limit the scheduling of the tasks of the vertex to while shuffling.
  */
-public final class ResourceCandidateProperty extends VertexExecutionProperty<ArrayList<String>> {
+public final class ShuffleExecutorSetProperty extends VertexExecutionProperty<HashSet<HashSet<String>>> {
 
   /**
    * Default constructor.
    * @param value value of the execution property.
    */
-  public ResourceCandidateProperty(final ArrayList<String> value) {
+  public ShuffleExecutorSetProperty(final HashSet<HashSet<String>> value) {
     super(value);
   }
 
   /**
-   * Static method for constructing {@link ResourceCandidateProperty}.
+   * Static method for constructing {@link ShuffleExecutorSetProperty}.
    *
    * @param value the list of executors to schedule the tasks of the vertex on. Leave empty to make it effectless.
    * @return the new execution property
    */
-  public static ResourceCandidateProperty of(final ArrayList<String> value) {
-    return new ResourceCandidateProperty(value);
+  public static ShuffleExecutorSetProperty of(final HashSet<HashSet<String>> value) {
+    return new ShuffleExecutorSetProperty(value);
   }
 }

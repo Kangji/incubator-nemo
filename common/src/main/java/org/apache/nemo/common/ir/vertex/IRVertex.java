@@ -119,4 +119,20 @@ public abstract class IRVertex extends Vertex implements Cloneable<IRVertex> {
     node.set("executionProperties", executionProperties.asJsonNode());
     return node;
   }
+
+  public final boolean hasSameTransformAndExecutionPropertiesAs(final IRVertex o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (this instanceof OperatorVertex && o instanceof OperatorVertex) {
+      if (!((OperatorVertex) this).getTransform().getClass().getCanonicalName()
+        .equals(((OperatorVertex) o).getTransform().getClass().getCanonicalName())) {
+        return false;
+      }
+    }
+    return this.getExecutionProperties().equals(o.getExecutionProperties());
+  }
 }

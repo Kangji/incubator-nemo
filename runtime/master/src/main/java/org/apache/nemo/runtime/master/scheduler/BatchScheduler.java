@@ -24,6 +24,7 @@ import org.apache.nemo.common.exception.UnknownExecutionStateException;
 import org.apache.nemo.common.exception.UnrecoverableFailureException;
 import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProperty;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
+import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.common.state.StageState;
 import org.apache.nemo.runtime.common.state.TaskState;
@@ -117,6 +118,7 @@ public final class BatchScheduler implements Scheduler {
       .sorted(Map.Entry.comparingByKey())
       .map(Map.Entry::getValue)
       .collect(Collectors.toList());
+    // doSchedule() is called after the stage triggering the runtime pass is done.
   }
 
   /**
@@ -124,7 +126,7 @@ public final class BatchScheduler implements Scheduler {
    * @param taskId           that generated the message.
    * @param data             of the message.
    */
-  public void onRunTimePassMessage(final String taskId, final Object data) {
+  public void onRunTimePassMessage(final String taskId, final List<ControlMessage.RunTimePassMessageEntry> data) {
     BatchSchedulerUtils.onRunTimePassMessage(planStateManager, planRewriter, taskId, data);
   }
 

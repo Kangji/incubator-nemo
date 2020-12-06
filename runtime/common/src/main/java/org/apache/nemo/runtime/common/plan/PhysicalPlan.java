@@ -22,8 +22,7 @@ import org.apache.nemo.common.dag.DAG;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A job's physical plan, to be executed by the Runtime.
@@ -46,7 +45,7 @@ public final class PhysicalPlan implements Serializable {
 
     idToIRVertex = new HashMap<>();
     for (final Stage stage : stageDAG.getVertices()) {
-      for (final IRVertex irVertex : stage.getIRDAG().getVertices()) {
+      for (final IRVertex irVertex : stage.getInternalIRDAG().getVertices()) {
         idToIRVertex.put(irVertex.getId(), irVertex);
       }
     }
@@ -71,6 +70,34 @@ public final class PhysicalPlan implements Serializable {
    */
   public Map<String, IRVertex> getIdToIRVertex() {
     return idToIRVertex;
+  }
+
+  /**
+   * Method for getting the part of the StageDAG that is new in the newer physical plan compared to the older one.
+   * @param newer the newer physical plan.
+   * @param older the older physical plan.
+   * @return the updated stages.
+   */
+  public static List<Stage> getDiffStageDAGBetween(final PhysicalPlan newer, final PhysicalPlan older) {
+    final Iterator<Stage> newerTopologicalSort = newer.getStageDAG().getTopologicalSort().iterator();
+    final Iterator<Stage> olderTopologicalSort = older.getStageDAG().getTopologicalSort().iterator();
+
+    while (newerTopologicalSort.hasNext() && olderTopologicalSort.hasNext()) {
+      final Stage newerStage = newerTopologicalSort.next();
+      final Iterator<IRVertex> newerInternalIRDAG = newerStage.getInternalIRDAG().getTopologicalSort().iterator();
+      final Iterator<IRVertex> olderInternalIRDAG =
+        olderTopologicalSort.next().getInternalIRDAG().getTopologicalSort().iterator();
+
+      while (newerInternalIRDAG.hasNext() && olderInternalIRDAG.hasNext()) {
+        if (!newerInternalIRDAG.next().hasSameTransformAndExecutionPropertiesAs(olderInternalIRDAG.next())) {
+          final List<Stage> result = new ArrayList<>();
+          result.add(newerStage);
+          newerTopologicalSort.forEachRemaining(result::add);
+          return result;
+        }
+      }
+    }
+    return new ArrayList<>();
   }
 
   @Override

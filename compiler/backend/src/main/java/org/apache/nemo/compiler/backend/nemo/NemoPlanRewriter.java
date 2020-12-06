@@ -56,13 +56,15 @@ import java.util.stream.IntStream;
  * This decoupling between the NemoOptimizer and the Runtime lets Nemo optimization policies dynamically control
  * distributed execution behaviors, and at the same time enjoy correctness/reusability/composability properties that
  * the IRDAG abstraction provides.
+ *
+ * @param <T> type of the data to aggregate.
  */
-public final class NemoPlanRewriter implements PlanRewriter {
+public final class NemoPlanRewriter<T> implements PlanRewriter {
   private static final Logger LOG = LoggerFactory.getLogger(NemoPlanRewriter.class.getName());
-  private static final String DATA_NOT_AUGMENTED = "NONE";
+  private static final String DTS_KEY = "DTS";
   private final NemoOptimizer nemoOptimizer;
   private final NemoBackend nemoBackend;
-  private final Map<Integer, Map<Object, Long>> messageIdToAggregatedData;
+  private final Map<Integer, Map<Object, T>> messageIdToAggregatedData;
   private CountDownLatch readyToRewriteLatch;
   private final InjectionFuture<SimulationScheduler> simulationSchedulerInjectionFuture;
   private final PhysicalPlanGenerator physicalPlanGenerator;
@@ -101,7 +103,7 @@ public final class NemoPlanRewriter implements PlanRewriter {
     if (currentIRDAG == null) {
       throw new IllegalStateException();
     }
-    final Map<Object, Long> aggregatedData = messageIdToAggregatedData.remove(messageId); // remove for GC
+    final Map<Object, T> aggregatedData = messageIdToAggregatedData.remove(messageId); // remove for GC
     if (aggregatedData == null) {
       throw new IllegalStateException();
     }
@@ -120,7 +122,7 @@ public final class NemoPlanRewriter implements PlanRewriter {
     }
 
     // Optimize using the Message
-    final Message message = new Message(messageId, examiningEdges, aggregatedData);
+    final Message<Map<Object, T>> message = new Message<>(messageId, examiningEdges, aggregatedData);
     final IRDAG newIRDAG = nemoOptimizer.optimizeAtRunTime(currentIRDAG, message);
     this.setCurrentIRDAG(newIRDAG);
 
@@ -155,18 +157,17 @@ public final class NemoPlanRewriter implements PlanRewriter {
    * @param data          to accumulate.
    */
   @Override
-  public void accumulate(final int messageId, final Set<StageEdge> targetEdges, final Object data) {
+  public void accumulate(final int messageId, final Set<StageEdge> targetEdges,
+                         final List<ControlMessage.RunTimePassMessageEntry> data) {
     final Prophet prophet;
-    final List<ControlMessage.RunTimePassMessageEntry> parsedData = (List<ControlMessage.RunTimePassMessageEntry>) data;
-    if (!parsedData.isEmpty() && parsedData.get(0).getKey().equals(DATA_NOT_AUGMENTED)) {
+    if (!data.isEmpty() && data.get(0).getKey().equals(DTS_KEY)) {
       prophet = new ParallelismProphet(currentIRDAG, currentPhysicalPlan, simulationSchedulerInjectionFuture.get(),
         physicalPlanGenerator, targetEdges);
     } else {
-      prophet = new SkewProphet(parsedData);
+      prophet = new SkewProphet(data);
     }
-    messageIdToAggregatedData.putIfAbsent(messageId, new HashMap<>());
-    final Map<String, Long> aggregatedData = prophet.calculate();
-    this.messageIdToAggregatedData.get(messageId).putAll(aggregatedData);
+    final Map<String, T> aggregatedData = prophet.calculate();
+    this.messageIdToAggregatedData.computeIfAbsent(messageId, id -> new HashMap<>()).putAll(aggregatedData);
     this.readyToRewriteLatch.countDown();
   }
 }

@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.runtime.executor.datatransfer;
 
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.punctuation.Watermark;
@@ -41,7 +42,7 @@ import java.util.Map;
 public final class RunTimeMessageOutputCollector<O> implements OutputCollector<O> {
   private static final Logger LOG = LoggerFactory.getLogger(RunTimeMessageOutputCollector.class.getName());
   private static final String NULL_KEY = "NULL";
-  private static final String NON_EXISTENT = "NONE";
+  public static final String DTS_KEY = "DTS";
 
   private final String taskId;
   private final IRVertex irVertex;
@@ -71,15 +72,15 @@ public final class RunTimeMessageOutputCollector<O> implements OutputCollector<O
           ControlMessage.RunTimePassMessageEntry.newBuilder()
             // TODO #325: Add (de)serialization for non-string key types in data metric collection
             .setKey(key == null ? NULL_KEY : String.valueOf(key))
-            .setValue(size)
+            .setValue(SerializationUtils.serialize(size))
             .build())
       );
     } else {
       entries.add(
         ControlMessage.RunTimePassMessageEntry.newBuilder()
           // TODO #325: Add (de)serialization for non-string key types in data metric collection
-          .setKey(NON_EXISTENT)
-          .setValue(0)
+          .setKey(DTS_KEY)
+          .setValue(SerializationUtils.serialize(null))
           .build());
     }
     connectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID)

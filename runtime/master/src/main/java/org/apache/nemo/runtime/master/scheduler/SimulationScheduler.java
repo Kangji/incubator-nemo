@@ -42,6 +42,7 @@ import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.common.state.StageState;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.BlockManagerMaster;
+import org.apache.nemo.runtime.master.PipeManagerMaster;
 import org.apache.nemo.runtime.master.PlanAppender;
 import org.apache.nemo.runtime.master.PlanStateManager;
 import org.apache.nemo.runtime.master.metric.MetricStore;
@@ -97,6 +98,7 @@ public final class SimulationScheduler implements Scheduler {
    *  so it's just here to prevent errors.
    */
   private final BlockManagerMaster blockManagerMaster;
+  private final PipeManagerMaster pipeManagerMaster;
 
   /**
    * The actual metric store, from the actual job that's running, which calls for the simulation to occur.
@@ -136,11 +138,13 @@ public final class SimulationScheduler implements Scheduler {
   private SimulationScheduler(final PlanRewriter planRewriter,
                               final SchedulingConstraintRegistry schedulingConstraintRegistry,
                               final BlockManagerMaster blockManagerMaster,
+                              final PipeManagerMaster pipeManagerMaster,
                               @Parameter(JobConf.ExecutorJSONContents.class) final String resourceSpecificationString,
                               @Parameter(JobConf.ScheduleSerThread.class) final int scheduleSerThread,
                               @Parameter(JobConf.DAGDirectory.class) final String dagDirectory) {
     this.planRewriter = planRewriter;
     this.blockManagerMaster = blockManagerMaster;
+    this.pipeManagerMaster = pipeManagerMaster;
     this.pendingTaskCollectionPointer = PendingTaskCollectionPointer.newInstance();
     this.executorRegistry = ExecutorRegistry.newInstance();
     this.schedulingConstraintRegistry = schedulingConstraintRegistry;
@@ -148,8 +152,8 @@ public final class SimulationScheduler implements Scheduler {
     this.resourceSpecificationString = resourceSpecificationString;
     this.dagDirectory = dagDirectory;
     this.planStateManager = PlanStateManager.newInstance(dagDirectory);
-    this.taskDispatcher = TaskDispatcher.newInstance(schedulingConstraintRegistry, schedulingPolicy,
-      pendingTaskCollectionPointer, executorRegistry, planStateManager);
+    this.taskDispatcher = TaskDispatcher.newInstance(this, schedulingConstraintRegistry, schedulingPolicy,
+      pendingTaskCollectionPointer, executorRegistry, planStateManager, pipeManagerMaster, planRewriter);
     this.serializationExecutorService = Executors.newFixedThreadPool(scheduleSerThread);
     this.actualMetricStore = MetricStore.getStore();
     this.metricStore = MetricStore.newInstance();
@@ -186,8 +190,8 @@ public final class SimulationScheduler implements Scheduler {
     this.executorRegistry = ExecutorRegistry.newInstance();
     this.planStateManager = PlanStateManager.newInstance(dagDirectory);
     this.pendingTaskCollectionPointer.getAndSetNull();
-    this.taskDispatcher = TaskDispatcher.newInstance(schedulingConstraintRegistry, schedulingPolicy,
-      pendingTaskCollectionPointer, executorRegistry, planStateManager);
+    this.taskDispatcher = TaskDispatcher.newInstance(this, schedulingConstraintRegistry, schedulingPolicy,
+      pendingTaskCollectionPointer, executorRegistry, planStateManager, pipeManagerMaster, planRewriter);
     this.metricStore = MetricStore.newInstance();
     this.planStateManager.setMetricStore(metricStore);
     this.simulatedTaskExecutorMap.clear();
@@ -332,7 +336,7 @@ public final class SimulationScheduler implements Scheduler {
    * @param taskId that generated the message.
    * @param data   of the message.
    */
-  public void onRunTimePassMessage(final String taskId, final Object data) {
+  public void onRunTimePassMessage(final String taskId, final List<ControlMessage.RunTimePassMessageEntry> data) {
     // TODO #436: Dynamic task resizing.
     BatchSchedulerUtils.onRunTimePassMessage(planStateManager, planRewriter, taskId, data);
   }

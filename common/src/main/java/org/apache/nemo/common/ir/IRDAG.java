@@ -39,12 +39,11 @@ import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ResourceCandidateProperty;
+import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
+import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
 import org.apache.nemo.common.ir.vertex.utility.TaskSizeSplitterVertex;
 import org.apache.nemo.common.ir.vertex.utility.runtimepass.MessageAggregatorVertex;
 import org.apache.nemo.common.ir.vertex.utility.runtimepass.MessageGeneratorVertex;
-import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
-import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
 import org.apache.nemo.common.ir.vertex.utility.runtimepass.SignalVertex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -801,33 +800,34 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     modifiedDAG = builder.build();
   }
 
-  public void insert(final OperatorVertex combineVertex, final List<IREdge> shuffleEdges,
-                     final ArrayList<String> sourceExecutors, final ArrayList<String> intermediateExecutors) {
+  /**
+   * Insert an accumulator vertex between the shuffle edges.
+   * @param accumulatorVertex to insert.
+   * @param shuffleEdges to insert at.
+   */
+  public void insert(final OperatorVertex accumulatorVertex, final List<IREdge> shuffleEdges) {
     // Create a completely new DAG with the vertex inserted.
     final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
 
-    builder.addVertex(combineVertex);
-    final Integer newParallelism = shuffleEdges.stream()
-      .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(1))
-      .max()
-      .orElse(1);
-    combineVertex.setProperty(ParallelismProperty.of(newParallelism));
+    builder.addVertex(accumulatorVertex);
+    final Integer runtimeOptimizationMessageID = IdManager.generateMessageId();
+    accumulatorVertex.setProperty(MessageIdVertexProperty.of(runtimeOptimizationMessageID));
+
 
     modifiedDAG.topologicalDo(v -> {
       builder.addVertex(v);
       modifiedDAG.getIncomingEdgesOf(v).forEach(e -> {
         if (shuffleEdges.contains(e)) {
-          // MATCH!
-
           // Edge to the combineVertex
-          final IREdge toCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, e.getSrc(), combineVertex);
+          final IREdge toCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, e.getSrc(), accumulatorVertex);
           e.copyExecutionPropertiesTo(toCV);
-          toCV.getSrc().setProperty(ResourceCandidateProperty.of(sourceExecutors));
+          final HashSet<Integer> msgEdgeIds = e.getPropertyValue(MessageIdEdgeProperty.class).orElse(new HashSet<>(0));
+          msgEdgeIds.add(runtimeOptimizationMessageID);
+          e.setProperty(MessageIdEdgeProperty.of(msgEdgeIds));
 
           // Edge from the combineVertex
-          final IREdge fromCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, combineVertex, e.getDst());
+          final IREdge fromCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, accumulatorVertex, e.getDst());
           e.copyExecutionPropertiesTo(fromCV);
-          combineVertex.setProperty(ResourceCandidateProperty.of(intermediateExecutors));
 
           // Connect the new edges
           builder.connectVertices(toCV);

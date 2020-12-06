@@ -18,10 +18,18 @@
  */
 package org.apache.nemo.runtime.master.scheduler;
 
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
+import org.apache.nemo.compiler.optimizer.pass.runtime.IntermediateAccumulatorInsertionPass;
+import org.apache.nemo.runtime.common.RuntimeIdManager;
+import org.apache.nemo.runtime.common.comm.ControlMessage;
+import org.apache.nemo.runtime.common.plan.PhysicalPlan;
+import org.apache.nemo.runtime.common.plan.PlanRewriter;
+import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.common.state.TaskState;
+import org.apache.nemo.runtime.master.PipeManagerMaster;
 import org.apache.nemo.runtime.master.PlanStateManager;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
@@ -59,12 +67,20 @@ final class TaskDispatcher {
   private final SchedulingConstraintRegistry schedulingConstraintRegistry;
   private final SchedulingPolicy schedulingPolicy;
 
+  private final Scheduler scheduler;
+  private final PipeManagerMaster pipeManagerMaster;
+  private final PlanRewriter planRewriter;
+
   @Inject
-  private TaskDispatcher(final SchedulingConstraintRegistry schedulingConstraintRegistry,
+  private TaskDispatcher(final Scheduler scheduler,
+                         final SchedulingConstraintRegistry schedulingConstraintRegistry,
                          final SchedulingPolicy schedulingPolicy,
                          final PendingTaskCollectionPointer pendingTaskCollectionPointer,
                          final ExecutorRegistry executorRegistry,
-                         final PlanStateManager planStateManager) {
+                         final PlanStateManager planStateManager,
+                         final PipeManagerMaster pipeManagerMaster,
+                         final PlanRewriter planRewriter) {
+    this.scheduler = scheduler;
     this.pendingTaskCollectionPointer = pendingTaskCollectionPointer;
     this.dispatcherThread = Executors.newSingleThreadExecutor(runnable ->
       new Thread(runnable, "TaskDispatcher thread"));
@@ -74,6 +90,8 @@ final class TaskDispatcher {
     this.executorRegistry = executorRegistry;
     this.schedulingPolicy = schedulingPolicy;
     this.schedulingConstraintRegistry = schedulingConstraintRegistry;
+    this.pipeManagerMaster = pipeManagerMaster;
+    this.planRewriter = planRewriter;
   }
 
   /**
@@ -83,15 +101,20 @@ final class TaskDispatcher {
    * @param pendingTaskCollectionPointer A pointer to the pending tasks to be executed later on.
    * @param executorRegistry Registry for the list of executors available.
    * @param planStateManager Manager for the state of the plan being executed.
+   * @param pipeManagerMaster Manager for the pipe data transfer for stream processing.
+   * @param planRewriter     The Plan Rewriter for runtime optimization.
    * @return a new instance of task dispatcher.
    */
-  public static TaskDispatcher newInstance(final SchedulingConstraintRegistry schedulingConstraintRegistry,
+  public static TaskDispatcher newInstance(final Scheduler scheduler,
+                                           final SchedulingConstraintRegistry schedulingConstraintRegistry,
                                            final SchedulingPolicy schedulingPolicy,
                                            final PendingTaskCollectionPointer pendingTaskCollectionPointer,
                                            final ExecutorRegistry executorRegistry,
-                                           final PlanStateManager planStateManager) {
-    return new TaskDispatcher(schedulingConstraintRegistry, schedulingPolicy, pendingTaskCollectionPointer,
-      executorRegistry, planStateManager);
+                                           final PlanStateManager planStateManager,
+                                           final PipeManagerMaster pipeManagerMaster,
+                                           final PlanRewriter planRewriter) {
+    return new TaskDispatcher(scheduler, schedulingConstraintRegistry, schedulingPolicy, pendingTaskCollectionPointer,
+      executorRegistry, planStateManager, pipeManagerMaster, planRewriter);
   }
 
   /**
@@ -134,7 +157,28 @@ final class TaskDispatcher {
 
       final Optional<String> barrierProperty = task.getPropertyValue(BarrierProperty.class);
       if (barrierProperty.isPresent()) {
-        barrierProperty.get()
+        // Trigger the runtime pass
+        final Set<StageEdge> targetEdges = BatchSchedulerUtils.getEdgesToOptimize(planStateManager, task.getTaskId());
+        final int messageId = BatchSchedulerUtils.getMessageId(targetEdges);
+        final List<ControlMessage.RunTimePassMessageEntry> data = new ArrayList<>();
+
+        if (IntermediateAccumulatorInsertionPass.class.getCanonicalName().equals(barrierProperty.get())) {
+          final HashSet<String> dataLocationExecutorNodeNames = task.getTaskIncomingEdges().stream()
+            .map(e -> pipeManagerMaster.getLocation(e.getId(), RuntimeIdManager.getIndexFromTaskId(task.getTaskId())))
+            .map(executorRegistry::executorIdToNodeName)
+            .collect(Collectors.toCollection(HashSet::new));
+
+          data.add(ControlMessage.RunTimePassMessageEntry.newBuilder()
+            .setKey(IntermediateAccumulatorInsertionPass.EXECUTOR_SOURCE_KEY)
+            .setValue(SerializationUtils.serialize(dataLocationExecutorNodeNames)).build());
+        }
+
+        planRewriter.accumulate(messageId, targetEdges, data);
+        final PhysicalPlan newPhysicalPlan = planRewriter.rewrite(messageId);
+
+        // Asynchronous call to the update of the physical plan on the scheduler.
+        new Thread(() -> scheduler.updatePlan(newPhysicalPlan)).start();
+        return;
       }
 
       executorRegistry.viewExecutors(executors -> {

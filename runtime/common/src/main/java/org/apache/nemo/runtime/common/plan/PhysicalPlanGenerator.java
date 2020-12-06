@@ -291,7 +291,7 @@ public final class PhysicalPlanGenerator implements Function<IRDAG, DAG<Stage, S
       throw new RuntimeException("ScheduleGroup property must be set for Stage");
     }
 
-    stage.getIRDAG().getVertices().forEach(irVertex -> {
+    stage.getInternalIRDAG().getVertices().forEach(irVertex -> {
       // Check vertex type.
       if (!(irVertex instanceof SourceVertex
         || irVertex instanceof OperatorVertex)) {
