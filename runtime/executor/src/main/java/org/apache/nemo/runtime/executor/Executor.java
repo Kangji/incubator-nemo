@@ -124,8 +124,8 @@ public final class Executor {
     LOG.info("Launch task: {}", task.getTaskId());
     try {
       final long deserializationStartTime = System.currentTimeMillis();
-      final DAG<IRVertex, RuntimeEdge<IRVertex>> irDag =
-        SerializationUtils.deserialize(task.getSerializedIRDag());
+      final DAG<IRVertex, RuntimeEdge<IRVertex>> taskInternalIRDAG =
+        SerializationUtils.deserialize(task.getSerializedInternalIRDAG());
       metricMessageSender.send("TaskMetric", task.getTaskId(), "taskDeserializationTime",
         SerializationUtils.serialize(System.currentTimeMillis() - deserializationStartTime));
       final TaskStateManager taskStateManager =
@@ -141,14 +141,14 @@ public final class Executor {
         getDecoderFactory(e.getPropertyValue(DecoderProperty.class).get()),
         e.getPropertyValue(CompressionProperty.class).orElse(null),
         e.getPropertyValue(DecompressionProperty.class).orElse(null)));
-      irDag.getVertices().forEach(v ->
-        irDag.getOutgoingEdgesOf(v).forEach(e -> serializerManager.register(e.getId(),
+      taskInternalIRDAG.getVertices().forEach(v ->
+        taskInternalIRDAG.getOutgoingEdgesOf(v).forEach(e -> serializerManager.register(e.getId(),
           getEncoderFactory(e.getPropertyValue(EncoderProperty.class).get()),
           getDecoderFactory(e.getPropertyValue(DecoderProperty.class).get()),
           e.getPropertyValue(CompressionProperty.class).orElse(null),
           e.getPropertyValue(DecompressionProperty.class).orElse(null))));
 
-      new TaskExecutor(task, irDag, taskStateManager, intermediateDataIOFactory, broadcastManagerWorker,
+      new TaskExecutor(task, taskInternalIRDAG, taskStateManager, intermediateDataIOFactory, broadcastManagerWorker,
         metricMessageSender, persistentConnectionToMasterMap).execute();
     } catch (final Exception e) {
       persistentConnectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID).send(

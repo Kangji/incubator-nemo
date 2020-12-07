@@ -37,31 +37,32 @@ public final class Task implements Serializable {
   private final List<StageEdge> taskIncomingEdges;
   private final List<StageEdge> taskOutgoingEdges;
   private final ExecutionPropertyMap<VertexExecutionProperty> executionProperties;
-  private final byte[] serializedIRDag;
+  private final byte[] serializedInternalIRDAG;
   private final Map<String, Readable> irVertexIdToReadable;
 
   /**
    * Constructor.
    *
-   * @param planId               the id of the physical plan.
-   * @param taskId               the ID of this task attempt.
-   * @param executionProperties  {@link VertexExecutionProperty} map for the corresponding stage
-   * @param serializedIRDag      the serialized DAG of the task.
-   * @param taskIncomingEdges    the incoming edges of the task.
-   * @param taskOutgoingEdges    the outgoing edges of the task.
-   * @param irVertexIdToReadable the map between IRVertex id to readable.
+   * @param planId                  the id of the physical plan.
+   * @param taskId                  the ID of this task attempt.
+   * @param executionProperties     {@link VertexExecutionProperty} map for the corresponding stage
+   * @param serializedInternalIRDAG the serialized DAG of the task.
+   * @param taskIncomingEdges       the incoming edges of the task.
+   * @param taskOutgoingEdges       the outgoing edges of the task.
+   * @param irVertexIdToReadable    the map between IRVertex id to readable.
    */
   public Task(final String planId,
               final String taskId,
               final ExecutionPropertyMap<VertexExecutionProperty> executionProperties,
-              final byte[] serializedIRDag,
+              final byte[] serializedInternalIRDAG,
               final List<StageEdge> taskIncomingEdges,
               final List<StageEdge> taskOutgoingEdges,
               final Map<String, Readable> irVertexIdToReadable) {
+
     this.planId = planId;
     this.taskId = taskId;
     this.executionProperties = executionProperties;
-    this.serializedIRDag = serializedIRDag;
+    this.serializedInternalIRDAG = serializedInternalIRDAG;
     this.taskIncomingEdges = taskIncomingEdges;
     this.taskOutgoingEdges = taskOutgoingEdges;
     this.irVertexIdToReadable = irVertexIdToReadable;
@@ -77,8 +78,8 @@ public final class Task implements Serializable {
   /**
    * @return the serialized IR DAG of the task.
    */
-  public byte[] getSerializedIRDag() {
-    return serializedIRDag;
+  public byte[] getSerializedInternalIRDAG() {
+    return serializedInternalIRDAG;
   }
 
   /**

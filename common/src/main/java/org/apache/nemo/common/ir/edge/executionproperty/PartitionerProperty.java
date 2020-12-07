@@ -66,7 +66,7 @@ public final class PartitionerProperty
     if (!auto && numOfPartitions <= 0) {
       throw new IllegalArgumentException(String.valueOf(numOfPartitions));
     }
-    return new PartitionerProperty(Pair.of(type, numOfPartitions));
+    return PartitionerProperty.of(Pair.of(type, numOfPartitions));
   }
 
   /**
