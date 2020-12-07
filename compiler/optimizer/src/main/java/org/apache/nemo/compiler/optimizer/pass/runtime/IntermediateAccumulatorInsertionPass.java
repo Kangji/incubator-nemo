@@ -27,6 +27,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
@@ -83,6 +84,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
           incomingShuffleEdges.forEach(e -> {
             final Integer messageId = e.getDst().getPropertyValue(MessageIdVertexProperty.class).get();
             e.getDst().getExecutionProperties().remove(MessageIdVertexProperty.class);
+            e.getDst().getExecutionProperties().remove(BarrierProperty.class);
             final HashSet<Integer> edgeMessageIDs = e.getPropertyValue(MessageIdEdgeProperty.class).get();
             edgeMessageIDs.remove(messageId);
             if (edgeMessageIDs.isEmpty()) {

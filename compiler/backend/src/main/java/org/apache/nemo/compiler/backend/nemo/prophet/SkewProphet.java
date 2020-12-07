@@ -29,18 +29,18 @@ import java.util.Map;
 /**
  * Prophet class for skew handling.
  */
-public final class SkewProphet implements Prophet<Object, Long> {
+public final class SkewProphet implements Prophet<String, Long> {
   private final List<ControlMessage.RunTimePassMessageEntry> messageEntries;
   public SkewProphet(final List<ControlMessage.RunTimePassMessageEntry> messageEntries) {
     this.messageEntries = messageEntries;
   }
 
   @Override
-  public Map<Object, Long> calculate() {
-    final Map<Object, Long> aggregatedData = new HashMap<>();
+  public Map<String, Long> calculate() {
+    final Map<String, Long> aggregatedData = new HashMap<>();
     messageEntries.forEach(entry -> {
       final String key = entry.getKey();
-      final long partitionSize = SerializationUtils.deserialize(Base64.getDecoder().decode(entry.getValue()));
+      final Long partitionSize = SerializationUtils.deserialize(Base64.getDecoder().decode(entry.getValue()));
       if (aggregatedData.containsKey(key)) {
         aggregatedData.compute(key, (originalKey, originalValue) -> originalValue + partitionSize);
       } else {

@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.compiler.backend.nemo;
 
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
@@ -159,14 +160,20 @@ public final class NemoPlanRewriter<T> implements PlanRewriter {
   @Override
   public void accumulate(final int messageId, final Set<StageEdge> targetEdges,
                          final List<ControlMessage.RunTimePassMessageEntry> data) {
-    final Prophet prophet;
+    final Map<String, T> aggregatedData;
     if (!data.isEmpty() && data.get(0).getKey().equals(DTS_KEY)) {
-      prophet = new ParallelismProphet(currentIRDAG, currentPhysicalPlan, simulationSchedulerInjectionFuture.get(),
-        physicalPlanGenerator, targetEdges);
+      final Prophet<String, Long> prophet =
+        new ParallelismProphet(currentIRDAG, currentPhysicalPlan, simulationSchedulerInjectionFuture.get(),
+          physicalPlanGenerator, targetEdges);
+      aggregatedData = (Map<String, T>) prophet.calculate();
+    } else if (SerializationUtils.deserialize(Base64.getDecoder().decode(data.get(0).getValue())) instanceof Long) {
+      final Prophet<String, Long> prophet = new SkewProphet(data);
+      aggregatedData = (Map<String, T>) prophet.calculate();
     } else {
-      prophet = new SkewProphet(data);
+      aggregatedData = new HashMap<>();
+      data.forEach(e ->
+        aggregatedData.put(e.getKey(), (T) SerializationUtils.deserialize(Base64.getDecoder().decode(e.getValue()))));
     }
-    final Map<String, T> aggregatedData = prophet.calculate();
     this.messageIdToAggregatedData.computeIfAbsent(messageId, id -> new HashMap<>()).putAll(aggregatedData);
     this.readyToRewriteLatch.countDown();
   }
