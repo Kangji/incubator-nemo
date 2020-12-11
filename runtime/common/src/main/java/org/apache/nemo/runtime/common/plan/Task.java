@@ -111,6 +111,13 @@ public final class Task implements Serializable {
   }
 
   /**
+   * @return the task index.
+   */
+  public int getTaskIdx() {
+    return RuntimeIdManager.getIndexFromTaskId(taskId);
+  }
+
+  /**
    * @return the attempt index.
    */
   public int getAttemptIdx() {

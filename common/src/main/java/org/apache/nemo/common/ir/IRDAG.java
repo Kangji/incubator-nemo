@@ -819,7 +819,8 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
       modifiedDAG.getIncomingEdgesOf(v).forEach(e -> {
         if (shuffleEdges.contains(e)) {
           // Edge to the combineVertex
-          final IREdge toCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, e.getSrc(), accumulatorVertex);
+          final IREdge toCV = new IREdge(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE,
+            e.getSrc(), accumulatorVertex);
           e.copyExecutionPropertiesTo(toCV);
           final HashSet<Integer> msgEdgeIds = e.getPropertyValue(MessageIdEdgeProperty.class).orElse(new HashSet<>(0));
           msgEdgeIds.add(runtimeOptimizationMessageID);

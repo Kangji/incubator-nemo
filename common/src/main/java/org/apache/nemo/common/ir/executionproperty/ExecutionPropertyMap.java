@@ -29,6 +29,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.TaskIDToExecutorProperty;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Serializable;
@@ -74,6 +75,7 @@ public final class ExecutionPropertyMap<T extends ExecutionProperty> implements 
     map.put(DecoderProperty.of(DecoderFactory.DUMMY_DECODER_FACTORY));
     switch (commPattern) {
       case SHUFFLE:
+      case PARTIAL_SHUFFLE:
         map.put(DataFlowProperty.of(DataFlowProperty.Value.PULL));
         map.put(PartitionerProperty.of(PartitionerProperty.Type.HASH));
         map.put(DataStoreProperty.of(DataStoreProperty.Value.LOCAL_FILE_STORE));
@@ -103,6 +105,7 @@ public final class ExecutionPropertyMap<T extends ExecutionProperty> implements 
   public static ExecutionPropertyMap<VertexExecutionProperty> of(final IRVertex irVertex) {
     final ExecutionPropertyMap<VertexExecutionProperty> map = new ExecutionPropertyMap<>(irVertex.getId());
     map.put(ResourcePriorityProperty.of(ResourcePriorityProperty.NONE));
+    map.put(TaskIDToExecutorProperty.of(new HashMap<>()));
     return map;
   }
 

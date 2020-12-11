@@ -20,14 +20,18 @@ package org.apache.nemo.common.partitioner;
 
 import org.apache.nemo.common.KeyExtractor;
 import org.apache.nemo.common.exception.UnsupportedPartitionerException;
+import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.KeyExtractorProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.TaskIDToExecutorProperty;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * This interface represents the way of partitioning output data from a source task.
@@ -53,6 +57,26 @@ public interface Partitioner<K extends Serializable> {
    */
   static Partitioner getPartitioner(final ExecutionPropertyMap<EdgeExecutionProperty> edgeProperties,
                                     final ExecutionPropertyMap<VertexExecutionProperty> dstProperties) {
+    if (PartitionerProperty.Type.HASH
+      .equals(edgeProperties.get(PartitionerProperty.class).orElseThrow(IllegalStateException::new).left())
+      && CommunicationPatternProperty.Value.PARTIAL_SHUFFLE
+      .equals(edgeProperties.get(CommunicationPatternProperty.class).get())) {
+      throw new IllegalArgumentException("the source taskID and the source vertex properties must be specified.");
+    }
+
+    return getPartitioner("", edgeProperties, new ExecutionPropertyMap<>("EMPTY"), dstProperties);
+  }
+
+  /**
+   * @param srcTaskID the task ID that you have to provide if the communication pattern is partial shuffle.
+   * @param edgeProperties edge properties.
+   * @param dstProperties  vertex properties.
+   * @return the partitioner.
+   */
+  static Partitioner getPartitioner(final String srcTaskID,
+                                    final ExecutionPropertyMap<EdgeExecutionProperty> edgeProperties,
+                                    final ExecutionPropertyMap<VertexExecutionProperty> srcProperties,
+                                    final ExecutionPropertyMap<VertexExecutionProperty> dstProperties) {
     final PartitionerProperty.Type type =
       edgeProperties.get(PartitionerProperty.class).orElseThrow(IllegalStateException::new).left();
     final Partitioner partitioner;
@@ -68,9 +92,20 @@ public interface Partitioner<K extends Serializable> {
           .get(PartitionerProperty.class)
           .orElseThrow(IllegalStateException::new)
           .right();
-        final int actualNumOfPartitions = (numOfPartitions == PartitionerProperty.NUM_EQUAL_TO_DST_PARALLELISM)
+        final int calculatedNumOfPartitions = (numOfPartitions == PartitionerProperty.NUM_EQUAL_TO_DST_PARALLELISM)
           ? dstProperties.get(ParallelismProperty.class).orElseThrow(IllegalStateException::new)
           : numOfPartitions;
+        final int actualNumOfPartitions;
+        if (CommunicationPatternProperty.Value.PARTIAL_SHUFFLE
+          .equals(edgeProperties.get(CommunicationPatternProperty.class).get())) {
+          final List<String> sourceTaskExecutorIDs = srcProperties.get(TaskIDToExecutorProperty.class).get()
+            .get(Integer.valueOf(srcTaskID.split("-")[1]));
+          final String sourceTaskExecutorID = sourceTaskExecutorIDs.get(sourceTaskExecutorIDs.size() - 1);
+          actualNumOfPartitions = Long.valueOf(srcProperties.get(ShuffleExecutorSetProperty.class).get().stream()
+            .filter(hs -> hs.contains(sourceTaskExecutorID)).count()).intValue() * 2 / 3;
+        } else {
+          actualNumOfPartitions = calculatedNumOfPartitions;
+        }
         final KeyExtractor keyExtractor = edgeProperties.get(KeyExtractorProperty.class)
           .orElseThrow(IllegalStateException::new);
         partitioner = new HashPartitioner(actualNumOfPartitions, keyExtractor);

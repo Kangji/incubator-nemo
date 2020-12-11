@@ -55,7 +55,7 @@ public final class IntermediateDataIOFactory {
    * @return the {@link OutputWriter} created.
    */
   public OutputWriter createWriter(final String srcTaskId,
-                                   final RuntimeEdge<?> runtimeEdge) {
+                                   final StageEdge runtimeEdge) {
     if (isPipe(runtimeEdge)) {
       return new PipeOutputWriter(srcTaskId, runtimeEdge, pipeManagerWorker);
     } else {
@@ -74,7 +74,7 @@ public final class IntermediateDataIOFactory {
    */
   public InputReader createReader(final String dstTaskId,
                                   final IRVertex srcIRVertex,
-                                  final RuntimeEdge runtimeEdge) {
+                                  final StageEdge runtimeEdge) {
     if (isPipe(runtimeEdge)) {
       return new PipeInputReader(dstTaskId, srcIRVertex, runtimeEdge, pipeManagerWorker, metricMessageSender);
     } else {

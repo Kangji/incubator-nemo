@@ -21,29 +21,28 @@ package org.apache.nemo.common.ir.vertex.executionproperty;
 
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.List;
 
 /**
- * List of set of node names to limit the scheduling of the tasks of the vertex to while shuffling.
+ * Keep track of where the tasks are located by its executor ID.
  */
-public final class ShuffleExecutorSetProperty extends VertexExecutionProperty<HashSet<HashSet<String>>> {
-
+public final class TaskIDToExecutorProperty extends VertexExecutionProperty<HashMap<Integer, List<String>>> {
   /**
    * Default constructor.
-   * @param value value of the execution property.
+   * @param taskIDToExecutorIDsMap value of the execution property.
    */
-  private ShuffleExecutorSetProperty(final HashSet<HashSet<String>> value) {
-    super(value);
+  private TaskIDToExecutorProperty(final HashMap<Integer, List<String>> taskIDToExecutorIDsMap) {
+    super(taskIDToExecutorIDsMap);
   }
 
   /**
-   * Static method for constructing {@link ShuffleExecutorSetProperty}.
+   * Static method for constructing {@link TaskIDToExecutorProperty}.
    *
-   * @param setsOfExecutors the list of executors to schedule the tasks of the vertex on.
-   *                        Leave empty to make it effectless.
+   * @param taskIDToExecutorIDsMap the map indicating the executor IDs where the tasks are located on.
    * @return the new execution property
    */
-  public static ShuffleExecutorSetProperty of(final HashSet<HashSet<String>> setsOfExecutors) {
-    return new ShuffleExecutorSetProperty(setsOfExecutors);
+  public static TaskIDToExecutorProperty of(final HashMap<Integer, List<String>> taskIDToExecutorIDsMap) {
+    return new TaskIDToExecutorProperty(taskIDToExecutorIDsMap);
   }
 }

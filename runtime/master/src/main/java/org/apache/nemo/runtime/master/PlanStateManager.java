@@ -169,7 +169,7 @@ public final class PlanStateManager {
       // for each task idx of this stage
       stage.getTaskIndices().forEach(taskIndex ->
         stageIdToTaskIdxToAttemptStates.get(stage.getId()).putIfAbsent(taskIndex, new ArrayList<>()));
-        // task states will be initialized lazily in getTaskAttemptsToSchedule()
+      // task states will be initialized lazily in getTaskAttemptsToSchedule()
     });
   }
 

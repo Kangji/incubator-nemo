@@ -115,14 +115,14 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
 
     // Note that if there is no previous number of sets, we use the number of data source executors.
     int previousNumOfSets = incomingShuffleEdges.stream()
-      .mapToInt(e -> e.getSrc().getPropertyValue(ShuffleExecutorSetProperty.class).orElse(new HashSet<>()).size())
+      .mapToInt(e -> e.getSrc().getPropertyValue(ShuffleExecutorSetProperty.class)
+        .orElse(new HashSet<>()).size())
       .max().orElse(0);
 
-    // Max value is minimum between parallelism and 2/3 * previousNumOfSets, min value is 1.
+    // Max value is 2/3 * previousNumOfSets, min value is 1.
     // We traverse from the max to the min value, and compare the distance, and find the value where the distance
     // becomes greater than the previous distance * threshold.
-    final Integer max = Math.min(parallelism, previousNumOfSets == 0
-      ? dataSourceExecutors.size() : previousNumOfSets * 2 / 3);
+    final int max = previousNumOfSets == 0 ? dataSourceExecutors.size() : previousNumOfSets * 2 / 3;
     final int mapSize = map.size();
     final int indexToCheckFrom = mapSize - max;
     Float previousDistance = 0F;

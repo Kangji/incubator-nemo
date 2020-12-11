@@ -23,8 +23,10 @@ import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProp
 import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.TaskIDToExecutorProperty;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
-import org.apache.nemo.runtime.common.plan.RuntimeEdge;
+import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.data.DataUtil;
 import org.apache.nemo.runtime.executor.data.PipeManagerWorker;
@@ -48,11 +50,11 @@ public final class PipeInputReader implements InputReader {
    * Attributes that specify how we should read the input.
    */
   private final IRVertex srcVertex;
-  private final RuntimeEdge runtimeEdge;
+  private final StageEdge runtimeEdge;
 
   PipeInputReader(final String dstTaskId,
                   final IRVertex srcIRVertex,
-                  final RuntimeEdge runtimeEdge,
+                  final StageEdge runtimeEdge,
                   final PipeManagerWorker pipeManagerWorker,
                   final MetricMessageSender metricMessageSender) {
     this.dstTaskIndex = RuntimeIdManager.getIndexFromTaskId(dstTaskId);
@@ -76,6 +78,20 @@ public final class PipeInputReader implements InputReader {
       final List<CompletableFuture<DataUtil.IteratorWithNumBytes>> futures = new ArrayList<>();
       for (int srcTaskIdx = 0; srcTaskIdx < numSrcTasks; srcTaskIdx++) {
         futures.add(pipeManagerWorker.read(srcTaskIdx, runtimeEdge, dstTaskIndex));
+      }
+      return futures;
+    } else if (comValue.equals(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE)) {
+      final int numSrcTasks = InputReader.getSourceParallelism(this);
+      final List<CompletableFuture<DataUtil.IteratorWithNumBytes>> futures = new ArrayList<>();
+      for (int srcTaskIdx = 0; srcTaskIdx < numSrcTasks; srcTaskIdx++) {
+        final Integer srcTaskIndex = srcTaskIdx;
+        if (runtimeEdge.getDst().getExecutionProperties().get(ShuffleExecutorSetProperty.class).get().stream()
+          .filter(hs -> hs.contains(runtimeEdge.getDst().getExecutionProperties()
+            .get(TaskIDToExecutorProperty.class).get().get(dstTaskIndex)))
+          .anyMatch(hs -> hs.contains(runtimeEdge.getSrc().getExecutionProperties().get(TaskIDToExecutorProperty.class)
+            .get().get(srcTaskIndex)))) {
+          futures.add(pipeManagerWorker.read(srcTaskIdx, runtimeEdge, dstTaskIndex));
+        }
       }
       return futures;
     } else {
