@@ -21,6 +21,7 @@ package org.apache.nemo.compiler.optimizer.policy;
 
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.IntermediateAccumulatorAnnotatingPass;
+import org.apache.nemo.compiler.optimizer.pass.compiletime.annotating.PipeTransferForAllEdgesPass;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.composite.DefaultCompositePass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.IntermediateAccumulatorInsertionPass;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
@@ -32,6 +33,7 @@ public final class IntermediateAccumulatorPolicy implements Policy {
   public static final PolicyBuilder BUILDER =
     new PolicyBuilder()
       .registerCompileTimePass(new DefaultCompositePass())
+      .registerCompileTimePass(new PipeTransferForAllEdgesPass())
       .registerRunTimePass(new IntermediateAccumulatorInsertionPass(), new IntermediateAccumulatorAnnotatingPass());
 
   private final Policy policy;

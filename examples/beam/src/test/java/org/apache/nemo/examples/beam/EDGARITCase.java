@@ -23,8 +23,8 @@ import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
-import org.apache.nemo.compiler.optimizer.policy.DefaultPolicy;
 import org.apache.nemo.compiler.optimizer.policy.IntermediateAccumulatorPolicy;
+import org.apache.nemo.compiler.optimizer.policy.StreamingPolicy;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -49,13 +49,14 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARAvgDocSizeFixed() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeFixed")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -68,6 +69,7 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARAvgDocSizeFixedHierarchical() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
@@ -87,14 +89,14 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARAvgDocSizeSliding() throws Exception {
     builder = new ArgBuilder()
-      // .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeSliding")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -107,7 +109,7 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARAvgDocSizeSlidingHierarchical() throws Exception {
     builder = new ArgBuilder()
-      // .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
@@ -127,13 +129,14 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARDocumentSuccessRateFixed() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARDocumentSuccessRate.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARDocumentSuccessRateFixed")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -146,6 +149,7 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARDocumentSuccessRateFixedHierarchical() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARDocumentSuccessRate.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
@@ -165,13 +169,14 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARDocumentSuccessRateSliding() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARDocumentSuccessRate.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARDocumentSuccessRateSliding")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -184,6 +189,7 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARDocumentSuccessRateSlidingHierarchical() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARDocumentSuccessRate.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
@@ -203,13 +209,14 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARRequestsByCIKFixed() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARRequestsByCIK.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARRequestsByCIKFixed")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -222,6 +229,7 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARRequestsByCIKFixedHierarchical() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARRequestsByCIK.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
@@ -241,13 +249,14 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARRequestsByCIKSliding() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARRequestsByCIK.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARRequestsByCIKSliding")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -260,6 +269,7 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARRequestsByCIKSlidingHierarchical() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARRequestsByCIK.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
@@ -280,13 +290,14 @@ public final class EDGARITCase {
   public void testEDGARTop10BadRefererDocsFixed() throws Exception {
 
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARTop10BadRefererDocs.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10BadRefererDocsFixed")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -300,6 +311,7 @@ public final class EDGARITCase {
   public void testEDGARTop10BadRefererDocsFixedHierarchical() throws Exception {
 
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARTop10BadRefererDocs.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
@@ -319,13 +331,14 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARTop10BadRefererDocsSliding() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARTop10BadRefererDocs.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10BadRefererDocsSliding")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -338,6 +351,7 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARTop10BadRefererDocsSlidingHierarchical() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARTop10BadRefererDocs.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
@@ -357,13 +371,14 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARTop10DocumentsFixed() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARTop10Documents.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10DocumentsFixed")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -376,6 +391,7 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARTop10DocumentsFixedHierarchical() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARTop10Documents.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
 
@@ -395,13 +411,14 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARTop10DocumentsSliding() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARTop10Documents.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10DocumentsSliding")
-      .addOptimizationPolicy(DefaultPolicy.class.getCanonicalName())
+      .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -414,6 +431,7 @@ public final class EDGARITCase {
   @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARTop10DocumentsSlidingHierarchical() throws Exception {
     builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARTop10Documents.class.getCanonicalName())
       .addUserArgs(inputFilePath, "sliding", outputFilePath);
 
