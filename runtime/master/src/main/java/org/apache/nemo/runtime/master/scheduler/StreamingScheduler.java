@@ -96,22 +96,7 @@ public final class StreamingScheduler implements Scheduler {
   @Override
   public void updatePlan(final PhysicalPlan newPhysicalPlan) {
     // TODO #227: StreamingScheduler Dynamic Optimization
-    // This case only handles the case when the runtime optimization is called before the task scheduling.
-    // #227 should handle the task checkpoint and resume functionalities to migrate tasks between executors.
-    final PhysicalPlan previousPlan = planStateManager.getPhysicalPlan();
-
-    planStateManager.updatePlan(newPhysicalPlan, planStateManager.getMaxScheduleAttempt());
-    planStateManager.storeJSON("updated");
-
-    final List<Stage> newStagesToSchedule = PhysicalPlan.getDiffStageDAGBetween(newPhysicalPlan, previousPlan);
-    final List<Task> newTasksToSchedule = newStagesToSchedule.stream()
-      .flatMap(stageToSchedule -> StreamingScheduler
-        .deriveNewTasksFrom(stageToSchedule, newPhysicalPlan, planStateManager, pipeManagerMaster))
-      .collect(Collectors.toList());
-
-    // Schedule everything at once
-    pendingTaskCollectionPointer.setToOverwrite(newTasksToSchedule);
-    taskDispatcher.onNewPendingTaskCollectionAvailable();
+    throw new UnsupportedOperationException();
   }
 
   /**
@@ -123,7 +108,7 @@ public final class StreamingScheduler implements Scheduler {
    * @param pipeManagerMaster the manager for the pipe data transfer.
    * @return the newly created stream of new tasks.
    */
-  private static Stream<Task> deriveNewTasksFrom(final Stage stageToSchedule,
+  public static Stream<Task> deriveNewTasksFrom(final Stage stageToSchedule,
                                                  final PhysicalPlan physicalPlan,
                                                  final PlanStateManager planStateManager,
                                                  final PipeManagerMaster pipeManagerMaster) {

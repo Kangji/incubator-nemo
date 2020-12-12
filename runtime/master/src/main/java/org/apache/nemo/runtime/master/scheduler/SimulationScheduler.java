@@ -152,8 +152,8 @@ public final class SimulationScheduler implements Scheduler {
     this.resourceSpecificationString = resourceSpecificationString;
     this.dagDirectory = dagDirectory;
     this.planStateManager = PlanStateManager.newInstance(dagDirectory);
-    this.taskDispatcher = TaskDispatcher.newInstance(this, schedulingConstraintRegistry, schedulingPolicy,
-      pendingTaskCollectionPointer, executorRegistry, planStateManager, planRewriter);
+    this.taskDispatcher = TaskDispatcher.newInstance(schedulingConstraintRegistry, schedulingPolicy,
+      pendingTaskCollectionPointer, executorRegistry, planStateManager, pipeManagerMaster, planRewriter);
     this.serializationExecutorService = Executors.newFixedThreadPool(scheduleSerThread);
     this.actualMetricStore = MetricStore.getStore();
     this.metricStore = MetricStore.newInstance();
@@ -190,8 +190,8 @@ public final class SimulationScheduler implements Scheduler {
     this.executorRegistry = ExecutorRegistry.newInstance();
     this.planStateManager = PlanStateManager.newInstance(dagDirectory);
     this.pendingTaskCollectionPointer.getAndSetNull();
-    this.taskDispatcher = TaskDispatcher.newInstance(this, schedulingConstraintRegistry, schedulingPolicy,
-      pendingTaskCollectionPointer, executorRegistry, planStateManager, planRewriter);
+    this.taskDispatcher = TaskDispatcher.newInstance(schedulingConstraintRegistry, schedulingPolicy,
+      pendingTaskCollectionPointer, executorRegistry, planStateManager, pipeManagerMaster, planRewriter);
     this.metricStore = MetricStore.newInstance();
     this.planStateManager.setMetricStore(metricStore);
     this.simulatedTaskExecutorMap.clear();

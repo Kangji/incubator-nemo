@@ -24,11 +24,9 @@ import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 import org.apache.nemo.compiler.optimizer.pass.runtime.IntermediateAccumulatorInsertionPass;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
-import org.apache.nemo.runtime.common.plan.PhysicalPlan;
-import org.apache.nemo.runtime.common.plan.PlanRewriter;
-import org.apache.nemo.runtime.common.plan.StageEdge;
-import org.apache.nemo.runtime.common.plan.Task;
+import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.common.state.TaskState;
+import org.apache.nemo.runtime.master.PipeManagerMaster;
 import org.apache.nemo.runtime.master.PlanStateManager;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 import org.apache.reef.annotations.audience.DriverSide;
@@ -66,18 +64,17 @@ final class TaskDispatcher {
   private final SchedulingConstraintRegistry schedulingConstraintRegistry;
   private final SchedulingPolicy schedulingPolicy;
 
-  private final Scheduler scheduler;
+  private final PipeManagerMaster pipeManagerMaster;
   private final PlanRewriter planRewriter;
 
   @Inject
-  private TaskDispatcher(final Scheduler scheduler,
-                         final SchedulingConstraintRegistry schedulingConstraintRegistry,
+  private TaskDispatcher(final SchedulingConstraintRegistry schedulingConstraintRegistry,
                          final SchedulingPolicy schedulingPolicy,
                          final PendingTaskCollectionPointer pendingTaskCollectionPointer,
                          final ExecutorRegistry executorRegistry,
                          final PlanStateManager planStateManager,
+                         final PipeManagerMaster pipeManagerMaster,
                          final PlanRewriter planRewriter) {
-    this.scheduler = scheduler;
     this.pendingTaskCollectionPointer = pendingTaskCollectionPointer;
     this.dispatcherThread = Executors.newSingleThreadExecutor(runnable ->
       new Thread(runnable, "TaskDispatcher thread"));
@@ -87,6 +84,7 @@ final class TaskDispatcher {
     this.executorRegistry = executorRegistry;
     this.schedulingPolicy = schedulingPolicy;
     this.schedulingConstraintRegistry = schedulingConstraintRegistry;
+    this.pipeManagerMaster = pipeManagerMaster;
     this.planRewriter = planRewriter;
   }
 
@@ -100,15 +98,15 @@ final class TaskDispatcher {
    * @param planRewriter     The Plan Rewriter for runtime optimization.
    * @return a new instance of task dispatcher.
    */
-  public static TaskDispatcher newInstance(final Scheduler scheduler,
-                                           final SchedulingConstraintRegistry schedulingConstraintRegistry,
+  public static TaskDispatcher newInstance(final SchedulingConstraintRegistry schedulingConstraintRegistry,
                                            final SchedulingPolicy schedulingPolicy,
                                            final PendingTaskCollectionPointer pendingTaskCollectionPointer,
                                            final ExecutorRegistry executorRegistry,
                                            final PlanStateManager planStateManager,
+                                           final PipeManagerMaster pipeManagerMaster,
                                            final PlanRewriter planRewriter) {
-    return new TaskDispatcher(scheduler, schedulingConstraintRegistry, schedulingPolicy, pendingTaskCollectionPointer,
-      executorRegistry, planStateManager, planRewriter);
+    return new TaskDispatcher(schedulingConstraintRegistry, schedulingPolicy, pendingTaskCollectionPointer,
+      executorRegistry, planStateManager, pipeManagerMaster, planRewriter);
   }
 
   /**
@@ -176,9 +174,20 @@ final class TaskDispatcher {
 
           planRewriter.accumulate(messageId, targetEdges, data);
           final PhysicalPlan newPhysicalPlan = planRewriter.rewrite(messageId);
+          final PhysicalPlan previousPlan = planStateManager.getPhysicalPlan();
 
-          // Asynchronous call to the update of the physical plan on the scheduler.
-          scheduler.updatePlan(newPhysicalPlan);
+          planStateManager.updatePlan(newPhysicalPlan, planStateManager.getMaxScheduleAttempt());
+          planStateManager.storeJSON("updated");
+
+          final List<Stage> newStagesToSchedule = PhysicalPlan.getDiffStageDAGBetween(newPhysicalPlan, previousPlan);
+          final List<Task> newTasksToSchedule = newStagesToSchedule.stream()
+            .flatMap(stageToSchedule -> StreamingScheduler
+              .deriveNewTasksFrom(stageToSchedule, newPhysicalPlan, planStateManager, pipeManagerMaster))
+            .collect(Collectors.toList());
+
+          // Schedule everything at once
+          pendingTaskCollectionPointer.setToOverwrite(newTasksToSchedule);
+          this.onNewPendingTaskCollectionAvailable();
         }).start();
         return;
       }
