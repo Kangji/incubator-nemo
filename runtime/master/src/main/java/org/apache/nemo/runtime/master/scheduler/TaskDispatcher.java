@@ -21,7 +21,7 @@ package org.apache.nemo.runtime.master.scheduler;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.TaskIDToExecutorProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 import org.apache.nemo.compiler.optimizer.pass.runtime.IntermediateAccumulatorInsertionPass;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.plan.PhysicalPlan;
@@ -164,7 +164,7 @@ final class TaskDispatcher {
             final HashSet<String> dataLocationExecutorNodeNames = task.getTaskIncomingEdges().stream()
               .flatMap(e -> {
                 final Collection<List<String>> collection = e.getSrc().getExecutionProperties()
-                  .get(TaskIDToExecutorProperty.class).get().values();
+                  .get(TaskIndexToExecutorIDProperty.class).get().values();
                 return collection.stream().map(lst -> lst.get(lst.size() - 1));
               }).collect(Collectors.toCollection(HashSet::new));
 
@@ -202,7 +202,7 @@ final class TaskDispatcher {
           planStateManager.onTaskStateChanged(task.getTaskId(), TaskState.State.EXECUTING);
 
           LOG.info("{} scheduled to {}", task.getTaskId(), selectedExecutor.getExecutorId());
-          task.getPropertyValue(TaskIDToExecutorProperty.class).get()
+          task.getPropertyValue(TaskIndexToExecutorIDProperty.class).get()
             .computeIfAbsent(task.getTaskIdx(), i -> new ArrayList<>())
             .add(task.getAttemptIdx(), selectedExecutor.getExecutorId());
           // send the task

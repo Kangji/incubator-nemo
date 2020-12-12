@@ -27,22 +27,22 @@ import java.util.List;
 /**
  * Keep track of where the tasks are located by its executor ID.
  */
-public final class TaskIDToExecutorProperty extends VertexExecutionProperty<HashMap<Integer, List<String>>> {
+public final class TaskIndexToExecutorIDProperty extends VertexExecutionProperty<HashMap<Integer, List<String>>> {
   /**
    * Default constructor.
    * @param taskIDToExecutorIDsMap value of the execution property.
    */
-  private TaskIDToExecutorProperty(final HashMap<Integer, List<String>> taskIDToExecutorIDsMap) {
+  private TaskIndexToExecutorIDProperty(final HashMap<Integer, List<String>> taskIDToExecutorIDsMap) {
     super(taskIDToExecutorIDsMap);
   }
 
   /**
-   * Static method for constructing {@link TaskIDToExecutorProperty}.
+   * Static method for constructing {@link TaskIndexToExecutorIDProperty}.
    *
-   * @param taskIDToExecutorIDsMap the map indicating the executor IDs where the tasks are located on.
+   * @param taskIndexToExecutorIDsMap the map indicating the executor IDs where the tasks are located on.
    * @return the new execution property
    */
-  public static TaskIDToExecutorProperty of(final HashMap<Integer, List<String>> taskIDToExecutorIDsMap) {
-    return new TaskIDToExecutorProperty(taskIDToExecutorIDsMap);
+  public static TaskIndexToExecutorIDProperty of(final HashMap<Integer, List<String>> taskIndexToExecutorIDsMap) {
+    return new TaskIndexToExecutorIDProperty(taskIndexToExecutorIDsMap);
   }
 }

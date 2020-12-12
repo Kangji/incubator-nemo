@@ -28,10 +28,12 @@ import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.TaskIDToExecutorProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This interface represents the way of partitioning output data from a source task.
@@ -98,11 +100,25 @@ public interface Partitioner<K extends Serializable> {
         final int actualNumOfPartitions;
         if (CommunicationPatternProperty.Value.PARTIAL_SHUFFLE
           .equals(edgeProperties.get(CommunicationPatternProperty.class).get())) {
-          final List<String> sourceTaskExecutorIDs = srcProperties.get(TaskIDToExecutorProperty.class).get()
+          final Map<Integer, List<String>> taskIndexToExecutorIDs =
+            srcProperties.get(TaskIndexToExecutorIDProperty.class).get();
+
+          // Derive the executor where the source task is located on.
+          final List<String> sourceTaskExecutorIDs = taskIndexToExecutorIDs
             .get(Integer.valueOf(srcTaskID.split("-")[1]));
           final String sourceTaskExecutorID = sourceTaskExecutorIDs.get(sourceTaskExecutorIDs.size() - 1);
-          actualNumOfPartitions = Long.valueOf(srcProperties.get(ShuffleExecutorSetProperty.class).get().stream()
-            .filter(hs -> hs.contains(sourceTaskExecutorID)).count()).intValue() * 2 / 3;
+
+          // Get the hashset of executors that are close to the source task.
+          final HashSet<String> hashSetOfExecutors = srcProperties.get(ShuffleExecutorSetProperty.class).get().stream()
+            .filter(hs -> hs.contains(sourceTaskExecutorID)).findFirst().get();
+
+          // Derive the number of the source tasks that belong to the hashset and do * 2 / 3
+          final int numOfPartitionsCandidate = Long.valueOf(taskIndexToExecutorIDs.entrySet().stream().filter(entry -> {
+            final List<String> list = entry.getValue();
+            return hashSetOfExecutors.contains(list.get(list.size() - 1));
+          }).count()).intValue();
+          actualNumOfPartitions = numOfPartitionsCandidate > 3
+            ? numOfPartitionsCandidate * 2 / 3 : numOfPartitionsCandidate;
         } else {
           actualNumOfPartitions = calculatedNumOfPartitions;
         }

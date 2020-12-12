@@ -20,6 +20,7 @@
 package org.apache.nemo.compiler.optimizer.pass.runtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.exception.SchedulingException;
 import org.apache.nemo.common.ir.IRDAG;
@@ -27,18 +28,17 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
-import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.*;
 import org.apache.nemo.compiler.frontend.beam.transform.CombineTransform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * A pass that inserts an intermediate accumulator in between combiners and reducers.
@@ -106,12 +106,6 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
                                             final CombineTransform<?, ?, ?, ?> finalCombineStreamTransform,
                                             final List<IREdge> incomingShuffleEdges,
                                             final Float threshold) {
-    final int newParallelism = incomingShuffleEdges.stream()
-      .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).orElse(1))
-      .max()
-      .orElse(1);
-    // parallelism of the new vertex is set to 2/3 of the max value of parallelisms of its shuffle source vertices.
-    final int parallelism = newParallelism > 5 ? newParallelism * 2 / 3 : newParallelism;
 
     // Note that if there is no previous number of sets, we use the number of data source executors.
     int previousNumOfSets = incomingShuffleEdges.stream()
@@ -123,7 +117,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
     // We traverse from the max to the min value, and compare the distance, and find the value where the distance
     // becomes greater than the previous distance * threshold.
     final int max = previousNumOfSets == 0 ? dataSourceExecutors.size() : previousNumOfSets * 2 / 3;
-    final int mapSize = map.size();
+    final int mapSize = map.size();  // indicates the number of executors * 2 - 1.
     final int indexToCheckFrom = mapSize - max;
     Float previousDistance = 0F;
 
@@ -136,12 +130,25 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
         final OperatorVertex intermediateAccumulatorVertex =
           new OperatorVertex(intermediateCombineStreamTransform);
         irdag.insert(intermediateAccumulatorVertex, incomingShuffleEdges);
-        intermediateAccumulatorVertex.setProperty(ParallelismProperty.of(parallelism));
 
+        // Calculate the number of sets and set the property.
         final Integer targetNumberOfSets = mapSize - i;
         final HashSet<HashSet<String>> setsOfExecutors = getTargetNumberOfExecutorSetsFrom(map, targetNumberOfSets);
         intermediateAccumulatorVertex.setProperty(ShuffleExecutorSetProperty.of(setsOfExecutors));
         previousNumOfSets = setsOfExecutors.size();
+
+        // Calculate the parallelism and set the property
+        final Supplier<Stream<Pair<Integer, String>>> taskIndexToExecutorID = () ->
+          incomingShuffleEdges.stream()
+            .flatMap(e -> e.getSrc().getPropertyValue(TaskIndexToExecutorIDProperty.class).get().entrySet().stream())
+            .map(e -> Pair.of(e.getKey(), e.getValue().get(e.getValue().size() - 1)));
+
+        final int parallelism = Long.valueOf(setsOfExecutors.stream()
+          .mapToLong(hs -> taskIndexToExecutorID.get().filter(p -> hs.contains(p.right())).count())
+          .map(l -> l > 3 ? l * 2 / 3 : l)
+          .sum()).intValue();
+
+        intermediateAccumulatorVertex.setProperty(ParallelismProperty.of(parallelism));
       }
       previousDistance = currentDistance;
     }
