@@ -43,6 +43,12 @@ public final class PartialCombineFn<InputT, AccumT> extends Combine.CombineFn<In
   }
 
   @Override
+  public Coder<AccumT> getAccumulatorCoder(final CoderRegistry registry, final Coder<InputT> inputCoder)
+    throws CannotProvideCoderException {
+    return accumCoder;
+  }
+
+  @Override
   public AccumT createAccumulator() {
     return originFn.createAccumulator();
   }
@@ -60,11 +66,5 @@ public final class PartialCombineFn<InputT, AccumT> extends Combine.CombineFn<In
   @Override
   public AccumT extractOutput(final AccumT accumulator) {
     return accumulator;
-  }
-
-  @Override
-  public Coder<AccumT> getAccumulatorCoder(final CoderRegistry registry, final Coder<InputT> inputCoder)
-    throws CannotProvideCoderException {
-    return accumCoder;
   }
 }

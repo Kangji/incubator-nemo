@@ -22,12 +22,15 @@ package org.apache.nemo.runtime.master.scheduler;
 import com.google.common.collect.Sets;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.dag.DAG;
+import org.apache.nemo.common.exception.RuntimeOptimizationException;
 import org.apache.nemo.common.exception.UnknownFailureCauseException;
 import org.apache.nemo.common.ir.Readable;
 import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.IgnoreSchedulingTempDataReceiverProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
+import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.plan.*;
 import org.apache.nemo.runtime.common.state.BlockState;
 import org.apache.nemo.runtime.common.state.StageState;
@@ -90,21 +93,19 @@ public final class BatchSchedulerUtils {
     final List<Map<String, Readable>> vertexIdToReadables = stageToSchedule.getVertexIdToReadables();
 
     final List<String> taskIdsToSchedule = planStateManager.getTaskAttemptsToSchedule(stageToSchedule.getId());
-    final List<Task> tasks = new ArrayList<>(taskIdsToSchedule.size());
-    taskIdsToSchedule.forEach(taskId -> {
+    return taskIdsToSchedule.stream().map(taskId -> {
       final Set<String> blockIds = BatchSchedulerUtils.getOutputBlockIds(planStateManager, taskId);
       blockManagerMaster.onProducerTaskScheduled(taskId, blockIds);
       final int taskIdx = RuntimeIdManager.getIndexFromTaskId(taskId);
-      tasks.add(new Task(
+      return new Task(
         planStateManager.getPhysicalPlan().getPlanId(),
         taskId,
         stageToSchedule.getExecutionProperties(),
-        stageToSchedule.getSerializedIRDAG(),
+        stageToSchedule.getSerializedInternalIRDAG(),
         stageIncomingEdges,
         stageOutgoingEdges,
-        vertexIdToReadables.get(taskIdx)));
-    });
-    return tasks;
+        vertexIdToReadables.get(taskIdx));
+    }).collect(Collectors.toList());
   }
 
   ////////////////////////////////////////////////////////////////////// Task state change handlers
@@ -139,18 +140,13 @@ public final class BatchSchedulerUtils {
    * @return the edges to optimize.
    */
   static Set<StageEdge> getEdgesToOptimize(final PlanStateManager planStateManager,
-                                                   final String taskId) {
+                                           final String taskId) {
     final DAG<Stage, StageEdge> stageDag = planStateManager.getPhysicalPlan().getStageDAG();
-
-    // Get a stage including the given task
-    final Stage stagePutOnHold = stageDag.getVertices().stream()
-      .filter(stage -> stage.getId().equals(RuntimeIdManager.getStageIdFromTaskId(taskId)))
-      .findFirst()
-      .orElseThrow(RuntimeException::new);
+    final Stage stagePutOnHold = getStageFromTaskId(planStateManager, taskId);
 
     // Stage put on hold, i.e. stage with vertex containing MessageAggregatorTransform
     // should have a parent stage whose outgoing edges contain the target edge of dynamic optimization.
-    final List<Integer> messageIds = stagePutOnHold.getIRDAG()
+    final List<Integer> messageIds = stagePutOnHold.getInternalIRDAG()
       .getVertices()
       .stream()
       .filter(v -> v.getPropertyValue(MessageIdVertexProperty.class).isPresent())
@@ -175,6 +171,16 @@ public final class BatchSchedulerUtils {
     }
 
     return targetEdges;
+  }
+
+  static Stage getStageFromTaskId(final PlanStateManager planStateManager, final String taskId) {
+    final DAG<Stage, StageEdge> stageDag = planStateManager.getPhysicalPlan().getStageDAG();
+
+    // Get a stage including the given task
+    return stageDag.getVertices().stream()
+      .filter(stage -> stage.getId().equals(RuntimeIdManager.getStageIdFromTaskId(taskId)))
+      .findFirst()
+      .orElseThrow(RuntimeException::new);
   }
 
   /**
@@ -221,6 +227,7 @@ public final class BatchSchedulerUtils {
                                                       final PlanRewriter planRewriter,
                                                       final String executorId,
                                                       final String taskId) {
+
     LOG.info("{} put on hold in {}", new Object[]{taskId, executorId});
     executorRegistry.updateExecutor(executorId, (executor, state) -> {
       executor.onTaskExecutionComplete(taskId);
@@ -231,14 +238,17 @@ public final class BatchSchedulerUtils {
     final boolean stageComplete =
       planStateManager.getStageState(stageIdForTaskUponCompletion).equals(StageState.State.COMPLETE);
 
+    final Stage stagePutOnHold = getStageFromTaskId(planStateManager, taskId);
+    final String runtimePassName = stagePutOnHold.getPropertyValue(BarrierProperty.class)
+      .orElseThrow(() -> new RuntimeOptimizationException("Runtime pass is not specified for the task"));
+
     final Set<StageEdge> targetEdges = getEdgesToOptimize(planStateManager, taskId);
     if (targetEdges.isEmpty()) {
       throw new RuntimeException("No edges specified for data skew optimization");
     }
 
     if (stageComplete) {
-      return Optional.of(planRewriter.rewrite(
-        planStateManager.getPhysicalPlan(), getMessageId(targetEdges)));
+      return Optional.of(planRewriter.rewrite(getMessageId(targetEdges)));
     } else {
       return Optional.empty();
     }
@@ -253,9 +263,10 @@ public final class BatchSchedulerUtils {
    * @param data             of the message.
    */
   public static void onRunTimePassMessage(final PlanStateManager planStateManager, final PlanRewriter planRewriter,
-                                          final String taskId, final Object data) {
-    final Set<StageEdge> targetEdges = BatchSchedulerUtils.getEdgesToOptimize(planStateManager, taskId);
-    planRewriter.accumulate(BatchSchedulerUtils.getMessageId(targetEdges), data);
+                                          final String taskId,
+                                          final List<ControlMessage.RunTimePassMessageEntry> data) {
+    final Set<StageEdge> targetEdges = getEdgesToOptimize(planStateManager, taskId);
+    planRewriter.accumulate(getMessageId(targetEdges), targetEdges, data);
   }
 
   static int getMessageId(final Set<StageEdge> stageEdges) {

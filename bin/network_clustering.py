@@ -37,13 +37,9 @@ Z = linkage(dist)
 # dn = dendrogram(Z, labels=slaves)
 # plt.show()
 
-labeldict = {idx: (v, "1") for idx, v in enumerate(slaves)}
-prevdist = 0
+labeldict = {idx: (v, "0") for idx, v in enumerate(slaves)}
 for item in Z:
-  if prevdist == 0:
-    prevdist = item[2]
-  labeldict[len(labeldict)] = (str(labeldict[item[0]][0]) + '+' + str(labeldict[item[1]][0]), "{:.4f}".format(item[2]/prevdist))
-  prevdist = item[2]
+  labeldict[len(labeldict)] = ("{}+{}".format(int(item[0]),  int(item[1])), "{:.8f}".format(item[2]))
 
 with open('labeldict.json', 'w') as fp:
   json.dump(labeldict, fp)

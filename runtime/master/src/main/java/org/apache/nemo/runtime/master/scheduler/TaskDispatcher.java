@@ -18,7 +18,15 @@
  */
 package org.apache.nemo.runtime.master.scheduler;
 
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
+import org.apache.nemo.compiler.optimizer.pass.runtime.IntermediateAccumulatorInsertionPass;
+import org.apache.nemo.runtime.common.comm.ControlMessage;
+import org.apache.nemo.runtime.common.plan.PhysicalPlan;
+import org.apache.nemo.runtime.common.plan.PlanRewriter;
+import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.master.PlanStateManager;
@@ -58,12 +66,18 @@ final class TaskDispatcher {
   private final SchedulingConstraintRegistry schedulingConstraintRegistry;
   private final SchedulingPolicy schedulingPolicy;
 
+  private final Scheduler scheduler;
+  private final PlanRewriter planRewriter;
+
   @Inject
-  private TaskDispatcher(final SchedulingConstraintRegistry schedulingConstraintRegistry,
+  private TaskDispatcher(final Scheduler scheduler,
+                         final SchedulingConstraintRegistry schedulingConstraintRegistry,
                          final SchedulingPolicy schedulingPolicy,
                          final PendingTaskCollectionPointer pendingTaskCollectionPointer,
                          final ExecutorRegistry executorRegistry,
-                         final PlanStateManager planStateManager) {
+                         final PlanStateManager planStateManager,
+                         final PlanRewriter planRewriter) {
+    this.scheduler = scheduler;
     this.pendingTaskCollectionPointer = pendingTaskCollectionPointer;
     this.dispatcherThread = Executors.newSingleThreadExecutor(runnable ->
       new Thread(runnable, "TaskDispatcher thread"));
@@ -73,6 +87,7 @@ final class TaskDispatcher {
     this.executorRegistry = executorRegistry;
     this.schedulingPolicy = schedulingPolicy;
     this.schedulingConstraintRegistry = schedulingConstraintRegistry;
+    this.planRewriter = planRewriter;
   }
 
   /**
@@ -82,15 +97,18 @@ final class TaskDispatcher {
    * @param pendingTaskCollectionPointer A pointer to the pending tasks to be executed later on.
    * @param executorRegistry Registry for the list of executors available.
    * @param planStateManager Manager for the state of the plan being executed.
+   * @param planRewriter     The Plan Rewriter for runtime optimization.
    * @return a new instance of task dispatcher.
    */
-  public static TaskDispatcher newInstance(final SchedulingConstraintRegistry schedulingConstraintRegistry,
+  public static TaskDispatcher newInstance(final Scheduler scheduler,
+                                           final SchedulingConstraintRegistry schedulingConstraintRegistry,
                                            final SchedulingPolicy schedulingPolicy,
                                            final PendingTaskCollectionPointer pendingTaskCollectionPointer,
                                            final ExecutorRegistry executorRegistry,
-                                           final PlanStateManager planStateManager) {
-    return new TaskDispatcher(schedulingConstraintRegistry, schedulingPolicy, pendingTaskCollectionPointer,
-      executorRegistry, planStateManager);
+                                           final PlanStateManager planStateManager,
+                                           final PlanRewriter planRewriter) {
+    return new TaskDispatcher(scheduler, schedulingConstraintRegistry, schedulingPolicy, pendingTaskCollectionPointer,
+      executorRegistry, planStateManager, planRewriter);
   }
 
   /**
@@ -114,6 +132,9 @@ final class TaskDispatcher {
     }
   }
 
+  /**
+   * Perform scheduling of the task list.
+   */
   private void doScheduleTaskList() {
     final Optional<Collection<Task>> taskListOptional = pendingTaskCollectionPointer.getAndSetNull();
     if (!taskListOptional.isPresent()) {
@@ -127,8 +148,39 @@ final class TaskDispatcher {
     for (final Task task : taskList) {
       if (!planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY)) {
         // Guard against race conditions causing duplicate task launches
-        LOG.debug("Skipping {} as it is not READY", task.getTaskId());
+        LOG.warn("Skipping task {} as it is not READY", task.getTaskId());
         continue;
+      }
+
+      final Optional<String> barrierProperty = task.getPropertyValue(BarrierProperty.class);
+      if (barrierProperty.isPresent()) {
+        new Thread(() -> {
+          // Trigger the runtime pass
+          final Set<StageEdge> targetEdges = BatchSchedulerUtils.getEdgesToOptimize(planStateManager, task.getTaskId());
+          final int messageId = BatchSchedulerUtils.getMessageId(targetEdges);
+          final List<ControlMessage.RunTimePassMessageEntry> data = new ArrayList<>();
+
+          if (IntermediateAccumulatorInsertionPass.class.getCanonicalName().equals(barrierProperty.get())) {
+            final HashSet<String> dataLocationExecutorNodeNames = task.getTaskIncomingEdges().stream()
+              .flatMap(e -> {
+                final Collection<List<String>> collection = e.getSrc().getExecutionProperties()
+                  .get(TaskIndexToExecutorIDProperty.class).get().values();
+                return collection.stream().map(lst -> lst.get(lst.size() - 1));
+              }).collect(Collectors.toCollection(HashSet::new));
+
+            data.add(ControlMessage.RunTimePassMessageEntry.newBuilder()
+              .setKey(IntermediateAccumulatorInsertionPass.EXECUTOR_SOURCE_KEY)
+              .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(dataLocationExecutorNodeNames)))
+              .build());
+          }
+
+          planRewriter.accumulate(messageId, targetEdges, data);
+          final PhysicalPlan newPhysicalPlan = planRewriter.rewrite(messageId);
+
+          // Asynchronous call to the update of the physical plan on the scheduler.
+          scheduler.updatePlan(newPhysicalPlan);
+        }).start();
+        return;
       }
 
       executorRegistry.viewExecutors(executors -> {
@@ -150,6 +202,9 @@ final class TaskDispatcher {
           planStateManager.onTaskStateChanged(task.getTaskId(), TaskState.State.EXECUTING);
 
           LOG.info("{} scheduled to {}", task.getTaskId(), selectedExecutor.getExecutorId());
+          task.getPropertyValue(TaskIndexToExecutorIDProperty.class).get()
+            .computeIfAbsent(task.getTaskIdx(), i -> new ArrayList<>())
+            .add(task.getAttemptIdx(), selectedExecutor.getExecutorId());
           // send the task
           selectedExecutor.onTaskScheduled(task);
         } else {
@@ -159,7 +214,7 @@ final class TaskDispatcher {
     }
 
     LOG.debug("All except {} were scheduled among {}", new Object[]{couldNotSchedule, taskList});
-    if (couldNotSchedule.size() > 0) {
+    if (!couldNotSchedule.isEmpty()) {
       // Try these again, if no new task list has been set
       pendingTaskCollectionPointer.setIfNull(couldNotSchedule);
     }

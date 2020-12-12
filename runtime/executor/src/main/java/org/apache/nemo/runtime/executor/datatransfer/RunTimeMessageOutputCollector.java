@@ -18,6 +18,7 @@
  */
 package org.apache.nemo.runtime.executor.datatransfer;
 
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.punctuation.Watermark;
@@ -30,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -41,35 +43,47 @@ import java.util.Map;
 public final class RunTimeMessageOutputCollector<O> implements OutputCollector<O> {
   private static final Logger LOG = LoggerFactory.getLogger(RunTimeMessageOutputCollector.class.getName());
   private static final String NULL_KEY = "NULL";
+  public static final String DTS_KEY = "DTS";
 
   private final String taskId;
   private final IRVertex irVertex;
   private final PersistentConnectionToMasterMap connectionToMasterMap;
   private final TaskExecutor taskExecutor;
+  private final boolean dataTransferNeeded;
 
   public RunTimeMessageOutputCollector(final String taskId,
                                        final IRVertex irVertex,
                                        final PersistentConnectionToMasterMap connectionToMasterMap,
-                                       final TaskExecutor taskExecutor) {
+                                       final TaskExecutor taskExecutor,
+                                       final boolean dataTransferNeeded) {
     this.taskId = taskId;
     this.irVertex = irVertex;
     this.connectionToMasterMap = connectionToMasterMap;
     this.taskExecutor = taskExecutor;
+    this.dataTransferNeeded = dataTransferNeeded;
   }
 
   @Override
   public void emit(final O output) {
-    final Map<Object, Long> aggregatedMessage = (Map<Object, Long>) output;
     final List<ControlMessage.RunTimePassMessageEntry> entries = new ArrayList<>();
-    aggregatedMessage.forEach((key, size) ->
+    if (this.dataTransferNeeded) {
+      final Map<Object, Long> aggregatedMessage = (Map<Object, Long>) output;
+      aggregatedMessage.forEach((key, size) ->
+        entries.add(
+          ControlMessage.RunTimePassMessageEntry.newBuilder()
+            // TODO #325: Add (de)serialization for non-string key types in data metric collection
+            .setKey(key == null ? NULL_KEY : String.valueOf(key))
+            .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(size)))
+            .build())
+      );
+    } else {
       entries.add(
         ControlMessage.RunTimePassMessageEntry.newBuilder()
           // TODO #325: Add (de)serialization for non-string key types in data metric collection
-          .setKey(key == null ? NULL_KEY : String.valueOf(key))
-          .setValue(size)
-          .build())
-    );
-
+          .setKey(DTS_KEY)
+          .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(null)))
+          .build());
+    }
     connectionToMasterMap.getMessageSender(MessageEnvironment.RUNTIME_MASTER_MESSAGE_LISTENER_ID)
       .send(ControlMessage.Message.newBuilder()
         .setId(RuntimeIdManager.generateMessageId())

@@ -33,7 +33,8 @@ public final class SignalVertex extends OperatorVertex {
 
   public SignalVertex() {
     super(new SignalTransform());
-    this.setPropertyPermanently(MessageIdVertexProperty.of(IdManager.generateMessageId()));
+    final Integer runtimeOptimizationMessageID = IdManager.generateMessageId();
+    this.setPropertyPermanently(MessageIdVertexProperty.of(runtimeOptimizationMessageID));
     this.setPropertyPermanently(ParallelismProperty.of(1));
   }
 }

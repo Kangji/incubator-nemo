@@ -31,12 +31,16 @@ import java.util.HashSet;
 import java.util.Optional;
 
 /**
- * Check if one of the tasks running on the executor, and the task to schedule are both in the anti-affinity group.
+ * Check if any of the tasks running on the executor, and the task to schedule are both in the anti-affinity group.
+ * The constraint says that it is not schedule-able if so.
  */
 @ThreadSafe
 @DriverSide
 @AssociatedProperty(ResourceAntiAffinityProperty.class)
 public final class AntiAffinitySchedulingConstraint implements SchedulingConstraint {
+  /**
+   * Default constructor.
+   */
   @Inject
   AntiAffinitySchedulingConstraint() {
   }
@@ -54,7 +58,7 @@ public final class AntiAffinitySchedulingConstraint implements SchedulingConstra
   private boolean isInAntiAffinityGroup(final Task task) {
     final int taskIdx = RuntimeIdManager.getIndexFromTaskId(task.getTaskId());
     final Optional<HashSet<Integer>> indices =
-      task.getExecutionProperties().get(ResourceAntiAffinityProperty.class);
+      task.getPropertyValue(ResourceAntiAffinityProperty.class);
     return indices.isPresent() && indices.get().contains(taskIdx);
   }
 }

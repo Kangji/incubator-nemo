@@ -45,9 +45,12 @@ import java.util.*;
  * @param <InputT> input type
  * @param <OutputT> output type
  */
-public final class GBKTransform<K, InputT, OutputT>
+public class GBKTransform<K, InputT, OutputT>
   extends AbstractDoFnTransform<KV<K, InputT>, KeyedWorkItem<K, InputT>, KV<K, OutputT>> {
   private static final Logger LOG = LoggerFactory.getLogger(GBKTransform.class.getName());
+  private final PipelineOptions options;
+  private final DoFnSchemaInformation doFnSchemaInformation;
+  private final DisplayData displayData;
   private final SystemReduceFn reduceFn;
   private transient InMemoryTimerInternalsFactory<K> inMemoryTimerInternalsFactory;
   private transient InMemoryStateInternalsFactory<K> inMemoryStateInternalsFactory;
@@ -55,8 +58,6 @@ public final class GBKTransform<K, InputT, OutputT>
   private Watermark prevOutputWatermark = new Watermark(Long.MIN_VALUE);
   private Watermark inputWatermark = new Watermark(Long.MIN_VALUE);
   private boolean dataReceived = false;
-  private transient OutputCollector originOc;
-  private final boolean isPartialCombining;
 
   public GBKTransform(final Coder<KV<K, InputT>> inputCoder,
                       final Map<TupleTag<?>, Coder<?>> outputCoders,
@@ -65,8 +66,7 @@ public final class GBKTransform<K, InputT, OutputT>
                       final PipelineOptions options,
                       final SystemReduceFn reduceFn,
                       final DoFnSchemaInformation doFnSchemaInformation,
-                      final DisplayData displayData,
-                      final boolean isPartialCombining) {
+                      final DisplayData displayData) {
     super(null,
       inputCoder,
       outputCoders,
@@ -78,8 +78,10 @@ public final class GBKTransform<K, InputT, OutputT>
       displayData,
       doFnSchemaInformation,
       Collections.emptyMap()); /* does not have side inputs */
+    this.options = options;
+    this.doFnSchemaInformation = doFnSchemaInformation;
+    this.displayData = displayData;
     this.reduceFn = reduceFn;
-    this.isPartialCombining = isPartialCombining;
   }
 
   /**
@@ -88,7 +90,7 @@ public final class GBKTransform<K, InputT, OutputT>
    * @return GroupAlsoByWindowViaWindowSetNewDoFn
    */
   @Override
-  protected DoFn wrapDoFn(final DoFn doFn) {
+  protected final DoFn wrapDoFn(final DoFn doFn) {
     if (inMemoryStateInternalsFactory == null) {
       this.inMemoryStateInternalsFactory = new InMemoryStateInternalsFactory<>();
     } else {
@@ -115,8 +117,7 @@ public final class GBKTransform<K, InputT, OutputT>
 
   /** Wrapper function of output collector. */
   @Override
-  OutputCollector wrapOutputCollector(final OutputCollector oc) {
-    originOc = oc;
+  final OutputCollector wrapOutputCollector(final OutputCollector oc) {
     return new GBKOutputCollector(oc);
   }
 
@@ -125,7 +126,7 @@ public final class GBKTransform<K, InputT, OutputT>
    * @param element input data element.
    */
   @Override
-  public void onData(final WindowedValue<KV<K, InputT>> element) {
+  public final void onData(final WindowedValue<KV<K, InputT>> element) {
     dataReceived = true;
     try {
       checkAndInvokeBundle();
@@ -142,11 +143,11 @@ public final class GBKTransform<K, InputT, OutputT>
   }
 
   /**
-   * Trigger timers that need to be fired at {@param watermark} and emit output watermark.
+   * Trigger timers that need to be fired at {@code watermark} and emit output watermark.
    * @param watermark watermark
    */
   @Override
-  public void onWatermark(final Watermark watermark) throws RuntimeException {
+  public final void onWatermark(final Watermark watermark) throws RuntimeException {
     if (watermark.getTimestamp() <= inputWatermark.getTimestamp()) {
       throw new RuntimeException(
         "Received watermark " + watermark.getTimestamp()
@@ -171,7 +172,7 @@ public final class GBKTransform<K, InputT, OutputT>
    * in order to emit all data.
    */
   @Override
-  protected void beforeClose() {
+  protected final void beforeClose() {
     // Finish any pending windows by advancing the input watermark to timestamp max value.
     inputWatermark = new Watermark(BoundedWindow.TIMESTAMP_MAX_VALUE.getMillis());
     // Trigger all the remaining timers that have not been fired yet.
@@ -263,11 +264,37 @@ public final class GBKTransform<K, InputT, OutputT>
     }
   }
 
-  /** Accessor for isPartialCombining. */
-  public boolean getIsPartialCombining() {
-    return isPartialCombining;
+  /**
+   * Accessor for reduceFn.
+   * @return the reduceFn function.
+   */
+  public final SystemReduceFn getReduceFn() {
+    return reduceFn;
   }
 
+  /**
+   * Accessor of options.
+   * @return the pipeline options.
+   */
+  public final PipelineOptions getOptions() {
+    return options;
+  }
+
+  /**
+   * Accessor of doFnSchemaInformation.
+   * @return the doFnSchemaInformation.
+   */
+  public final DoFnSchemaInformation getDoFnSchemaInformation() {
+    return doFnSchemaInformation;
+  }
+
+  /**
+   * Accessor of display data.
+   * @return the display data.
+   */
+  public final DisplayData getDisplayData() {
+    return displayData;
+  }
 
   /** Wrapper class for {@link OutputCollector}. */
   public class GBKOutputCollector implements OutputCollector<WindowedValue<KV<K, OutputT>>> {
@@ -277,7 +304,7 @@ public final class GBKTransform<K, InputT, OutputT>
       this.oc = oc;
     }
 
-    /** Emit output. If {@param output} is emitted on-time, save its timestamp in the output watermark map. */
+    /** Emit output. If {@code output} is emitted on-time, save its timestamp in the output watermark map. */
     @Override
     public final void emit(final WindowedValue<KV<K, OutputT>> output) {
       // The watermark advances only in ON_TIME
@@ -301,7 +328,7 @@ public final class GBKTransform<K, InputT, OutputT>
       oc.emitWatermark(watermark);
     }
 
-    /** Emit output value to {@param dstVertexId}. */
+    /** Emit output value to {@code dstVertexId}. */
     @Override
     public final <T> void emit(final String dstVertexId, final T output) {
       oc.emit(dstVertexId, output);

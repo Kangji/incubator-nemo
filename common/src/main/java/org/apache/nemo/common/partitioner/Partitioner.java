@@ -20,14 +20,20 @@ package org.apache.nemo.common.partitioner;
 
 import org.apache.nemo.common.KeyExtractor;
 import org.apache.nemo.common.exception.UnsupportedPartitionerException;
+import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.KeyExtractorProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.PartitionerProperty;
 import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 
 import java.io.Serializable;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This interface represents the way of partitioning output data from a source task.
@@ -53,6 +59,26 @@ public interface Partitioner<K extends Serializable> {
    */
   static Partitioner getPartitioner(final ExecutionPropertyMap<EdgeExecutionProperty> edgeProperties,
                                     final ExecutionPropertyMap<VertexExecutionProperty> dstProperties) {
+    if (PartitionerProperty.Type.HASH
+      .equals(edgeProperties.get(PartitionerProperty.class).orElseThrow(IllegalStateException::new).left())
+      && CommunicationPatternProperty.Value.PARTIAL_SHUFFLE
+      .equals(edgeProperties.get(CommunicationPatternProperty.class).get())) {
+      throw new IllegalArgumentException("the source taskID and the source vertex properties must be specified.");
+    }
+
+    return getPartitioner("", edgeProperties, new ExecutionPropertyMap<>("EMPTY"), dstProperties);
+  }
+
+  /**
+   * @param srcTaskID the task ID that you have to provide if the communication pattern is partial shuffle.
+   * @param edgeProperties edge properties.
+   * @param dstProperties  vertex properties.
+   * @return the partitioner.
+   */
+  static Partitioner getPartitioner(final String srcTaskID,
+                                    final ExecutionPropertyMap<EdgeExecutionProperty> edgeProperties,
+                                    final ExecutionPropertyMap<VertexExecutionProperty> srcProperties,
+                                    final ExecutionPropertyMap<VertexExecutionProperty> dstProperties) {
     final PartitionerProperty.Type type =
       edgeProperties.get(PartitionerProperty.class).orElseThrow(IllegalStateException::new).left();
     final Partitioner partitioner;
@@ -68,9 +94,34 @@ public interface Partitioner<K extends Serializable> {
           .get(PartitionerProperty.class)
           .orElseThrow(IllegalStateException::new)
           .right();
-        final int actualNumOfPartitions = (numOfPartitions == PartitionerProperty.NUM_EQUAL_TO_DST_PARALLELISM)
+        final int calculatedNumOfPartitions = (numOfPartitions == PartitionerProperty.NUM_EQUAL_TO_DST_PARALLELISM)
           ? dstProperties.get(ParallelismProperty.class).orElseThrow(IllegalStateException::new)
           : numOfPartitions;
+        final int actualNumOfPartitions;
+        if (CommunicationPatternProperty.Value.PARTIAL_SHUFFLE
+          .equals(edgeProperties.get(CommunicationPatternProperty.class).get())) {
+          final Map<Integer, List<String>> taskIndexToExecutorIDs =
+            srcProperties.get(TaskIndexToExecutorIDProperty.class).get();
+
+          // Derive the executor where the source task is located on.
+          final List<String> sourceTaskExecutorIDs = taskIndexToExecutorIDs
+            .get(Integer.valueOf(srcTaskID.split("-")[1]));
+          final String sourceTaskExecutorID = sourceTaskExecutorIDs.get(sourceTaskExecutorIDs.size() - 1);
+
+          // Get the hashset of executors that are close to the source task.
+          final HashSet<String> hashSetOfExecutors = srcProperties.get(ShuffleExecutorSetProperty.class).get().stream()
+            .filter(hs -> hs.contains(sourceTaskExecutorID)).findFirst().get();
+
+          // Derive the number of the source tasks that belong to the hashset and do * 2 / 3
+          final int numOfPartitionsCandidate = Long.valueOf(taskIndexToExecutorIDs.entrySet().stream().filter(entry -> {
+            final List<String> list = entry.getValue();
+            return hashSetOfExecutors.contains(list.get(list.size() - 1));
+          }).count()).intValue();
+          actualNumOfPartitions = numOfPartitionsCandidate > 3
+            ? numOfPartitionsCandidate * 2 / 3 : numOfPartitionsCandidate;
+        } else {
+          actualNumOfPartitions = calculatedNumOfPartitions;
+        }
         final KeyExtractor keyExtractor = edgeProperties.get(KeyExtractorProperty.class)
           .orElseThrow(IllegalStateException::new);
         partitioner = new HashPartitioner(actualNumOfPartitions, keyExtractor);

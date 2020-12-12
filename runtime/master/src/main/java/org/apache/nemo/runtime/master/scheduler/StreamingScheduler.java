@@ -39,6 +39,7 @@ import javax.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A simple scheduler for streaming workloads.
@@ -82,30 +83,10 @@ public final class StreamingScheduler implements Scheduler {
 
     // Prepare tasks
     final List<Stage> allStages = submittedPhysicalPlan.getStageDAG().getTopologicalSort();
-    final List<Task> allTasks = allStages.stream().flatMap(stageToSchedule -> {
-      // Helper variables for this stage
-      final List<StageEdge> stageIncomingEdges =
-        submittedPhysicalPlan.getStageDAG().getIncomingEdgesOf(stageToSchedule.getId());
-      final List<StageEdge> stageOutgoingEdges =
-        submittedPhysicalPlan.getStageDAG().getOutgoingEdgesOf(stageToSchedule.getId());
-      final List<Map<String, Readable>> vertexIdToReadables = stageToSchedule.getVertexIdToReadables();
-      final List<String> taskIdsToSchedule = planStateManager.getTaskAttemptsToSchedule(stageToSchedule.getId());
-
-      taskIdsToSchedule.forEach(taskId -> {
-        final int index = RuntimeIdManager.getIndexFromTaskId(taskId);
-        stageOutgoingEdges.forEach(outEdge -> pipeManagerMaster.onTaskScheduled(outEdge.getId(), index));
-      });
-
-      // Create tasks of this stage
-      return taskIdsToSchedule.stream().map(taskId -> new Task(
-        submittedPhysicalPlan.getPlanId(),
-        taskId,
-        stageToSchedule.getExecutionProperties(),
-        stageToSchedule.getSerializedIRDAG(),
-        stageIncomingEdges,
-        stageOutgoingEdges,
-        vertexIdToReadables.get(RuntimeIdManager.getIndexFromTaskId(taskId))));
-    }).collect(Collectors.toList());
+    final List<Task> allTasks = allStages.stream()
+      .flatMap(stageToSchedule -> StreamingScheduler
+        .deriveNewTasksFrom(stageToSchedule, submittedPhysicalPlan, planStateManager, pipeManagerMaster))
+      .collect(Collectors.toList());
 
     // Schedule everything at once
     pendingTaskCollectionPointer.setToOverwrite(allTasks);
@@ -115,7 +96,59 @@ public final class StreamingScheduler implements Scheduler {
   @Override
   public void updatePlan(final PhysicalPlan newPhysicalPlan) {
     // TODO #227: StreamingScheduler Dynamic Optimization
-    throw new UnsupportedOperationException();
+    // This case only handles the case when the runtime optimization is called before the task scheduling.
+    // #227 should handle the task checkpoint and resume functionalities to migrate tasks between executors.
+    final PhysicalPlan previousPlan = planStateManager.getPhysicalPlan();
+
+    planStateManager.updatePlan(newPhysicalPlan, planStateManager.getMaxScheduleAttempt());
+    planStateManager.storeJSON("updated");
+
+    final List<Stage> newStagesToSchedule = PhysicalPlan.getDiffStageDAGBetween(newPhysicalPlan, previousPlan);
+    final List<Task> newTasksToSchedule = newStagesToSchedule.stream()
+      .flatMap(stageToSchedule -> StreamingScheduler
+        .deriveNewTasksFrom(stageToSchedule, newPhysicalPlan, planStateManager, pipeManagerMaster))
+      .collect(Collectors.toList());
+
+    // Schedule everything at once
+    pendingTaskCollectionPointer.setToOverwrite(newTasksToSchedule);
+    taskDispatcher.onNewPendingTaskCollectionAvailable();
+  }
+
+  /**
+   * Private static method for deriving the new tasks from the new stages the schedule.
+   *
+   * @param stageToSchedule the stages to derive the tasks from.
+   * @param physicalPlan the entire physical plan.
+   * @param planStateManager the physical plan state manager
+   * @param pipeManagerMaster the manager for the pipe data transfer.
+   * @return the newly created stream of new tasks.
+   */
+  private static Stream<Task> deriveNewTasksFrom(final Stage stageToSchedule,
+                                                 final PhysicalPlan physicalPlan,
+                                                 final PlanStateManager planStateManager,
+                                                 final PipeManagerMaster pipeManagerMaster) {
+    // Helper variables for this stage
+    final List<StageEdge> stageIncomingEdges =
+      physicalPlan.getStageDAG().getIncomingEdgesOf(stageToSchedule.getId());
+    final List<StageEdge> stageOutgoingEdges =
+      physicalPlan.getStageDAG().getOutgoingEdgesOf(stageToSchedule.getId());
+    final List<Map<String, Readable>> vertexIdToReadables = stageToSchedule.getVertexIdToReadables();
+    final List<String> taskIdsToSchedule = planStateManager.getTaskAttemptsToSchedule(stageToSchedule.getId());
+
+    taskIdsToSchedule.forEach(taskId -> {
+      final int index = RuntimeIdManager.getIndexFromTaskId(taskId);
+      stageOutgoingEdges.forEach(outEdge -> pipeManagerMaster.onTaskScheduled(outEdge.getId(), index));
+    });
+
+    // Create tasks of this stage
+    return taskIdsToSchedule.stream().map(taskId -> new Task(
+      physicalPlan.getPlanId(),
+      taskId,
+      stageToSchedule.getExecutionProperties(),
+      stageToSchedule.getSerializedInternalIRDAG(),
+      stageIncomingEdges,
+      stageOutgoingEdges,
+      vertexIdToReadables.get(RuntimeIdManager.getIndexFromTaskId(taskId))));
   }
 
   @Override
@@ -132,6 +165,7 @@ public final class StreamingScheduler implements Scheduler {
         // Do nothing.
         break;
       case ON_HOLD:
+        // TODO #227: StreamingScheduler Dynamic Optimization.
       case FAILED:
       case SHOULD_RETRY:
         // TODO #226: StreamingScheduler Fault Tolerance

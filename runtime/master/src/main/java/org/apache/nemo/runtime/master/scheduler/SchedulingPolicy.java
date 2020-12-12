@@ -32,7 +32,7 @@ import java.util.Collection;
 @DriverSide
 @ThreadSafe
 @FunctionalInterface
-@DefaultImplementation(LocalityOccupancySchedulingPolicy.class)
+@DefaultImplementation(MinOccupancyFirstSchedulingPolicy.class)
 public interface SchedulingPolicy {
   /**
    * A function to select an executor from the specified collection of available executors.
