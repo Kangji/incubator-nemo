@@ -151,10 +151,12 @@ public final class StreamingScheduler implements Scheduler {
         break;
       case ON_HOLD:
         // TODO #227: StreamingScheduler Dynamic Optimization.
+        throw new UnsupportedOperationException("OnHold");
       case FAILED:
+        throw new UnsupportedOperationException("Failed");
       case SHOULD_RETRY:
         // TODO #226: StreamingScheduler Fault Tolerance
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("ShouldRetry");
       case READY:
       case EXECUTING:
         throw new RuntimeException("The states READY/EXECUTING cannot occur at this point");
