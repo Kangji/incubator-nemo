@@ -70,7 +70,6 @@ public final class StreamingScheduler implements Scheduler {
     this.executorRegistry = executorRegistry;
     this.planStateManager = planStateManager;
     this.pipeManagerMaster = pipeManagerMaster;
-    pipeManagerMaster.initiate();
   }
 
   @Override
@@ -109,9 +108,9 @@ public final class StreamingScheduler implements Scheduler {
    * @return the newly created stream of new tasks.
    */
   public static Stream<Task> deriveNewTasksFrom(final Stage stageToSchedule,
-                                                 final PhysicalPlan physicalPlan,
-                                                 final PlanStateManager planStateManager,
-                                                 final PipeManagerMaster pipeManagerMaster) {
+                                                final PhysicalPlan physicalPlan,
+                                                final PlanStateManager planStateManager,
+                                                final PipeManagerMaster pipeManagerMaster) {
     // Helper variables for this stage
     final List<StageEdge> stageIncomingEdges =
       physicalPlan.getStageDAG().getIncomingEdgesOf(stageToSchedule.getId());

@@ -51,7 +51,6 @@ public final class EDGARITCase {
       .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
       .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
       .addUserArgs(inputFilePath, "fixed", outputFilePath);
-
     JobLauncher.main(builder
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeFixed")
