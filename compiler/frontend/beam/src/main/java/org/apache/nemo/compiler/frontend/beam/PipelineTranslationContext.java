@@ -279,6 +279,7 @@ final class PipelineTranslationContext {
     // since its output will be shuffled before going through a final CombinePerKey transformation.
     if ((dstTransform instanceof CombineTransform
       && !((CombineTransform<?, ?, ?, ?>) dstTransform).isFirstCombining())
+      || dstTransform instanceof GBKTransform
       || dstTransform instanceof GroupByKeyTransform) {
       return CommunicationPatternProperty.Value.SHUFFLE;
     }
