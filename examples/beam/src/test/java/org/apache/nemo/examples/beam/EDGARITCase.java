@@ -23,7 +23,6 @@ import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
-import org.apache.nemo.compiler.optimizer.policy.IntermediateAccumulatorPolicy;
 import org.apache.nemo.compiler.optimizer.policy.StreamingPolicy;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -67,26 +66,6 @@ public final class EDGARITCase {
   }
 
   @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARAvgDocSizeFixedHierarchical() throws Exception {
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "fixed", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeFixed")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
-
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARAvgDocSizeSliding() throws Exception {
     builder = new ArgBuilder()
       .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
@@ -97,26 +76,6 @@ public final class EDGARITCase {
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeSliding")
       .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedSlidingWindowOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
-
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARAvgDocSizeSlidingHierarchical() throws Exception {
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "sliding", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeSliding")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -147,26 +106,6 @@ public final class EDGARITCase {
   }
 
   @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARDocumentSuccessRateFixedHierarchical() throws Exception {
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARDocumentSuccessRate.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "fixed", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARDocumentSuccessRateFixed")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
-
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARDocumentSuccessRateSliding() throws Exception {
     builder = new ArgBuilder()
       .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
@@ -177,26 +116,6 @@ public final class EDGARITCase {
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARDocumentSuccessRateSliding")
       .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
-
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARDocumentSuccessRateSlidingHierarchical() throws Exception {
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARDocumentSuccessRate.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "sliding", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARDocumentSuccessRateSliding")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -227,26 +146,6 @@ public final class EDGARITCase {
   }
 
   @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARRequestsByCIKFixedHierarchical() throws Exception {
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARRequestsByCIK.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "fixed", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARRequestsByCIKFixed")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
-
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARRequestsByCIKSliding() throws Exception {
     builder = new ArgBuilder()
       .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
@@ -257,26 +156,6 @@ public final class EDGARITCase {
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARRequestsByCIKSliding")
       .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
-
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARRequestsByCIKSlidingHierarchical() throws Exception {
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARRequestsByCIK.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "sliding", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARRequestsByCIKSliding")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -308,27 +187,6 @@ public final class EDGARITCase {
   }
 
   @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARTop10BadRefererDocsFixedHierarchical() throws Exception {
-
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARTop10BadRefererDocs.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "fixed", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10BadRefererDocsFixed")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
-
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARTop10BadRefererDocsSliding() throws Exception {
     builder = new ArgBuilder()
       .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
@@ -339,26 +197,6 @@ public final class EDGARITCase {
       .addResourceJson(executorResourceFileName)
       .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10BadRefererDocsSliding")
       .addOptimizationPolicy(StreamingPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
-
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARTop10BadRefererDocsSlidingHierarchical() throws Exception {
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARTop10BadRefererDocs.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "sliding", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10BadRefererDocsSliding")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
       .build());
 
     // try {
@@ -389,26 +227,6 @@ public final class EDGARITCase {
   }
 
   @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARTop10DocumentsFixedHierarchical() throws Exception {
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARTop10Documents.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "fixed", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10DocumentsFixed")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
-
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
   public void testEDGARTop10DocumentsSliding() throws Exception {
     builder = new ArgBuilder()
       .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
@@ -428,23 +246,205 @@ public final class EDGARITCase {
     // }
   }
 
-  @Test(timeout = ExampleTestArgs.TIMEOUT)
-  public void testEDGARTop10DocumentsSlidingHierarchical() throws Exception {
-    builder = new ArgBuilder()
-      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-      .addUserMain(EDGARTop10Documents.class.getCanonicalName())
-      .addUserArgs(inputFilePath, "sliding", outputFilePath);
-
-    JobLauncher.main(builder
-      .addResourceJson(executorResourceFileName)
-      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10DocumentsSliding")
-      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
-      .build());
-
-    // try {
-    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-    // } finally {
-    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-    // }
-  }
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARAvgDocSizeFixedHierarchical() throws Exception {
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "fixed", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeFixed")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
+  //
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARAvgDocSizeSlidingHierarchical() throws Exception {
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "sliding", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeSliding")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedSlidingWindowOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
+  //
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARDocumentSuccessRateFixedHierarchical() throws Exception {
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARDocumentSuccessRate.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "fixed", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARDocumentSuccessRateFixed")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
+  //
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARDocumentSuccessRateSlidingHierarchical() throws Exception {
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARDocumentSuccessRate.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "sliding", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARDocumentSuccessRateSliding")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
+  //
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARRequestsByCIKFixedHierarchical() throws Exception {
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARRequestsByCIK.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "fixed", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARRequestsByCIKFixed")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
+  //
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARRequestsByCIKSlidingHierarchical() throws Exception {
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARRequestsByCIK.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "sliding", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARRequestsByCIKSliding")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
+  //
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARTop10BadRefererDocsFixedHierarchical() throws Exception {
+  //
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARTop10BadRefererDocs.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "fixed", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10BadRefererDocsFixed")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
+  //
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARTop10BadRefererDocsSlidingHierarchical() throws Exception {
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARTop10BadRefererDocs.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "sliding", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10BadRefererDocsSliding")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
+  //
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARTop10DocumentsFixedHierarchical() throws Exception {
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARTop10Documents.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "fixed", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10DocumentsFixed")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
+  //
+  //
+  // @Test(timeout = ExampleTestArgs.TIMEOUT)
+  // public void testEDGARTop10DocumentsSlidingHierarchical() throws Exception {
+  //   builder = new ArgBuilder()
+  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+  //     .addUserMain(EDGARTop10Documents.class.getCanonicalName())
+  //     .addUserArgs(inputFilePath, "sliding", outputFilePath);
+  //
+  //   JobLauncher.main(builder
+  //     .addResourceJson(executorResourceFileName)
+  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARTop10DocumentsSliding")
+  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+  //     .build());
+  //
+  //   // try {
+  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+  //   // } finally {
+  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+  //   // }
+  // }
 }
