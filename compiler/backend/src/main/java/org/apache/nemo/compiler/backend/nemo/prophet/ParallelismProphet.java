@@ -139,7 +139,7 @@ public final class ParallelismProphet implements Prophet<String, Long> {
                                                      final Set<StageEdge> edges,
                                                      final IRDAG currentDag) {
     Set<IRVertex> verticesToChangeParallelism = edges.stream()
-      .map(edge -> edge.getDst().getIRDAG().getVertices())
+      .map(edge -> edge.getDst().getInternalIRDAG().getVertices())
       .flatMap(Collection::stream).collect(Collectors.toSet());
     final DAGBuilder<IRVertex, IREdge> dagBuilder = new DAGBuilder<>();
 

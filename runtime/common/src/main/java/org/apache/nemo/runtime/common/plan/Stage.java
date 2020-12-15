@@ -42,7 +42,7 @@ import java.util.Optional;
  */
 public final class Stage extends Vertex {
   private final List<Integer> taskIndices;
-  private final DAG<IRVertex, RuntimeEdge<IRVertex>> irDag;
+  private final DAG<IRVertex, RuntimeEdge<IRVertex>> internalIrDag;
   private final byte[] serializedIRDag;
   private final List<Map<String, Readable>> vertexIdToReadables;
 
@@ -53,19 +53,19 @@ public final class Stage extends Vertex {
    *
    * @param stageId             ID of the stage.
    * @param taskIndices         indices of the tasks to execute.
-   * @param irDag               the DAG of the task in this stage.
+   * @param internalIrDag               the DAG of the task in this stage.
    * @param executionProperties set of {@link VertexExecutionProperty} for this stage
    * @param vertexIdToReadables the list of maps between vertex ID and {@link Readable}.
    */
   public Stage(final String stageId,
                final List<Integer> taskIndices,
-               final DAG<IRVertex, RuntimeEdge<IRVertex>> irDag,
+               final DAG<IRVertex, RuntimeEdge<IRVertex>> internalIrDag,
                final ExecutionPropertyMap<VertexExecutionProperty> executionProperties,
                final List<Map<String, Readable>> vertexIdToReadables) {
     super(stageId);
     this.taskIndices = taskIndices;
-    this.irDag = irDag;
-    this.serializedIRDag = SerializationUtils.serialize(irDag);
+    this.internalIrDag = internalIrDag;
+    this.serializedIRDag = SerializationUtils.serialize(internalIrDag);
     this.executionProperties = executionProperties;
     this.vertexIdToReadables = vertexIdToReadables;
   }
@@ -73,14 +73,14 @@ public final class Stage extends Vertex {
   /**
    * @return the IRVertex DAG.
    */
-  public DAG<IRVertex, RuntimeEdge<IRVertex>> getIRDAG() {
-    return irDag;
+  public DAG<IRVertex, RuntimeEdge<IRVertex>> getInternalIRDAG() {
+    return internalIrDag;
   }
 
   /**
    * @return the serialized DAG of the task.
    */
-  public byte[] getSerializedIRDAG() {
+  public byte[] getSerializedInternalIRDAG() {
     return serializedIRDag;
   }
 
@@ -159,7 +159,7 @@ public final class Stage extends Vertex {
   public ObjectNode getPropertiesAsJsonNode() {
     final ObjectNode node = JsonNodeFactory.instance.objectNode();
     node.put("scheduleGroup", getScheduleGroup());
-    node.set("irDag", irDag.asJsonNode());
+    node.set("irDag", internalIrDag.asJsonNode());
     node.put("parallelism", getParallelism());
     node.put("num of task indices", getTaskIndices().size());
     node.set("executionProperties", executionProperties.asJsonNode());

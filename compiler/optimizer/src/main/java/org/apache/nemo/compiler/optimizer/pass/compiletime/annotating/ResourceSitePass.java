@@ -116,7 +116,7 @@ public final class ResourceSitePass extends AnnotatingPass {
       final Collection<IREdge> inEdges = dag.getIncomingEdgesOf(irVertex);
       final int parallelism = irVertex.getPropertyValue(ParallelismProperty.class)
         .orElseThrow(() -> new RuntimeException("Parallelism property required"));
-      if (inEdges.size() == 0) {
+      if (inEdges.isEmpty()) {
         // This vertex is root vertex.
         // Fall back to setting even distribution
         irVertex.setProperty(ResourceSiteProperty.of(EMPTY_MAP));

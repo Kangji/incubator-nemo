@@ -39,6 +39,7 @@ import javax.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A simple scheduler for streaming workloads.
@@ -81,30 +82,10 @@ public final class StreamingScheduler implements Scheduler {
 
     // Prepare tasks
     final List<Stage> allStages = submittedPhysicalPlan.getStageDAG().getTopologicalSort();
-    final List<Task> allTasks = allStages.stream().flatMap(stageToSchedule -> {
-      // Helper variables for this stage
-      final List<StageEdge> stageIncomingEdges =
-        submittedPhysicalPlan.getStageDAG().getIncomingEdgesOf(stageToSchedule.getId());
-      final List<StageEdge> stageOutgoingEdges =
-        submittedPhysicalPlan.getStageDAG().getOutgoingEdgesOf(stageToSchedule.getId());
-      final List<Map<String, Readable>> vertexIdToReadables = stageToSchedule.getVertexIdToReadables();
-      final List<String> taskIdsToSchedule = planStateManager.getTaskAttemptsToSchedule(stageToSchedule.getId());
-
-      taskIdsToSchedule.forEach(taskId -> {
-        final int index = RuntimeIdManager.getIndexFromTaskId(taskId);
-        stageOutgoingEdges.forEach(outEdge -> pipeManagerMaster.onTaskScheduled(outEdge.getId(), index));
-      });
-
-      // Create tasks of this stage
-      return taskIdsToSchedule.stream().map(taskId -> new Task(
-        submittedPhysicalPlan.getPlanId(),
-        taskId,
-        stageToSchedule.getExecutionProperties(),
-        stageToSchedule.getSerializedIRDAG(),
-        stageIncomingEdges,
-        stageOutgoingEdges,
-        vertexIdToReadables.get(RuntimeIdManager.getIndexFromTaskId(taskId))));
-    }).collect(Collectors.toList());
+    final List<Task> allTasks = allStages.stream()
+      .flatMap(stageToSchedule -> StreamingScheduler
+        .deriveNewTasksFrom(stageToSchedule, submittedPhysicalPlan, planStateManager, pipeManagerMaster))
+      .collect(Collectors.toList());
 
     // Schedule everything at once
     pendingTaskCollectionPointer.setToOverwrite(allTasks);
@@ -115,6 +96,43 @@ public final class StreamingScheduler implements Scheduler {
   public void updatePlan(final PhysicalPlan newPhysicalPlan) {
     // TODO #227: StreamingScheduler Dynamic Optimization
     throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Private static method for deriving the new tasks from the new stages the schedule.
+   *
+   * @param stageToSchedule the stages to derive the tasks from.
+   * @param physicalPlan the entire physical plan.
+   * @param planStateManager the physical plan state manager
+   * @param pipeManagerMaster the manager for the pipe data transfer.
+   * @return the newly created stream of new tasks.
+   */
+  public static Stream<Task> deriveNewTasksFrom(final Stage stageToSchedule,
+                                                final PhysicalPlan physicalPlan,
+                                                final PlanStateManager planStateManager,
+                                                final PipeManagerMaster pipeManagerMaster) {
+    // Helper variables for this stage
+    final List<StageEdge> stageIncomingEdges =
+      physicalPlan.getStageDAG().getIncomingEdgesOf(stageToSchedule.getId());
+    final List<StageEdge> stageOutgoingEdges =
+      physicalPlan.getStageDAG().getOutgoingEdgesOf(stageToSchedule.getId());
+    final List<Map<String, Readable>> vertexIdToReadables = stageToSchedule.getVertexIdToReadables();
+    final List<String> taskIdsToSchedule = planStateManager.getTaskAttemptsToSchedule(stageToSchedule.getId());
+
+    taskIdsToSchedule.forEach(taskId -> {
+      final int index = RuntimeIdManager.getIndexFromTaskId(taskId);
+      stageOutgoingEdges.forEach(outEdge -> pipeManagerMaster.onTaskScheduled(outEdge.getId(), index));
+    });
+
+    // Create tasks of this stage
+    return taskIdsToSchedule.stream().map(taskId -> new Task(
+      physicalPlan.getPlanId(),
+      taskId,
+      stageToSchedule.getExecutionProperties(),
+      stageToSchedule.getSerializedInternalIRDAG(),
+      stageIncomingEdges,
+      stageOutgoingEdges,
+      vertexIdToReadables.get(RuntimeIdManager.getIndexFromTaskId(taskId))));
   }
 
   @Override

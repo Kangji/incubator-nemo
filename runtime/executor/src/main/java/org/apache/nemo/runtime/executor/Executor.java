@@ -129,7 +129,7 @@ public final class Executor {
     try {
       final long deserializationStartTime = System.currentTimeMillis();
       final DAG<IRVertex, RuntimeEdge<IRVertex>> irDag =
-        SerializationUtils.deserialize(task.getSerializedIRDag());
+        SerializationUtils.deserialize(task.getSerializedInternalIRDag());
       metricMessageSender.send("TaskMetric", task.getTaskId(), "taskDeserializationTime",
         SerializationUtils.serialize(System.currentTimeMillis() - deserializationStartTime));
       final TaskStateManager taskStateManager =
