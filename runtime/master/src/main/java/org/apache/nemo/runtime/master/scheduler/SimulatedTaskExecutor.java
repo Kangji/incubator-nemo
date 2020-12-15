@@ -90,7 +90,7 @@ public final class SimulatedTaskExecutor {
    */
   private long calculateExpectedTaskDuration(final Task task) {
     final DAG<IRVertex, RuntimeEdge<IRVertex>> stageIRDAG = stageIDToStageIRDAG.computeIfAbsent(task.getStageId(),
-      i -> SerializationUtils.deserialize(task.getSerializedInternalIRDag()));
+      i -> SerializationUtils.deserialize(task.getSerializedInternalIRDAG()));
 
     final Map<String, Object> jobMetricMap = this.actualMetricStore.getMetricMap(JobMetric.class);
     if (jobMetricMap.size() > 1) {
