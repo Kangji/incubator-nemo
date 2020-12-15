@@ -146,7 +146,7 @@ final class TaskDispatcher {
     for (final Task task : taskList) {
       if (!planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY)) {
         // Guard against race conditions causing duplicate task launches
-        LOG.warn("Skipping task {} as it is not READY", task.getTaskId());
+        LOG.warn("Skipping task {} for now, as it is not READY", task.getTaskId());
         continue;
       }
 
@@ -166,10 +166,11 @@ final class TaskDispatcher {
                 return collection.stream().map(lst -> lst.get(lst.size() - 1));
               }).collect(Collectors.toCollection(HashSet::new));
 
-            data.add(ControlMessage.RunTimePassMessageEntry.newBuilder()
-              .setKey(IntermediateAccumulatorInsertionPass.EXECUTOR_SOURCE_KEY)
-              .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(dataLocationExecutorNodeNames)))
-              .build());
+            // data.add(ControlMessage.RunTimePassMessageEntry.newBuilder()
+            //   .setKey(IntermediateAccumulatorInsertionPass.EXECUTOR_SOURCE_KEY)
+            //   .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(
+            //   dataLocationExecutorNodeNames)))
+            //   .build());
           }
 
           planRewriter.accumulate(messageId, targetEdges, data);
