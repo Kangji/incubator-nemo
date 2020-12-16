@@ -71,6 +71,7 @@ public class MultiThreadParentTaskDataFetcher extends DataFetcher {
 
   // Checkpoint aligner to support fault-tolerance in streaming
   private final CheckpointAligner checkpointAligner;
+  private final CheckpointBoard checkpointBoard;
 
   public MultiThreadParentTaskDataFetcher(final IRVertex dataSource,
                                    final InputReader readerForParentTask,
@@ -81,7 +82,9 @@ public class MultiThreadParentTaskDataFetcher extends DataFetcher {
     this.firstFetch = true;
     this.elementQueue = new ConcurrentLinkedQueue();
     this.queueInsertionThreads = Executors.newCachedThreadPool();
-    this.checkpointAligner = new CheckpointAligner(elementQueue, checkpointBoard);
+    this.checkpointAligner = new CheckpointAligner(elementQueue);
+    this.checkpointBoard = checkpointBoard;
+    System.out.println("initialization");
     checkpointBoard.initialize(this);
   }
 
@@ -93,6 +96,10 @@ public class MultiThreadParentTaskDataFetcher extends DataFetcher {
     }
 
     while (true) {
+      if (!checkpointBoard.canProceed(this)) {
+        // Wait until the other data fetchers in the same task receive a checkpoint mark
+        throw new NoSuchElementException();
+      }
       final Object element = elementQueue.poll();
       if (element == null) {
         throw new NoSuchElementException();
@@ -101,8 +108,10 @@ public class MultiThreadParentTaskDataFetcher extends DataFetcher {
         if (numOfFinishMarks == numOfIterators) {
           return Finishmark.getInstance();
         }
-        // else try again.
+      } else if (element instanceof Checkpointmark) {
+        checkpointBoard.update(this, (Checkpointmark) element);
       } else {
+        // else try again.
         return element;
       }
     }

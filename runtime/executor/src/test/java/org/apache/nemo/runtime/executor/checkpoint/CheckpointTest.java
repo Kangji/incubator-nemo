@@ -8,6 +8,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -17,12 +18,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class CheckpointTest extends TestCase {
   private final CheckpointBoard checkpointBoard = new CheckpointBoard();
   // setup for the first data fetcher
-  private final LinkedBlockingQueue elementQueue1 = new LinkedBlockingQueue();
-  private final CheckpointAligner checkpointAligner1 = new CheckpointAligner(elementQueue1, checkpointBoard);
+  private final ConcurrentLinkedQueue elementQueue1 = new ConcurrentLinkedQueue();
+  private final CheckpointAligner checkpointAligner1 = new CheckpointAligner(elementQueue1);
   private final DataFetcher dataFetcher1 = new MultiThreadParentTaskDataFetcher(null, null, null, checkpointBoard);
   // setup for the second data fetcher
-  private final LinkedBlockingQueue elementQueue2 = new LinkedBlockingQueue();
-  private final CheckpointAligner checkpointAligner2 = new CheckpointAligner(elementQueue2, checkpointBoard);
+  private final ConcurrentLinkedQueue elementQueue2 = new ConcurrentLinkedQueue();
+  private final CheckpointAligner checkpointAligner2 = new CheckpointAligner(elementQueue2);
   private final DataFetcher dataFetcher2 = new MultiThreadParentTaskDataFetcher(null, null, null, checkpointBoard);
 
   private final Checkpointmark checkpointmark = Checkpointmark.generateCheckpointmark();
@@ -30,11 +31,30 @@ public class CheckpointTest extends TestCase {
   private class task implements Runnable {
     public void run() {
       try {
-        Checkpointmark receivedCheckpointMark = (Checkpointmark) elementQueue1.take();
-        checkpointBoard.update(dataFetcher1, receivedCheckpointMark);
-        receivedCheckpointMark = (Checkpointmark) elementQueue2.take();
-        checkpointBoard.update(dataFetcher2, receivedCheckpointMark);
-      } catch (InterruptedException e) {
+        boolean update1 = false;
+        boolean update2 = false;
+        while (!update1 || !update2) {
+          Object element1 = null;
+          Object element2 = null;
+          if (checkpointBoard.canProceed(dataFetcher1)) {
+            element1 = elementQueue1.poll();
+          }
+          if (element1 != null) {
+            update1 = true;
+            checkpointBoard.update(dataFetcher1, (Checkpointmark) element1);
+          }
+          if (checkpointBoard.canProceed(dataFetcher2)) {
+            element2 = elementQueue2.poll();
+          }
+          if (element2 != null) {
+            update2 = true;
+            checkpointBoard.update(dataFetcher2, (Checkpointmark) element2);
+          }
+          Thread.sleep(100);
+        }
+        System.out.println(elementQueue1.size());
+        System.out.println(elementQueue2.size());
+    } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
     }

@@ -326,10 +326,11 @@ public final class TaskExecutor {
 
   private void processCheckpointmark(final DataFetcher dataFetcher,
                                      final Checkpointmark checkpointmark) {
-    checkpointBoard.update(dataFetcher, checkpointmark);
+    numOfReceivedMark++;
     if (numOfReceivedMark == dataFetchers.size()) {
       // The task has received checkpoint mark from all data fetchers.
-      //dataFetcher.getOutputCollector().emitCheckpointmark(checkpointmark);
+      numOfReceivedMark = 0;
+      // dataFetcher.getOutputCollector().emitCheckpointmark(checkpointmark);
     }
   }
 
