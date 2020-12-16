@@ -20,8 +20,11 @@ package org.apache.nemo.runtime.executor.task;
 
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.vertex.IRVertex;
+import org.apache.nemo.common.punctuation.Checkpointmark;
 import org.apache.nemo.common.punctuation.Finishmark;
 import org.apache.nemo.common.punctuation.Watermark;
+import org.apache.nemo.runtime.executor.checkpoint.CheckpointAligner;
+import org.apache.nemo.runtime.executor.checkpoint.CheckpointBoard;
 import org.apache.nemo.runtime.executor.data.DataUtil;
 import org.apache.nemo.runtime.executor.datatransfer.*;
 import org.slf4j.Logger;
@@ -46,7 +49,7 @@ import java.util.concurrent.Executors;
  * single unbounded iterator forever.
  */
 @NotThreadSafe
-class MultiThreadParentTaskDataFetcher extends DataFetcher {
+public class MultiThreadParentTaskDataFetcher extends DataFetcher {
   private static final Logger LOG = LoggerFactory.getLogger(MultiThreadParentTaskDataFetcher.class);
 
   private final InputReader readersForParentTask;
@@ -66,15 +69,20 @@ class MultiThreadParentTaskDataFetcher extends DataFetcher {
   // A watermark manager
   private InputWatermarkManager inputWatermarkManager;
 
+  // Checkpoint aligner to support fault-tolerance in streaming
+  private final CheckpointAligner checkpointAligner;
 
-  MultiThreadParentTaskDataFetcher(final IRVertex dataSource,
+  public MultiThreadParentTaskDataFetcher(final IRVertex dataSource,
                                    final InputReader readerForParentTask,
-                                   final OutputCollector outputCollector) {
+                                   final OutputCollector outputCollector,
+                                   final CheckpointBoard checkpointBoard) {
     super(dataSource, outputCollector);
     this.readersForParentTask = readerForParentTask;
     this.firstFetch = true;
     this.elementQueue = new ConcurrentLinkedQueue();
     this.queueInsertionThreads = Executors.newCachedThreadPool();
+    this.checkpointAligner = new CheckpointAligner(elementQueue, checkpointBoard);
+    checkpointBoard.initialize(this);
   }
 
   @Override
@@ -103,6 +111,7 @@ class MultiThreadParentTaskDataFetcher extends DataFetcher {
   private void fetchDataLazily() {
     final List<CompletableFuture<DataUtil.IteratorWithNumBytes>> futures = readersForParentTask.read();
     numOfIterators = futures.size();
+    checkpointAligner.setNumOfExpectedMark(numOfIterators);
 
     if (numOfIterators > 1) {
       inputWatermarkManager = new MultiInputWatermarkManager(numOfIterators, new WatermarkCollector());
@@ -125,7 +134,10 @@ class MultiThreadParentTaskDataFetcher extends DataFetcher {
                 final WatermarkWithIndex watermarkWithIndex = (WatermarkWithIndex) element;
                 inputWatermarkManager.trackAndEmitWatermarks(
                   watermarkWithIndex.getIndex(), watermarkWithIndex.getWatermark());
-              }
+                }
+                // Checkpointmark Alignment
+            } else if (element instanceof Checkpointmark) {
+              checkpointAligner.processCheckpointMark((Checkpointmark) element);
             } else {
               // data element
               elementQueue.offer(element);

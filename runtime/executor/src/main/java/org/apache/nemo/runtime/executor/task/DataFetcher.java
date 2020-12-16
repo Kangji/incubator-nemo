@@ -26,7 +26,7 @@ import java.io.IOException;
 /**
  * An abstraction for fetching data from task-external sources.
  */
-abstract class DataFetcher implements AutoCloseable {
+public abstract class DataFetcher implements AutoCloseable {
   private final IRVertex dataSource;
   private final OutputCollector outputCollector;
 

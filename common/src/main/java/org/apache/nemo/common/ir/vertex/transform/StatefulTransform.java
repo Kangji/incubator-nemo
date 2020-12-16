@@ -28,9 +28,11 @@ import org.apache.nemo.common.punctuation.Checkpointmark;
 public interface StatefulTransform<I, O> extends Transform<I, O> {
 
   // Process Checkpointmark. If it has received the expected number of checkpointmarks, checkpoint. If not, stop processing from t
+  /**
   void onCheckpointmark(Checkpointmark checkpointMark) {
 
   }
 
   void
+   */
 }

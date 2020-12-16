@@ -38,8 +38,7 @@ public abstract class NoWatermarkEmitTransform<I, O> implements Transform<I, O> 
     // do nothing
   }
 
-  @Override
-  public final void onCheckpointmark(final Checkpointmark checkpointmark) {
+  //@Override
+  //public final void onCheckpointmark(final Checkpointmark checkpointmark) {
     // do nothing
   }
-}

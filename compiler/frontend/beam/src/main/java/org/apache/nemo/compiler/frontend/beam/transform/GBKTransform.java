@@ -47,7 +47,7 @@ import java.util.*;
  * @param <OutputT> output type
  */
 public final class GBKTransform<K, InputT, OutputT>
-  extends AbstractDoFnTransform<KV<K, InputT>, KeyedWorkItem<K, InputT>, KV<K, OutputT>> implements StatefulTransform {
+  extends AbstractDoFnTransform<KV<K, InputT>, KeyedWorkItem<K, InputT>, KV<K, OutputT>> {
   private static final Logger LOG = LoggerFactory.getLogger(GBKTransform.class.getName());
   private final SystemReduceFn reduceFn;
   private transient InMemoryTimerInternalsFactory<K> inMemoryTimerInternalsFactory;

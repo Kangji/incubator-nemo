@@ -19,6 +19,10 @@
 package org.apache.nemo.runtime.executor.transfer;
 
 import org.apache.nemo.common.punctuation.Finishmark;
+import org.apache.nemo.runtime.executor.data.PipeManagerWorker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -31,6 +35,8 @@ import java.util.concurrent.LinkedBlockingQueue;
     private final LinkedBlockingQueue queue;
     private boolean outputContextClosed = false;
 
+  private static final Logger LOG = LoggerFactory.getLogger(LocalInputContext.class.getName());
+
     /**
      * Creates a new local input context and connect it to {@param localOutputContext}.
      * @param localOutputContext the local output context to which this local input context is connected
@@ -41,6 +47,7 @@ import java.util.concurrent.LinkedBlockingQueue;
           localOutputContext.getSrcTaskIndex(),
           localOutputContext.getDstTaskIndex());
     this.queue = localOutputContext.getQueue();
+    LOG.error("Thread : {}, localInputcontext initialized", Thread.currentThread());
   }
 
   /**

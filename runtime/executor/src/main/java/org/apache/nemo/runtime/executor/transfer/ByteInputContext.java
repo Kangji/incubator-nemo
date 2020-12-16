@@ -83,6 +83,7 @@ public final class ByteInputContext extends ByteTransferContext {
                    final byte[] contextDescriptor,
                    final ContextManager contextManager) {
     super(remoteExecutorId, contextId, contextDescriptor, contextManager);
+    LOG.error("Thread : {}, ByteInputContext initialized", Thread.currentThread());
   }
 
   /**

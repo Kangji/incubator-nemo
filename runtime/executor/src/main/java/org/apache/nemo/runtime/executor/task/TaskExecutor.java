@@ -32,6 +32,7 @@ import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.transform.MessageAggregatorTransform;
 import org.apache.nemo.common.ir.vertex.transform.Transform;
+import org.apache.nemo.common.punctuation.Checkpointmark;
 import org.apache.nemo.common.punctuation.Finishmark;
 import org.apache.nemo.common.punctuation.Watermark;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
@@ -45,6 +46,8 @@ import org.apache.nemo.runtime.common.state.TaskState;
 import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.TaskStateManager;
 import org.apache.nemo.runtime.executor.TransformContextImpl;
+import org.apache.nemo.runtime.executor.checkpoint.CheckpointAligner;
+import org.apache.nemo.runtime.executor.checkpoint.CheckpointBoard;
 import org.apache.nemo.runtime.executor.data.BroadcastManagerWorker;
 import org.apache.nemo.runtime.executor.datatransfer.*;
 import org.slf4j.Logger;
@@ -83,6 +86,12 @@ public final class TaskExecutor {
   private String idOfVertexPutOnHold;
 
   private final PersistentConnectionToMasterMap persistentConnectionToMasterMap;
+
+  // the number of received checkpoint mark
+  private int numOfReceivedMark = 0;
+
+  // Checkpoint status board
+  private final CheckpointBoard checkpointBoard = new CheckpointBoard();
 
   /**
    * Constructor.
@@ -123,6 +132,8 @@ public final class TaskExecutor {
     this.sortedHarnesses = pair.right();
 
     this.timeSinceLastExecution = System.currentTimeMillis();
+
+    LOG.error("Thread : {}, Task ID : {}", Thread.currentThread(), this.taskId);
   }
 
   // Get all of the intra-task edges + inter-task edges
@@ -280,7 +291,8 @@ public final class TaskExecutor {
                 new MultiThreadParentTaskDataFetcher(
                   parentTaskReader.getSrcIrVertex(),
                   parentTaskReader,
-                  dataFetcherOutputCollector));
+                  dataFetcherOutputCollector,
+                  checkpointBoard));
             } else {
               dataFetcherList.add(
                 new ParentTaskDataFetcher(
@@ -310,6 +322,15 @@ public final class TaskExecutor {
   private void processWatermark(final OutputCollector outputCollector,
                                 final Watermark watermark) {
     outputCollector.emitWatermark(watermark);
+  }
+
+  private void processCheckpointmark(final DataFetcher dataFetcher,
+                                     final Checkpointmark checkpointmark) {
+    checkpointBoard.update(dataFetcher, checkpointmark);
+    if (numOfReceivedMark == dataFetchers.size()) {
+      // The task has received checkpoint mark from all data fetchers.
+      //dataFetcher.getOutputCollector().emitCheckpointmark(checkpointmark);
+    }
   }
 
   /**
@@ -342,6 +363,7 @@ public final class TaskExecutor {
       SerializationUtils.serialize(executionStartTime - timeSinceLastExecution));
 
     // Phase 1: Consume task-external input data.
+    LOG.error("num of data fetcher : {}", dataFetchers.size());
     if (!handleDataFetchers(dataFetchers)) {
       return;
     }
@@ -400,6 +422,8 @@ public final class TaskExecutor {
     } else if (event instanceof Watermark) {
       // Watermark
       processWatermark(dataFetcher.getOutputCollector(), (Watermark) event);
+    } else if (event instanceof Checkpointmark) {
+      processCheckpointmark(dataFetcher, (Checkpointmark) event);
     } else {
       // Process data element
       processElement(dataFetcher.getOutputCollector(), event);

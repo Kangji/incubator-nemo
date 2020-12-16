@@ -20,6 +20,7 @@ package org.apache.nemo.runtime.executor.datatransfer;
 
 import org.apache.nemo.common.ir.OutputCollector;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
+import org.apache.nemo.common.punctuation.Checkpointmark;
 import org.apache.nemo.common.punctuation.Watermark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,10 @@ public final class DataFetcherOutputCollector<O> implements OutputCollector<O> {
   public void emitWatermark(final Watermark watermark) {
     watermarkManager.trackAndEmitWatermarks(edgeIndex, watermark);
   }
+
+  //public void emitCheckpointmark(final Checkpointmark checkpointmark) {
+    //nextOperatorVertex.getTransform().onCheckpointmark(checkpointmark);
+  //}
 
   @Override
   public <T> void emit(final String dstVertexId, final T output) {

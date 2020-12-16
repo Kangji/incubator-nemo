@@ -61,7 +61,7 @@ public interface Transform<I, O> extends Serializable {
   /**
    * On checkpoint mark received.
    */
-  void onCheckpointmark(Checkpointmark checkpointmark);
+  //void onCheckpointmark(Checkpointmark checkpointmark);
 
   /**
    *

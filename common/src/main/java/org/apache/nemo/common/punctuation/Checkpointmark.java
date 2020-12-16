@@ -19,7 +19,7 @@
 package org.apache.nemo.common.punctuation;
 
 public final class Checkpointmark {
-  private static int checkpointID = 0;
+  private int checkpointID = 0;
 
   private Checkpointmark() {
     this.checkpointID = checkpointID++;
