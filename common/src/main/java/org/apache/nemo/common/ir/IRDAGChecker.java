@@ -318,6 +318,10 @@ public final class IRDAGChecker {
         .filter(v -> v instanceof MessageAggregatorVertex
         || (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof SignalTransform))
         .count();
+      final long numBarrierVertices = dag.getVertices()
+        .stream()
+        .filter(v -> v.getPropertyValue(BarrierProperty.class).isPresent())
+        .count();
 
       // Triggering ids, must be unique
       final List<Integer> vertexMessageIds = dag.getVertices()
@@ -333,9 +337,10 @@ public final class IRDAGChecker {
         .flatMap(e -> e.getPropertyValue(MessageIdEdgeProperty.class).get().stream())
         .collect(Collectors.toSet());
 
-      if (numMessageAggregatorVertices != vertexMessageIds.size()) {
+      final long totalRuntimeOptimizationVertices = numMessageAggregatorVertices + numBarrierVertices;
+      if (totalRuntimeOptimizationVertices != vertexMessageIds.size()) {
         return failure("Num vertex-messageId mismatch: "
-          + numMessageAggregatorVertices + " != " + vertexMessageIds.size());
+          + totalRuntimeOptimizationVertices + " != " + vertexMessageIds.size());
       }
       if (vertexMessageIds.stream().distinct().count() != vertexMessageIds.size()) {
         return failure("Duplicate vertex message ids: " + vertexMessageIds.toString());

@@ -19,16 +19,17 @@
 package org.apache.nemo.compiler.backend.nemo;
 
 import org.apache.commons.lang.SerializationUtils;
+import org.apache.nemo.common.dag.DAGBuilder;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.utility.runtimepass.MessageAggregatorVertex;
 import org.apache.nemo.compiler.backend.nemo.prophet.ParallelismProphet;
 import org.apache.nemo.compiler.backend.nemo.prophet.Prophet;
 import org.apache.nemo.compiler.backend.nemo.prophet.SkewProphet;
-import org.apache.nemo.common.ir.vertex.utility.runtimepass.MessageAggregatorVertex;
 import org.apache.nemo.compiler.optimizer.NemoOptimizer;
 import org.apache.nemo.compiler.optimizer.pass.runtime.Message;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
@@ -133,18 +134,43 @@ public final class NemoPlanRewriter<T> implements PlanRewriter {
     // Update the physical plan and return
     final List<Stage> currentStages = currentPhysicalPlan.getStageDAG().getTopologicalSort();
     final List<Stage> newStages = newPhysicalPlan.getStageDAG().getTopologicalSort();
-    IntStream.range(0, currentStages.size()).forEachOrdered(i -> {
-      final ExecutionPropertyMap<VertexExecutionProperty> newProperties = newStages.get(i).getExecutionProperties();
-      currentStages.get(i).setExecutionProperties(newProperties);
-      newProperties.get(ParallelismProperty.class).ifPresent(newParallelism -> {
-        currentStages.get(i).getTaskIndices().clear();
-        currentStages.get(i).getTaskIndices().addAll(IntStream.range(0, newParallelism).boxed()
-          .collect(Collectors.toList()));
-        IntStream.range(currentStages.get(i).getVertexIdToReadables().size(), newParallelism).forEach(newIdx ->
-          currentStages.get(i).getVertexIdToReadables().add(new HashMap<>()));
-      });
-    });
-    return currentPhysicalPlan;
+
+    final DAGBuilder<Stage, StageEdge> stageBuilder = new DAGBuilder<>();
+    boolean updatePlan = false;
+    final Map<Stage, Stage> newToOldStageMap = new HashMap<>();
+    for (int i = 0; i < newStages.size(); i++) {
+      if (!updatePlan && currentStages.get(i).getInternalIRDAG().getVertices().size()
+        == newStages.get(i).getInternalIRDAG().getVertices().size()) {
+        final Stage stage = currentStages.get(i);
+        newToOldStageMap.put(newStages.get(i), stage);
+
+        stageBuilder.addVertex(stage);
+        currentPhysicalPlan.getStageDAG().getIncomingEdgesOf(stage).forEach(stageBuilder::connectVertices);
+        final ExecutionPropertyMap<VertexExecutionProperty> newProperties = newStages.get(i).getExecutionProperties();
+        stage.setExecutionProperties(newProperties);
+        newProperties.get(ParallelismProperty.class).ifPresent(newParallelism -> {
+          stage.getTaskIndices().clear();
+          stage.getTaskIndices().addAll(IntStream.range(0, newParallelism).boxed()
+            .collect(Collectors.toList()));
+          IntStream.range(stage.getVertexIdToReadables().size(), newParallelism).forEach(newIdx ->
+            stage.getVertexIdToReadables().add(new HashMap<>()));
+        });
+      } else {
+        updatePlan = true;
+        final Stage newStage = newStages.get(i);
+        stageBuilder.addVertex(newStage);
+        newPhysicalPlan.getStageDAG().getIncomingEdgesOf(newStage).forEach(e -> {
+          if (newToOldStageMap.containsKey(e.getSrc())) {
+            stageBuilder.connectVertices(new StageEdge(e.getId(), e.getExecutionProperties(),
+              e.getSrcIRVertex(), e.getDstIRVertex(),
+              newToOldStageMap.get(e.getSrc()), e.getDst()));
+          } else {
+            stageBuilder.connectVertices(e);
+          }
+        });
+      }
+    }
+    return new PhysicalPlan(currentPhysicalPlan.getPlanId(), stageBuilder.build());
   }
 
   /**

@@ -46,8 +46,8 @@ import static org.apache.beam.sdk.transforms.windowing.PaneInfo.Timing.*;
 import static org.apache.beam.sdk.values.WindowingStrategy.AccumulationMode.ACCUMULATING_FIRED_PANES;
 import static org.mockito.Mockito.mock;
 
-public class GBKTransformTest {
-  private static final Logger LOG = LoggerFactory.getLogger(GBKTransformTest.class.getName());
+public class CombineTransformTest {
+  private static final Logger LOG = LoggerFactory.getLogger(CombineTransformTest.class.getName());
   private final static Coder STRING_CODER = StringUtf8Coder.of();
   private final static Coder INTEGER_CODER = BigEndianIntegerCoder.of();
 
@@ -153,8 +153,8 @@ public class GBKTransformTest {
         WindowingStrategy.of(slidingWindows).withMode(ACCUMULATING_FIRED_PANES)
       );
 
-    final GBKTransform<String, Integer, Integer> combineTransform =
-      new GBKTransform(
+    final CombineTransform<String, Integer, Integer> combineTransform =
+      new CombineTransform(
         KvCoder.of(STRING_CODER, INTEGER_CODER),
         Collections.singletonMap(outputTag, KvCoder.of(STRING_CODER, INTEGER_CODER)),
         outputTag,
@@ -162,7 +162,8 @@ public class GBKTransformTest {
         PipelineOptionsFactory.as(NemoPipelineOptions.class),
         SystemReduceFn.combining(STRING_CODER, appliedCombineFn),
         DoFnSchemaInformation.create(),
-        DisplayData.none());
+        DisplayData.none(),
+        false);
 
     // window1 : [-5000, 5000) in millisecond
     // window2 : [0, 10000)
@@ -281,8 +282,8 @@ public class GBKTransformTest {
         WindowingStrategy.of(slidingWindows).withMode(ACCUMULATING_FIRED_PANES).withAllowedLateness(lateness)
       );
 
-    final GBKTransform<String, Integer, Integer> combineTransform =
-      new GBKTransform(
+    final CombineTransform<String, Integer, Integer> combineTransform =
+      new CombineTransform(
         KvCoder.of(STRING_CODER, INTEGER_CODER),
         Collections.singletonMap(outputTag, KvCoder.of(STRING_CODER, INTEGER_CODER)),
         outputTag,
@@ -290,7 +291,8 @@ public class GBKTransformTest {
         PipelineOptionsFactory.as(NemoPipelineOptions.class),
         SystemReduceFn.combining(STRING_CODER, appliedCombineFn),
         DoFnSchemaInformation.create(),
-        DisplayData.none());
+        DisplayData.none(),
+        false);
 
     // window1 : [-5000, 5000) in millisecond
     // window2 : [0, 10000)
@@ -375,8 +377,8 @@ public class GBKTransformTest {
     final SlidingWindows slidingWindows = SlidingWindows.of(Duration.standardSeconds(2))
       .every(Duration.standardSeconds(1));
 
-    final GBKTransform<String, String, Iterable<String>> doFnTransform =
-      new GBKTransform(
+    final CombineTransform<String, String, Iterable<String>> doFnTransform =
+      new CombineTransform(
         KvCoder.of(STRING_CODER, STRING_CODER),
         Collections.singletonMap(outputTag, KvCoder.of(STRING_CODER, IterableCoder.of(STRING_CODER))),
         outputTag,
@@ -384,7 +386,8 @@ public class GBKTransformTest {
         PipelineOptionsFactory.as(NemoPipelineOptions.class),
         SystemReduceFn.buffering(STRING_CODER),
         DoFnSchemaInformation.create(),
-        DisplayData.none());
+        DisplayData.none(),
+        false);
 
     final Instant ts1 = new Instant(1);
     final Instant ts2 = new Instant(100);
@@ -560,8 +563,8 @@ public class GBKTransformTest {
 
     final TupleTag<String> outputTag = new TupleTag<>("main-output");
 
-    final GBKTransform<String, String, Iterable<String>> doFnTransform =
-      new GBKTransform(
+    final CombineTransform<String, String, Iterable<String>> doFnTransform =
+      new CombineTransform(
         KvCoder.of(STRING_CODER, STRING_CODER),
         Collections.singletonMap(outputTag, KvCoder.of(STRING_CODER, IterableCoder.of(STRING_CODER))),
         outputTag,
@@ -571,7 +574,8 @@ public class GBKTransformTest {
         PipelineOptionsFactory.as(NemoPipelineOptions.class),
         SystemReduceFn.buffering(STRING_CODER),
         DoFnSchemaInformation.create(),
-        DisplayData.none());
+        DisplayData.none(),
+        false);
 
 
     final Transform.Context context = mock(Transform.Context.class);

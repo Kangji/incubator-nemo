@@ -418,23 +418,22 @@ final class PipelineTranslator {
             null, mainInput.getWindowingStrategy()));
       final TupleTag<?> partialMainOutputTag = new TupleTag<>();
 
-      final CombineTransform partialCombineStreamTransform =
-        new CombineTransform(inputCoder,
-          Collections.singletonMap(partialMainOutputTag, KvCoder.of(inputCoder.getKeyCoder(), accumulatorCoder)),
-          getOutputCoders(pTransform),
+      final CombineTransformFactory combineTransformFactory =
+        new CombineTransformFactory(inputCoder,
           partialMainOutputTag,
+          KvCoder.of(inputCoder.getKeyCoder(), accumulatorCoder),
+          getOutputCoders(pTransform),
+          Iterables.getOnlyElement(beamNode.getOutputs().keySet()),
           mainInput.getWindowingStrategy(),
           ctx.getPipelineOptions(),
           partialSystemReduceFn,
           intermediateSystemReduceFn,
           finalSystemReduceFn,
           DoFnSchemaInformation.create(),
-          DisplayData.from(beamNode.getTransform()),
-          true,
-          false);
+          DisplayData.from(beamNode.getTransform()));
 
-      final CombineTransform finalCombineStreamTransform =
-        CombineTransform.getFinalCombineTransformOf(partialCombineStreamTransform);
+      final CombineTransform partialCombineStreamTransform = combineTransformFactory.getPartialCombineTransform();
+      final CombineTransform finalCombineStreamTransform = combineTransformFactory.getFinalCombineTransform();
 
       partialCombine = new OperatorVertex(partialCombineStreamTransform);
       finalCombine = new OperatorVertex(finalCombineStreamTransform);
@@ -571,7 +570,7 @@ final class PipelineTranslator {
       return new GroupByKeyTransform();
     } else {
       // GroupByKey Transform when using a non-global windowing strategy.
-      return new GBKTransform<>(
+      return new CombineTransform<>(
         (KvCoder) mainInput.getCoder(),
         getOutputCoders(pTransform),
         mainOutputTag,
@@ -579,7 +578,8 @@ final class PipelineTranslator {
         ctx.getPipelineOptions(),
         SystemReduceFn.buffering(mainInput.getCoder()),
         DoFnSchemaInformation.create(),
-        DisplayData.from(beamNode.getTransform()));
+        DisplayData.from(beamNode.getTransform()),
+        false);
     }
   }
 

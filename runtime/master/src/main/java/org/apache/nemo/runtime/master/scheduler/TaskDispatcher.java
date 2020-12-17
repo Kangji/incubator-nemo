@@ -166,11 +166,10 @@ final class TaskDispatcher {
                 return collection.stream().map(lst -> lst.get(lst.size() - 1));
               }).collect(Collectors.toCollection(HashSet::new));
 
-            // data.add(ControlMessage.RunTimePassMessageEntry.newBuilder()
-            //   .setKey(IntermediateAccumulatorInsertionPass.EXECUTOR_SOURCE_KEY)
-            //   .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(
-            //   dataLocationExecutorNodeNames)))
-            //   .build());
+            data.add(ControlMessage.RunTimePassMessageEntry.newBuilder()
+              .setKey(IntermediateAccumulatorInsertionPass.EXECUTOR_SOURCE_KEY)
+              .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(dataLocationExecutorNodeNames)))
+              .build());
           }
 
           planRewriter.accumulate(messageId, targetEdges, data);

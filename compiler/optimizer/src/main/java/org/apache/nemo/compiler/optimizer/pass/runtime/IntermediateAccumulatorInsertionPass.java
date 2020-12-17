@@ -64,7 +64,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
 
       irdag.topologicalDo(v -> {
         if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof CombineTransform
-          && ((CombineTransform<?, ?, ?, ?>) ((OperatorVertex) v).getTransform()).isFinalCombining()) {
+          && (!((CombineTransform<?, ?, ?>) ((OperatorVertex) v).getTransform()).getIsPartialCombining())) {
           // Insert an intermediate GBKTransform before the final combining vertex
           final List<IREdge> incomingShuffleEdges = irdag.getIncomingEdgesOf(v).stream()
             .filter(e -> CommunicationPatternProperty.Value.SHUFFLE
@@ -72,8 +72,8 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
                 .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE)))
             .collect(Collectors.toList());
 
-          final CombineTransform<?, ?, ?, ?> finalCombineStreamTransform =
-            (CombineTransform<?, ?, ?, ?>) ((OperatorVertex) v).getTransform();
+          final CombineTransform<?, ?, ?> finalCombineStreamTransform =
+            (CombineTransform<?, ?, ?>) ((OperatorVertex) v).getTransform();
 
           // Insert vertices that accumulate data hierarchically.
           handleDataTransferFor(irdag, map, dataSourceExecutors.getMessageValue().get(EXECUTOR_SOURCE_KEY),
@@ -86,6 +86,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
             e.getDst().getExecutionProperties().remove(MessageIdVertexProperty.class);
             e.getDst().getExecutionProperties().remove(BarrierProperty.class);
             final HashSet<Integer> edgeMessageIDs = e.getPropertyValue(MessageIdEdgeProperty.class).get();
+            LOG.error("EDGE MESSAGE ID: {}", edgeMessageIDs);
             edgeMessageIDs.remove(messageId);
             if (edgeMessageIDs.isEmpty()) {
               e.getExecutionProperties().remove(MessageIdEdgeProperty.class);
@@ -103,7 +104,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
   private static void handleDataTransferFor(final IRDAG irdag,
                                             final Map<String, ArrayList<String>> map,
                                             final HashSet<String> dataSourceExecutors,
-                                            final CombineTransform<?, ?, ?, ?> finalCombineStreamTransform,
+                                            final CombineTransform<?, ?, ?> finalCombineStreamTransform,
                                             final List<IREdge> incomingShuffleEdges,
                                             final Float threshold) {
 
@@ -125,8 +126,8 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
       final float currentDistance = Float.parseFloat(map.get(String.valueOf(i)).get(1));
       if (previousDistance != 0 && currentDistance > threshold * previousDistance
         && previousNumOfSets > ((mapSize - i) * 2) / 3) {
-        final CombineTransform<?, ?, ?, ?> intermediateCombineStreamTransform =
-          CombineTransform.getIntermediateCombineTransformOf(finalCombineStreamTransform);
+        final CombineTransform<?, ?, ?> intermediateCombineStreamTransform =
+          finalCombineStreamTransform.getIntermediateCombine().get();
         final OperatorVertex intermediateAccumulatorVertex =
           new OperatorVertex(intermediateCombineStreamTransform);
         irdag.insert(intermediateAccumulatorVertex, incomingShuffleEdges);

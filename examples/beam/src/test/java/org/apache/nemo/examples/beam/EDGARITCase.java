@@ -23,6 +23,7 @@ import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.common.test.ArgBuilder;
 import org.apache.nemo.common.test.ExampleTestArgs;
 import org.apache.nemo.common.test.ExampleTestUtil;
+import org.apache.nemo.compiler.optimizer.policy.IntermediateAccumulatorPolicy;
 import org.apache.nemo.compiler.optimizer.policy.StreamingPolicy;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -245,26 +246,26 @@ public final class EDGARITCase {
     // }
   }
 
-  // @Test(timeout = ExampleTestArgs.TIMEOUT)
-  // public void testEDGARAvgDocSizeFixedHierarchical() throws Exception {
-  //   builder = new ArgBuilder()
-  //     .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
-  //     .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
-  //     .addUserArgs(inputFilePath, "fixed", outputFilePath);
-  //
-  //   JobLauncher.main(builder
-  //     .addResourceJson(executorResourceFileName)
-  //     .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeFixed")
-  //     .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
-  //     .build());
-  //
-  //   // try {
-  //   //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
-  //   // } finally {
-  //   ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
-  //   // }
-  // }
-  //
+  @Test(timeout = ExampleTestArgs.TIMEOUT)
+  public void testEDGARAvgDocSizeFixedHierarchical() throws Exception {
+    builder = new ArgBuilder()
+      .addScheduler("org.apache.nemo.runtime.master.scheduler.StreamingScheduler")
+      .addUserMain(EDGARAvgDocSize.class.getCanonicalName())
+      .addUserArgs(inputFilePath, "fixed", outputFilePath);
+
+    JobLauncher.main(builder
+      .addResourceJson(executorResourceFileName)
+      .addJobId(EDGARITCase.class.getSimpleName() + "testEDGARAvgDocSizeFixed")
+      .addOptimizationPolicy(IntermediateAccumulatorPolicy.class.getCanonicalName())
+      .build());
+
+    // try {
+    //   ExampleTestUtil.ensureOutputValidity(ExampleTestArgs.getFileBasePath(), outputFileName, expectedOutputFileName);
+    // } finally {
+    ExampleTestUtil.deleteOutputFile(ExampleTestArgs.getFileBasePath(), outputFileName);
+    // }
+  }
+
   // @Test(timeout = ExampleTestArgs.TIMEOUT)
   // public void testEDGARAvgDocSizeSlidingHierarchical() throws Exception {
   //   builder = new ArgBuilder()
