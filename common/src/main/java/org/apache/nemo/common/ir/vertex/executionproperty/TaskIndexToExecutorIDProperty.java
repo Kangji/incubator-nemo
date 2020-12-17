@@ -21,26 +21,28 @@ package org.apache.nemo.common.ir.vertex.executionproperty;
 
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
+import java.util.HashMap;
+import java.util.List;
+
 /**
- * Property to enable dynamic task sizing policy.
+ * Keep track of where the tasks are located by its executor ID.
  */
-public class EnableDynamicTaskSizingProperty extends VertexExecutionProperty<Boolean> {
+public final class TaskIndexToExecutorIDProperty extends VertexExecutionProperty<HashMap<Integer, List<String>>> {
   /**
    * Default constructor.
-   *
-   * @param value value of the VertexExecutionProperty.
+   * @param taskIDToExecutorIDsMap value of the execution property.
    */
-  public EnableDynamicTaskSizingProperty(final Boolean value) {
-    super(value);
+  private TaskIndexToExecutorIDProperty(final HashMap<Integer, List<String>> taskIDToExecutorIDsMap) {
+    super(taskIDToExecutorIDsMap);
   }
 
   /**
-   * Static method exposing the constructor.
+   * Static method for constructing {@link TaskIndexToExecutorIDProperty}.
    *
-   * @param value value of the new execution property.
-   * @return the newly created execution property.
+   * @param taskIndexToExecutorIDsMap the map indicating the executor IDs where the tasks are located on.
+   * @return the new execution property
    */
-  public static EnableDynamicTaskSizingProperty of(final Boolean value) {
-    return new EnableDynamicTaskSizingProperty(value);
+  public static TaskIndexToExecutorIDProperty of(final HashMap<Integer, List<String>> taskIndexToExecutorIDsMap) {
+    return new TaskIndexToExecutorIDProperty(taskIndexToExecutorIDsMap);
   }
 }

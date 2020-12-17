@@ -73,7 +73,7 @@ public final class Stage extends Vertex {
   /**
    * @return the IRVertex DAG.
    */
-  public DAG<IRVertex, RuntimeEdge<IRVertex>> getIRDAG() {
+  public DAG<IRVertex, RuntimeEdge<IRVertex>> getInternalIRDAG() {
     return irDag;
   }
 

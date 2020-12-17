@@ -22,25 +22,26 @@ package org.apache.nemo.common.ir.vertex.executionproperty;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
 /**
- * Property to enable dynamic task sizing policy.
+ * Vertices tagged with the barrier property triggers a runtime pass prior to the execution of the vertex.
+ * Also see {@link org.apache.nemo.common.ir.vertex.utility.runtimepass.SignalVertex}, which has to be refactored.
  */
-public class EnableDynamicTaskSizingProperty extends VertexExecutionProperty<Boolean> {
+public final class BarrierProperty extends VertexExecutionProperty<String> {
   /**
    * Default constructor.
    *
-   * @param value value of the VertexExecutionProperty.
+   * @param value the class name of the runtime pass to trigger before executing the vertex.
    */
-  public EnableDynamicTaskSizingProperty(final Boolean value) {
+  public BarrierProperty(final String value) {
     super(value);
   }
 
   /**
-   * Static method exposing the constructor.
+   * Static method for constructing {@link BarrierProperty}.
    *
-   * @param value value of the new execution property.
-   * @return the newly created execution property.
+   * @param value the class name of the runtime pass to trigger before executing the vertex.
+   * @return the execution property.
    */
-  public static EnableDynamicTaskSizingProperty of(final Boolean value) {
-    return new EnableDynamicTaskSizingProperty(value);
+  public static BarrierProperty of(final String value) {
+    return new BarrierProperty(value);
   }
 }

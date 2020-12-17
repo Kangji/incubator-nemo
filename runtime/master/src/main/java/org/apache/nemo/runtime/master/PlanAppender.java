@@ -92,7 +92,7 @@ public final class PlanAppender {
         });
 
       // Find cached-data requiring ir edges in the submitted plan.
-      final DAG<IRVertex, RuntimeEdge<IRVertex>> stageIRDAG = stage.getIRDAG();
+      final DAG<IRVertex, RuntimeEdge<IRVertex>> stageIRDAG = stage.getInternalIRDAG();
       stageIRDAG.getVertices().stream()
         .filter(irVertex -> irVertex instanceof CachedSourceVertex)
         .forEach(cachedSourceVertex ->

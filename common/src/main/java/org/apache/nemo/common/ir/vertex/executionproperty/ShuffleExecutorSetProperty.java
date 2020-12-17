@@ -16,43 +16,34 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.nemo.common.ir.edge.executionproperty;
 
-import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
+package org.apache.nemo.common.ir.vertex.executionproperty;
 
-// TODO #492: modularizing runtime components for data communication pattern.
+import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
+
+import java.util.HashSet;
 
 /**
- * DataCommunicationPattern ExecutionProperty.
+ * List of set of node names to limit the scheduling of the tasks of the vertex to while shuffling.
  */
-public final class CommunicationPatternProperty
-  extends EdgeExecutionProperty<CommunicationPatternProperty.Value> {
+public final class ShuffleExecutorSetProperty extends VertexExecutionProperty<HashSet<HashSet<String>>> {
+
   /**
-   * Constructor.
-   *
+   * Default constructor.
    * @param value value of the execution property.
    */
-  private CommunicationPatternProperty(final Value value) {
+  private ShuffleExecutorSetProperty(final HashSet<HashSet<String>> value) {
     super(value);
   }
 
   /**
-   * Static method exposing the constructor.
+   * Static method for constructing {@link ShuffleExecutorSetProperty}.
    *
-   * @param value value of the new execution property.
-   * @return the newly created execution property.
+   * @param setsOfExecutors the list of executors to schedule the tasks of the vertex on.
+   *                        Leave empty to make it effectless.
+   * @return the new execution property
    */
-  public static CommunicationPatternProperty of(final Value value) {
-    return new CommunicationPatternProperty(value);
-  }
-
-  /**
-   * Possible values of DataCommunicationPattern ExecutionProperty.
-   */
-  public enum Value {
-    ONE_TO_ONE,
-    BROADCAST,
-    SHUFFLE,
-    PARTIAL_SHUFFLE
+  public static ShuffleExecutorSetProperty of(final HashSet<HashSet<String>> setsOfExecutors) {
+    return new ShuffleExecutorSetProperty(setsOfExecutors);
   }
 }
