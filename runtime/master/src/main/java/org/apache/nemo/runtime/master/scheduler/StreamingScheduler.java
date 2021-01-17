@@ -133,6 +133,7 @@ public final class StreamingScheduler implements Scheduler {
       case ON_HOLD:
       case FAILED:
       case SHOULD_RETRY:
+        // Request to restore state from the storage
         // TODO #226: StreamingScheduler Fault Tolerance
         throw new UnsupportedOperationException();
       case READY:

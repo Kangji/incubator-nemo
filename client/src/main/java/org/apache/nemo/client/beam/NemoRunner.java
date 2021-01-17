@@ -26,6 +26,8 @@ import org.apache.beam.sdk.options.PipelineOptionsValidator;
 import org.apache.nemo.client.JobLauncher;
 import org.apache.nemo.compiler.frontend.beam.NemoPipelineOptions;
 import org.apache.nemo.compiler.frontend.beam.PipelineVisitor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -34,6 +36,9 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class NemoRunner extends PipelineRunner<NemoPipelineResult> {
   private final NemoPipelineOptions nemoPipelineOptions;
+
+  private static final Logger LOG = LoggerFactory.getLogger(NemoRunner.class.getName());
+
 
   /**
    * BEAM Pipeline Runner.
@@ -86,6 +91,7 @@ public final class NemoRunner extends PipelineRunner<NemoPipelineResult> {
     final PipelineVisitor pipelineVisitor = new PipelineVisitor(pipeline, nemoPipelineOptions);
     pipeline.traverseTopologically(pipelineVisitor);
     final NemoPipelineResult nemoPipelineResult = new NemoPipelineResult();
+    LOG.error("Going in");
     CompletableFuture.runAsync(() ->
       JobLauncher.launchDAG(pipelineVisitor.getConvertedPipeline(), nemoPipelineOptions.getJobName()))
       .thenRun(nemoPipelineResult::setJobDone);

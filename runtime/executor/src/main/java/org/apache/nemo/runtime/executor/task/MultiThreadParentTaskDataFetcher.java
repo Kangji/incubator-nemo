@@ -84,7 +84,6 @@ public class MultiThreadParentTaskDataFetcher extends DataFetcher {
     this.queueInsertionThreads = Executors.newCachedThreadPool();
     this.checkpointAligner = new CheckpointAligner(elementQueue);
     this.checkpointBoard = checkpointBoard;
-    System.out.println("initialization");
     checkpointBoard.initialize(this);
   }
 

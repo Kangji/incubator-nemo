@@ -47,7 +47,6 @@ import java.util.concurrent.LinkedBlockingQueue;
           localOutputContext.getSrcTaskIndex(),
           localOutputContext.getDstTaskIndex());
     this.queue = localOutputContext.getQueue();
-    LOG.error("Thread : {}, localInputcontext initialized", Thread.currentThread());
   }
 
   /**

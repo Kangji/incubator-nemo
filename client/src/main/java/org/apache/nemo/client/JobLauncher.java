@@ -107,6 +107,7 @@ public final class JobLauncher {
    */
   public static void main(final String[] args) throws Exception {
     try {
+      LOG.error("JAEHWANBACK");
       setup(args);
       // Launch client main. The shutdown() method is called inside the launchDAG() method.
       runUserProgramMain(builtJobConf);
@@ -266,6 +267,7 @@ public final class JobLauncher {
   public static void launchDAG(final IRDAG dag,
                                final Map<Serializable, Object> broadcastVariables,
                                final String jobId) {
+    LOG.error("IS IT ?");
     // launch driver if it hasn't been already
     if (!isSetUp) {
       try {
@@ -329,7 +331,9 @@ public final class JobLauncher {
     final Class userCode = Class.forName(className);
     final Method method = userCode.getMethod("main", String[].class);
 
+    LOG.error("123123");
     LOG.info("User program started");
+    LOG.error("{}", method);
     method.invoke(null, (Object) args);
     LOG.info("User program finished");
   }
