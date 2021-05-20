@@ -103,7 +103,7 @@ public final class CombineFnFinalTransform<K, A, O>
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder();
-    sb.append("CombineFnPartialTransform:");
+    sb.append("CombineFnFinalTransform:");
     sb.append(super.toString());
     return sb.toString();
   }
