@@ -170,6 +170,8 @@ final class TaskDispatcher {
               .setKey(IntermediateAccumulatorInsertionPass.EXECUTOR_SOURCE_KEY)
               .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(dataLocationExecutorNodeNames)))
               .build());
+          } else {
+            throw new RuntimeException("Unsupported runtime pass");
           }
 
           planRewriter.accumulate(messageId, targetEdges, data);
@@ -211,9 +213,11 @@ final class TaskDispatcher {
           planStateManager.onTaskStateChanged(task.getTaskId(), TaskState.State.EXECUTING);
 
           LOG.info("{} scheduled to {}", task.getTaskId(), selectedExecutor.getExecutorId());
-          task.getPropertyValue(TaskIndexToExecutorIDProperty.class).get()
+          final Stage stage = BatchSchedulerUtils.getStageFromTaskId(planStateManager, task.getTaskId());
+          stage.getInternalIRDAG().topologicalDo(v -> v.getPropertyValue(TaskIndexToExecutorIDProperty.class).get()
             .computeIfAbsent(task.getTaskIdx(), i -> new ArrayList<>())
-            .add(task.getAttemptIdx(), selectedExecutor.getExecutorId());
+            .add(task.getAttemptIdx(), selectedExecutor.getExecutorId())
+          );
           // send the task
           selectedExecutor.onTaskScheduled(task);
         } else {
