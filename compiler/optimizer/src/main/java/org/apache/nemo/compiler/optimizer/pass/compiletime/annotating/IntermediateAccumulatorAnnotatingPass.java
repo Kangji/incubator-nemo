@@ -24,8 +24,10 @@ import org.apache.nemo.common.ir.IdManager;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
+import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
+import org.apache.nemo.compiler.frontend.beam.transform.CombineTransform;
 import org.apache.nemo.compiler.optimizer.pass.runtime.IntermediateAccumulatorInsertionPass;
 
 import java.util.HashSet;
@@ -47,10 +49,13 @@ public final class IntermediateAccumulatorAnnotatingPass extends AnnotatingPass 
   public IRDAG apply(final IRDAG irdag) {
     irdag.topologicalDo(v -> {
       final List<IREdge> incomingEdges = irdag.getIncomingEdgesOf(v);
-      if (incomingEdges.stream()
-        .anyMatch(e -> CommunicationPatternProperty.Value.SHUFFLE
-          .equals(e.getPropertyValue(CommunicationPatternProperty.class)
-            .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE)))) {
+      if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof CombineTransform
+        && ((CombineTransform<?, ?, ?>) ((OperatorVertex) v).getTransform()).getIntermediateCombine().isPresent()
+        && incomingEdges.size() == 1 && incomingEdges.stream()
+          .anyMatch(e -> (CommunicationPatternProperty.Value.SHUFFLE
+            .equals(e.getPropertyValue(CommunicationPatternProperty.class)
+              .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE))
+            && irdag.getOutgoingEdgesOf(e.getSrc()).size() == 1))) {
         // Generate a message ID for runtime optimization.
         final Integer runtimeOptimizationMessageID = IdManager.generateMessageId();
         v.setProperty(MessageIdVertexProperty.of(runtimeOptimizationMessageID));
