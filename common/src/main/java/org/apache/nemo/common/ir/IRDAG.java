@@ -810,8 +810,6 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
 
     builder.addVertex(accumulatorVertex);
-    final Integer runtimeOptimizationMessageID = IdManager.generateMessageId();
-    accumulatorVertex.setProperty(MessageIdVertexProperty.of(runtimeOptimizationMessageID));
 
 
     modifiedDAG.topologicalDo(v -> {
@@ -822,9 +820,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
           final IREdge toCV = new IREdge(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE,
             e.getSrc(), accumulatorVertex);
           e.copyExecutionPropertiesTo(toCV);
-          final HashSet<Integer> msgEdgeIds = e.getPropertyValue(MessageIdEdgeProperty.class).orElse(new HashSet<>(0));
-          msgEdgeIds.add(runtimeOptimizationMessageID);
-          e.setProperty(MessageIdEdgeProperty.of(msgEdgeIds));
+          e.setProperty(CommunicationPatternProperty.of(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE));
 
           // Edge from the combineVertex
           final IREdge fromCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, accumulatorVertex, e.getDst());
