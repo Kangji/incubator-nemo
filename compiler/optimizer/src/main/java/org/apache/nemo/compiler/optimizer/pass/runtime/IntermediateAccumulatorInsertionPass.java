@@ -62,9 +62,10 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
       final Map<String, ArrayList<String>> map = mapper.readValue(
         new File(Util.fetchProjectRootPath() + "/bin/labeldict.json"), Map.class);
 
+      final Integer messageId = dataSourceExecutors.getMessageId();
       irdag.topologicalDo(v -> {
-        if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof CombineTransform
-          && (!((CombineTransform<?, ?, ?>) ((OperatorVertex) v).getTransform()).getIsPartialCombining())) {
+        if (v.getPropertyValue(MessageIdVertexProperty.class).isPresent()
+          && v.getPropertyValue(MessageIdVertexProperty.class).get().equals(messageId)) {
           // Insert an intermediate GBKTransform before the final combining vertex
           final List<IREdge> incomingShuffleEdges = irdag.getIncomingEdgesOf(v).stream()
             .filter(e -> CommunicationPatternProperty.Value.SHUFFLE
@@ -75,14 +76,9 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
           final CombineTransform<?, ?, ?> finalCombineStreamTransform =
             (CombineTransform<?, ?, ?>) ((OperatorVertex) v).getTransform();
 
-          // Insert vertices that accumulate data hierarchically.
-          handleDataTransferFor(irdag, map, dataSourceExecutors.getMessageValue().get(EXECUTOR_SOURCE_KEY),
-            finalCombineStreamTransform, incomingShuffleEdges, 10F);
-
           // Remove the message ID property from the destination of the incoming shuffle edges and the shuffle edges,
           // as all of the insertion is complete, and we don't want to trigger additional insertions afterwards.
           incomingShuffleEdges.forEach(e -> {
-            final Integer messageId = e.getDst().getPropertyValue(MessageIdVertexProperty.class).get();
             e.getDst().getExecutionProperties().remove(MessageIdVertexProperty.class);
             e.getDst().getExecutionProperties().remove(BarrierProperty.class);
             final HashSet<Integer> edgeMessageIDs = e.getPropertyValue(MessageIdEdgeProperty.class).get();
@@ -92,6 +88,10 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
               e.getExecutionProperties().remove(MessageIdEdgeProperty.class);
             }
           });
+
+          // Insert vertices that accumulate data hierarchically.
+          handleDataTransferFor(irdag, map, dataSourceExecutors.getMessageValue().get(EXECUTOR_SOURCE_KEY),
+            finalCombineStreamTransform, incomingShuffleEdges, 10F);
         } // else if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof GBKTransform) {
         // }
       });
@@ -121,11 +121,14 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
     final int mapSize = map.size();  // indicates the number of executors * 2 - 1.
     final int indexToCheckFrom = mapSize - max;
     Float previousDistance = 0F;
+    if (previousNumOfSets == 0) {
+      previousNumOfSets = dataSourceExecutors.size();
+    }
 
     for (int i = indexToCheckFrom; i < mapSize; i++) {
       final float currentDistance = Float.parseFloat(map.get(String.valueOf(i)).get(1));
       if (previousDistance != 0 && currentDistance > threshold * previousDistance
-        && previousNumOfSets > ((mapSize - i) * 2) / 3) {
+        && previousNumOfSets * 2 / 3 >= mapSize - i) {
         final CombineTransform<?, ?, ?> intermediateCombineStreamTransform =
           finalCombineStreamTransform.getIntermediateCombine().get();
         final OperatorVertex intermediateAccumulatorVertex =
@@ -146,7 +149,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
 
         final int parallelism = Long.valueOf(setsOfExecutors.stream()
           .mapToLong(hs -> taskIndexToExecutorID.get().filter(p -> hs.contains(p.right())).count())
-          .map(l -> l > 3 ? l * 2 / 3 : l)
+          .map(l -> l >= 3 ? l * 2 / 3 : l)
           .sum()).intValue();
 
         intermediateAccumulatorVertex.setProperty(ParallelismProperty.of(parallelism));
