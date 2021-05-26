@@ -74,20 +74,25 @@ public final class PhysicalPlan implements Serializable {
 
   /**
    * Method for getting the part of the StageDAG that is required to schedule after reshaping in run-time.
-   * @param plan the updated physical plan.
-   * @param pendingStageId the stage Id from which rescheduling should start.
+   * @param newer the newer physical plan.
+   * @param older the older physical plan.
+   * @param pendingStageId the stage Id at which the scheduling stopped in older physical plan.
    * @return the updated stages.
    */
-  public static List<Stage> getStagesToScheduleAfterReshaping(final PhysicalPlan plan, final String pendingStageId) {
-    final Iterator<Stage> planTopologicalSort = plan.getStageDAG().getTopologicalSort().iterator();
+  public static List<Stage> getStagesToScheduleAfterReshaping(final PhysicalPlan newer,
+                                                              final PhysicalPlan older,
+                                                              final String pendingStageId) {
+    final Iterator<Stage> newerTopologicalSort = newer.getStageDAG().getTopologicalSort().iterator();
+    final Iterator<Stage> olderTopologicalSort = older.getStageDAG().getTopologicalSort().iterator();
 
-    while (planTopologicalSort.hasNext()) {
-      final Stage stage = planTopologicalSort.next();
+    while (newerTopologicalSort.hasNext() && olderTopologicalSort.hasNext()) {
+      final Stage newerStage = newerTopologicalSort.next();
+      final Stage olderStage = olderTopologicalSort.next();
 
-      if (stage.getId().equals(pendingStageId)) {
+      if (olderStage.getId().equals(pendingStageId)) {
         final List<Stage> result = new ArrayList<>();
-        result.add(stage);
-        planTopologicalSort.forEachRemaining(result::add);
+        result.add(newerStage);
+        newerTopologicalSort.forEachRemaining(result::add);
         return result;
       }
     }

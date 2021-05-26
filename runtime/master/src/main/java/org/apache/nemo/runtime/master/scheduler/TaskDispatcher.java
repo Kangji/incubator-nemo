@@ -182,12 +182,13 @@ final class TaskDispatcher {
 
           planRewriter.accumulate(messageId, targetEdges, data);
           final PhysicalPlan newPhysicalPlan = planRewriter.rewrite(messageId);
+          final PhysicalPlan previousPlan = planStateManager.getPhysicalPlan();
 
           planStateManager.updatePlan(newPhysicalPlan, planStateManager.getMaxScheduleAttempt());
           planStateManager.storeJSON("updated");
 
           final List<Stage> newStagesToSchedule = PhysicalPlan
-            .getStagesToScheduleAfterReshaping(newPhysicalPlan, task.getStageId());
+            .getStagesToScheduleAfterReshaping(newPhysicalPlan, previousPlan, task.getStageId());
           final List<Task> newTasksToSchedule = newStagesToSchedule.stream()
             .flatMap(stageToSchedule -> StreamingScheduler
               .deriveNewTasksFrom(stageToSchedule, newPhysicalPlan, planStateManager, pipeManagerMaster))
