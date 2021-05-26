@@ -51,7 +51,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.apache.nemo.common.dag.DAG.EMPTY_DAG_DIRECTORY;
 
@@ -164,10 +163,10 @@ public final class PlanStateManager {
    */
   private void initializeStates() {
     onPlanStateChanged(PlanState.State.EXECUTING);
-    final Stream<String> stageIdList = physicalPlan.getStageDAG().getTopologicalSort().stream()
-      .map(Vertex::getId);
-    stageIdToState.keySet().removeIf(key -> stageIdList.noneMatch(key::equals));
-    stageIdToTaskIdxToAttemptStates.keySet().removeIf(key -> stageIdList.noneMatch(key::equals));
+    final List<Stage> stageIdList = physicalPlan.getStageDAG().getTopologicalSort();
+    stageIdToState.keySet().removeIf(key -> stageIdList.stream().map(Vertex::getId).noneMatch(key::equals));
+    stageIdToTaskIdxToAttemptStates.keySet().removeIf(key ->
+      stageIdList.stream().map(Vertex::getId).noneMatch(key::equals));
     physicalPlan.getStageDAG().topologicalDo(stage -> {
       stageIdToState.putIfAbsent(stage.getId(), new StageState());
       stageIdToTaskIdxToAttemptStates.putIfAbsent(stage.getId(), new HashMap<>());
