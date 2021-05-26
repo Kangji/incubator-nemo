@@ -73,7 +73,7 @@ public final class PhysicalPlan implements Serializable {
   }
 
   /**
-   * Method for getting the part of the StageDAG that is required to schedule after reshaping in run-time
+   * Method for getting the part of the StageDAG that is required to schedule after reshaping in run-time.
    * @param plan the updated physical plan.
    * @param pendingStageId the stage Id from which rescheduling should start.
    * @return the updated stages.
