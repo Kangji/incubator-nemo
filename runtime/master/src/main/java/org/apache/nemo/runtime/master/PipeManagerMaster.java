@@ -25,6 +25,7 @@ import org.apache.nemo.runtime.common.comm.ControlMessage;
 import org.apache.nemo.runtime.common.message.MessageContext;
 import org.apache.nemo.runtime.common.message.MessageEnvironment;
 import org.apache.nemo.runtime.common.message.MessageListener;
+import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.reef.annotations.audience.DriverSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +75,19 @@ public final class PipeManagerMaster {
     if (null != runtimeEdgeSrcIndexToCondition.put(keyPair, runtimeEdgeSrcIndexToLock.get(keyPair).newCondition())) {
       throw new IllegalStateException(keyPair.toString());
     }
+  }
+
+  public void removeUnscheduledTask(final Task task) {
+    final long index = task.getTaskIdx();
+    task.getTaskOutgoingEdges().forEach(outEdge -> {
+      final Pair<String, Long> keyPair = Pair.of(outEdge.getId(), index);
+      if (null == runtimeEdgeSrcIndexToCondition.remove(keyPair)) {
+        throw new IllegalStateException(keyPair.toString());
+      }
+      if (null == runtimeEdgeSrcIndexToLock.remove(keyPair)) {
+        throw new IllegalStateException(keyPair.toString());
+      }
+    });
   }
 
   /**

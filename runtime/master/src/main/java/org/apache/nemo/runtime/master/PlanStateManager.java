@@ -20,6 +20,7 @@ package org.apache.nemo.runtime.master;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.nemo.common.StateMachine;
+import org.apache.nemo.common.dag.Vertex;
 import org.apache.nemo.common.exception.IllegalStateTransitionException;
 import org.apache.nemo.common.exception.UnknownExecutionStateException;
 import org.apache.nemo.common.ir.vertex.executionproperty.ClonedSchedulingProperty;
@@ -162,11 +163,17 @@ public final class PlanStateManager {
    */
   private void initializeStates() {
     onPlanStateChanged(PlanState.State.EXECUTING);
+    final List<Stage> stageIdList = physicalPlan.getStageDAG().getTopologicalSort();
+    stageIdToState.keySet().removeIf(key -> stageIdList.stream().map(Vertex::getId).noneMatch(key::equals));
+    stageIdToTaskIdxToAttemptStates.keySet().removeIf(key ->
+      stageIdList.stream().map(Vertex::getId).noneMatch(key::equals));
     physicalPlan.getStageDAG().topologicalDo(stage -> {
       stageIdToState.putIfAbsent(stage.getId(), new StageState());
       stageIdToTaskIdxToAttemptStates.putIfAbsent(stage.getId(), new HashMap<>());
 
       // for each task idx of this stage
+      stageIdToTaskIdxToAttemptStates.get(stage.getId()).keySet()
+        .removeIf(key -> stage.getTaskIndices().stream().noneMatch(key::equals));
       stage.getTaskIndices().forEach(taskIndex ->
         stageIdToTaskIdxToAttemptStates.get(stage.getId()).putIfAbsent(taskIndex, new ArrayList<>()));
       // task states will be initialized lazily in getTaskAttemptsToSchedule()
