@@ -826,6 +826,9 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
           final IREdge fromCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, accumulatorVertex, e.getDst());
           e.copyExecutionPropertiesTo(fromCV);
 
+          // set accumulatorVertex property
+          e.getDst().copyExecutionPropertiesTo(accumulatorVertex);
+
           // Connect the new edges
           builder.connectVertices(toCV);
           builder.connectVertices(fromCV);
