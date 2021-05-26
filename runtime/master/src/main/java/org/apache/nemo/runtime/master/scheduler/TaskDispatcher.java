@@ -142,8 +142,10 @@ final class TaskDispatcher {
     }
 
     final Collection<Task> taskList = taskListOptional.get();
+    final Iterator<Task> taskListIterator = taskList.iterator();
     final List<Task> couldNotSchedule = new ArrayList<>();
-    for (final Task task : taskList) {
+    while (taskListIterator.hasNext()) {
+      final Task task = taskListIterator.next();
       if (!planStateManager.getTaskState(task.getTaskId()).equals(TaskState.State.READY)) {
         // Guard against race conditions causing duplicate task launches
         LOG.warn("Skipping task {} for now, as it is not READY", task.getTaskId());
@@ -153,6 +155,10 @@ final class TaskDispatcher {
       final Optional<String> barrierProperty = task.getPropertyValue(BarrierProperty.class);
       if (barrierProperty.isPresent()) {
         new Thread(() -> {
+          // reset pipeManagerMaster
+          pipeManagerMaster.removeUnscheduledTask(task);
+          taskListIterator.forEachRemaining(pipeManagerMaster::removeUnscheduledTask);
+
           // Trigger the runtime pass
           final Set<StageEdge> targetEdges = BatchSchedulerUtils.getEdgesToOptimize(planStateManager, task.getTaskId());
           final int messageId = BatchSchedulerUtils.getMessageId(targetEdges);
@@ -176,12 +182,12 @@ final class TaskDispatcher {
 
           planRewriter.accumulate(messageId, targetEdges, data);
           final PhysicalPlan newPhysicalPlan = planRewriter.rewrite(messageId);
-          final PhysicalPlan previousPlan = planStateManager.getPhysicalPlan();
 
           planStateManager.updatePlan(newPhysicalPlan, planStateManager.getMaxScheduleAttempt());
           planStateManager.storeJSON("updated");
 
-          final List<Stage> newStagesToSchedule = PhysicalPlan.getDiffStageDAGBetween(newPhysicalPlan, previousPlan);
+          final List<Stage> newStagesToSchedule = PhysicalPlan
+            .getStagesToScheduleAfterReshaping(newPhysicalPlan, task.getStageId());
           final List<Task> newTasksToSchedule = newStagesToSchedule.stream()
             .flatMap(stageToSchedule -> StreamingScheduler
               .deriveNewTasksFrom(stageToSchedule, newPhysicalPlan, planStateManager, pipeManagerMaster))

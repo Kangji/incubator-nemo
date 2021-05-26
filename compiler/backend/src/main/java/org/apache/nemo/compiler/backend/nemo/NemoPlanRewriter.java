@@ -25,6 +25,7 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.utility.runtimepass.MessageAggregatorVertex;
 import org.apache.nemo.compiler.backend.nemo.prophet.ParallelismProphet;
@@ -139,8 +140,13 @@ public final class NemoPlanRewriter<T> implements PlanRewriter {
     boolean updatePlan = false;
     final Map<Stage, Stage> newToOldStageMap = new HashMap<>();
     for (int i = 0; i < newStages.size(); i++) {
-      if (!updatePlan && currentStages.get(i).getInternalIRDAG().getVertices().size()
-        == newStages.get(i).getInternalIRDAG().getVertices().size()) {
+      final List<IRVertex> currentStageInternalIRDAG = currentStages.get(i).getInternalIRDAG().getVertices();
+      final List<IRVertex> newStageInternalIRDAG = newStages.get(i).getInternalIRDAG().getVertices();
+      final int currentStageInternalIRDAGSize = currentStageInternalIRDAG.size();
+      final int newStageInternalIRDAGSize = newStageInternalIRDAG.size();
+      if (!updatePlan && currentStageInternalIRDAGSize == newStageInternalIRDAGSize
+        && IntStream.range(0, currentStageInternalIRDAGSize).allMatch(
+          j -> currentStageInternalIRDAG.get(j).getId().equals(newStageInternalIRDAG.get(j).getId()))) {
         final Stage stage = currentStages.get(i);
         newToOldStageMap.put(newStages.get(i), stage);
 

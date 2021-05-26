@@ -73,28 +73,22 @@ public final class PhysicalPlan implements Serializable {
   }
 
   /**
-   * Method for getting the part of the StageDAG that is new in the newer physical plan compared to the older one.
-   * @param newer the newer physical plan.
-   * @param older the older physical plan.
+   * Method for getting the part of the StageDAG that is required to schedule after reshaping in run-time
+   * @param plan the updated physical plan.
+   * @param pendingStageId the stage Id from which rescheduling should start.
    * @return the updated stages.
    */
-  public static List<Stage> getDiffStageDAGBetween(final PhysicalPlan newer, final PhysicalPlan older) {
-    final Iterator<Stage> newerTopologicalSort = newer.getStageDAG().getTopologicalSort().iterator();
-    final Iterator<Stage> olderTopologicalSort = older.getStageDAG().getTopologicalSort().iterator();
+  public static List<Stage> getStagesToScheduleAfterReshaping(final PhysicalPlan plan, final String pendingStageId) {
+    final Iterator<Stage> planTopologicalSort = plan.getStageDAG().getTopologicalSort().iterator();
 
-    while (newerTopologicalSort.hasNext() && olderTopologicalSort.hasNext()) {
-      final Stage newerStage = newerTopologicalSort.next();
-      final Iterator<IRVertex> newerInternalIRDAG = newerStage.getInternalIRDAG().getTopologicalSort().iterator();
-      final Iterator<IRVertex> olderInternalIRDAG =
-        olderTopologicalSort.next().getInternalIRDAG().getTopologicalSort().iterator();
+    while (planTopologicalSort.hasNext()) {
+      final Stage stage = planTopologicalSort.next();
 
-      while (newerInternalIRDAG.hasNext() && olderInternalIRDAG.hasNext()) {
-        if (!newerInternalIRDAG.next().hasSameTransformAndExecutionPropertiesAs(olderInternalIRDAG.next())) {
-          final List<Stage> result = new ArrayList<>();
-          result.add(newerStage);
-          newerTopologicalSort.forEachRemaining(result::add);
-          return result;
-        }
+      if (stage.getId().equals(pendingStageId)) {
+        final List<Stage> result = new ArrayList<>();
+        result.add(stage);
+        planTopologicalSort.forEachRemaining(result::add);
+        return result;
       }
     }
     return new ArrayList<>();
