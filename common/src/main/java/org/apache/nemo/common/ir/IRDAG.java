@@ -39,6 +39,7 @@ import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.SourceVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.MessageIdVertexProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 import org.apache.nemo.common.ir.vertex.utility.RelayVertex;
 import org.apache.nemo.common.ir.vertex.utility.SamplingVertex;
 import org.apache.nemo.common.ir.vertex.utility.TaskSizeSplitterVertex;
@@ -828,6 +829,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
 
           // set accumulatorVertex property
           e.getDst().copyExecutionPropertiesTo(accumulatorVertex);
+          e.getDst().setProperty(TaskIndexToExecutorIDProperty.of(new HashMap<>()));
 
           // Connect the new edges
           builder.connectVertices(toCV);
