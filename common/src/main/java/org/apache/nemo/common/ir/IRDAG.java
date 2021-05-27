@@ -820,7 +820,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
           final IREdge toCV = new IREdge(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE,
             e.getSrc(), accumulatorVertex);
           e.copyExecutionPropertiesTo(toCV);
-          e.setProperty(CommunicationPatternProperty.of(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE));
+          toCV.setProperty(CommunicationPatternProperty.of(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE));
 
           // Edge from the combineVertex
           final IREdge fromCV = new IREdge(CommunicationPatternProperty.Value.SHUFFLE, accumulatorVertex, e.getDst());
