@@ -109,6 +109,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
                                             final Float threshold) {
 
     // Note that if there is no previous number of sets, we use the number of data source executors.
+    List<IREdge> updatedIncomingShuffleEdges = incomingShuffleEdges;
     int previousNumOfSets = incomingShuffleEdges.stream()
       .mapToInt(e -> e.getSrc().getPropertyValue(ShuffleExecutorSetProperty.class)
         .orElse(new HashSet<>()).size())
@@ -133,7 +134,12 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
           finalCombineStreamTransform.getIntermediateCombine().get();
         final OperatorVertex intermediateAccumulatorVertex =
           new OperatorVertex(intermediateCombineStreamTransform);
-        irdag.insert(intermediateAccumulatorVertex, incomingShuffleEdges);
+        irdag.insert(intermediateAccumulatorVertex, updatedIncomingShuffleEdges);
+        updatedIncomingShuffleEdges = irdag.getOutgoingEdgesOf(intermediateAccumulatorVertex).stream()
+          .filter(e -> CommunicationPatternProperty.Value.SHUFFLE
+            .equals(e.getPropertyValue(CommunicationPatternProperty.class)
+              .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE)))
+          .collect(Collectors.toList());
 
         // Calculate the number of sets and set the property.
         final Integer targetNumberOfSets = mapSize - i;
