@@ -140,9 +140,11 @@ public final class NemoPlanRewriter<T> implements PlanRewriter {
     boolean updatePlan = false;
     final Map<Stage, Stage> newToOldStageMap = new HashMap<>();
     for (int i = 0; i < newStages.size(); i++) {
-      final List<IRVertex> currentStageInternalIRDAG = currentStages.get(i).getInternalIRDAG().getVertices();
+      final List<IRVertex> currentStageInternalIRDAG = i < currentStages.size()
+        ? currentStages.get(i).getInternalIRDAG().getVertices() : null;
       final List<IRVertex> newStageInternalIRDAG = newStages.get(i).getInternalIRDAG().getVertices();
-      final int currentStageInternalIRDAGSize = currentStageInternalIRDAG.size();
+      final int currentStageInternalIRDAGSize = currentStageInternalIRDAG == null
+        ? 0 : currentStageInternalIRDAG.size();
       final int newStageInternalIRDAGSize = newStageInternalIRDAG.size();
       if (!updatePlan && currentStageInternalIRDAGSize == newStageInternalIRDAGSize
         && IntStream.range(0, currentStageInternalIRDAGSize).allMatch(
