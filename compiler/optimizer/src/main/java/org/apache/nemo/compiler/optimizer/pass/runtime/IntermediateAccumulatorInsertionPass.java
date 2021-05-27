@@ -24,9 +24,11 @@ import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.exception.SchedulingException;
 import org.apache.nemo.common.ir.IRDAG;
+import org.apache.nemo.common.ir.IdManager;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.edge.executionproperty.MessageIdEdgeProperty;
+import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.*;
 import org.apache.nemo.compiler.frontend.beam.transform.CombineTransform;
@@ -91,7 +93,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
 
           // Insert vertices that accumulate data hierarchically.
           handleDataTransferFor(irdag, map, dataSourceExecutors.getMessageValue().get(EXECUTOR_SOURCE_KEY),
-            finalCombineStreamTransform, incomingShuffleEdges, 10F);
+            finalCombineStreamTransform, incomingShuffleEdges, v, 10F);
         } // else if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof GBKTransform) {
         // }
       });
@@ -106,10 +108,10 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
                                             final HashSet<String> dataSourceExecutors,
                                             final CombineTransform<?, ?, ?> finalCombineStreamTransform,
                                             final List<IREdge> incomingShuffleEdges,
+                                            final IRVertex targetVertex,
                                             final Float threshold) {
 
     // Note that if there is no previous number of sets, we use the number of data source executors.
-    List<IREdge> updatedIncomingShuffleEdges = incomingShuffleEdges;
     int previousNumOfSets = incomingShuffleEdges.stream()
       .mapToInt(e -> e.getSrc().getPropertyValue(ShuffleExecutorSetProperty.class)
         .orElse(new HashSet<>()).size())
@@ -118,7 +120,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
     // Max value is 2/3 * previousNumOfSets, min value is 1.
     // We traverse from the max to the min value, and compare the distance, and find the value where the distance
     // becomes greater than the previous distance * threshold.
-    final int max = previousNumOfSets == 0 ? dataSourceExecutors.size() : previousNumOfSets * 2 / 3;
+    final int max = previousNumOfSets == 0 ? dataSourceExecutors.size() : previousNumOfSets;
     final int mapSize = map.size();  // indicates the number of executors * 2 - 1.
     final int indexToCheckFrom = mapSize - max;
     Float previousDistance = 0F;
@@ -130,24 +132,11 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
       final float currentDistance = Float.parseFloat(map.get(String.valueOf(i)).get(1));
       if (previousDistance != 0 && currentDistance > threshold * previousDistance
         && previousNumOfSets * 2 / 3 >= mapSize - i) {
-        final CombineTransform<?, ?, ?> intermediateCombineStreamTransform =
-          finalCombineStreamTransform.getIntermediateCombine().get();
-        final OperatorVertex intermediateAccumulatorVertex =
-          new OperatorVertex(intermediateCombineStreamTransform);
-        irdag.insert(intermediateAccumulatorVertex, updatedIncomingShuffleEdges);
-        updatedIncomingShuffleEdges = irdag.getOutgoingEdgesOf(intermediateAccumulatorVertex).stream()
-          .filter(e -> CommunicationPatternProperty.Value.SHUFFLE
-            .equals(e.getPropertyValue(CommunicationPatternProperty.class)
-              .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE)))
-          .collect(Collectors.toList());
-
-        // Calculate the number of sets and set the property.
+        // Calculate the number of sets
         final Integer targetNumberOfSets = mapSize - i;
         final HashSet<HashSet<String>> setsOfExecutors = getTargetNumberOfExecutorSetsFrom(map, targetNumberOfSets);
-        intermediateAccumulatorVertex.setProperty(ShuffleExecutorSetProperty.of(setsOfExecutors));
-        previousNumOfSets = setsOfExecutors.size();
 
-        // Calculate the parallelism and set the property
+        // Calculate the parallelism
         final Supplier<Stream<Pair<Integer, String>>> taskIndexToExecutorID = () ->
           incomingShuffleEdges.stream()
             .flatMap(e -> e.getSrc().getPropertyValue(TaskIndexToExecutorIDProperty.class).get().entrySet().stream())
@@ -155,10 +144,30 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
 
         final int parallelism = Long.valueOf(setsOfExecutors.stream()
           .mapToLong(hs -> taskIndexToExecutorID.get().filter(p -> hs.contains(p.right())).count())
-          .map(l -> l >= 3 ? l * 2 / 3 : l)
+          .map(l -> l >= 2 ? l * 2 / 3 : l)
           .sum()).intValue();
 
-        intermediateAccumulatorVertex.setProperty(ParallelismProperty.of(parallelism));
+        if (parallelism > targetVertex.getPropertyValue(ParallelismProperty.class).get()) {
+          final CombineTransform<?, ?, ?> intermediateCombineStreamTransform =
+            finalCombineStreamTransform.getIntermediateCombine().get();
+          final OperatorVertex intermediateAccumulatorVertex =
+            new OperatorVertex(intermediateCombineStreamTransform);
+          irdag.insert(intermediateAccumulatorVertex, incomingShuffleEdges);
+          intermediateAccumulatorVertex.setProperty(ShuffleExecutorSetProperty.of(setsOfExecutors));
+          intermediateAccumulatorVertex.setProperty(ParallelismProperty.of(parallelism));
+
+          // re-annotate barrier property and runtime optimization message for recursive operation
+          final Integer runtimeOptimizationMessageID = IdManager.generateMessageId();
+          targetVertex.setProperty(MessageIdVertexProperty.of(runtimeOptimizationMessageID));
+          targetVertex.setProperty(BarrierProperty.of(IntermediateAccumulatorInsertionPass.class.getCanonicalName()));
+          irdag.getIncomingEdgesOf(targetVertex).forEach(edge -> {
+            final HashSet<Integer> msgEdgeIds = edge.getPropertyValue(MessageIdEdgeProperty.class).
+              orElse(new HashSet<>(0));
+            msgEdgeIds.add(runtimeOptimizationMessageID);
+            edge.setProperty(MessageIdEdgeProperty.of(msgEdgeIds));
+          });
+        }
+        break;
       }
       previousDistance = currentDistance;
     }
