@@ -20,7 +20,9 @@ package org.apache.nemo.runtime.master.scheduler;
 
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.apache.nemo.common.exception.SchedulingException;
 import org.apache.nemo.common.ir.vertex.executionproperty.BarrierProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 import org.apache.nemo.compiler.optimizer.pass.runtime.IntermediateAccumulatorInsertionPass;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
@@ -177,7 +179,7 @@ final class TaskDispatcher {
               .setValue(Base64.getEncoder().encodeToString(SerializationUtils.serialize(dataLocationExecutorNodeNames)))
               .build());
           } else {
-            throw new RuntimeException("Unsupported runtime pass");
+            throw new SchedulingException("Unsupported runtime pass");
           }
 
           planRewriter.accumulate(messageId, targetEdges, data);
@@ -206,6 +208,11 @@ final class TaskDispatcher {
         // Filter out the candidate executors that do not meet scheduling constraints.
         task.getExecutionProperties().forEachProperties(property -> {
           final Optional<SchedulingConstraint> constraint = schedulingConstraintRegistry.get(property.getClass());
+          // test for registering scheduling constraint, should be removed
+          if (property.getClass().equals(ShuffleExecutorSetProperty.class)
+           && !constraint.isPresent()) {
+            throw new RuntimeException("No Intermediate Accumulator Scheduling Constraint");
+          }
           if (constraint.isPresent() && !candidateExecutors.getValue().isEmpty()) {
             candidateExecutors.setValue(candidateExecutors.getValue().stream()
               .filter(e -> constraint.get().testSchedulability(e, task))
@@ -225,6 +232,19 @@ final class TaskDispatcher {
             .computeIfAbsent(task.getTaskIdx(), i -> new ArrayList<>())
             .add(task.getAttemptIdx(), selectedExecutor.getExecutorId())
           );
+
+          if (task.getPropertyValue(ShuffleExecutorSetProperty.class).isPresent()) {
+            task.getPropertyValue(ShuffleExecutorSetProperty.class).get().stream().filter(p ->
+              p.left().contains(selectedExecutor.getExecutorId()))
+              .forEach(p -> {
+                if (p.right().left().intValue() > 0) {
+                  p.right().left().decrement();
+                } else {
+                  throw new SchedulingException("Exceeded the maximum number of executor");
+                }
+              });
+          }
+
           // send the task
           selectedExecutor.onTaskScheduled(task);
         } else {

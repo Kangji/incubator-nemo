@@ -20,6 +20,7 @@
 package org.apache.nemo.compiler.optimizer.pass.runtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
 import org.apache.nemo.common.exception.SchedulingException;
@@ -142,10 +143,14 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
             .flatMap(e -> e.getSrc().getPropertyValue(TaskIndexToExecutorIDProperty.class).get().entrySet().stream())
             .map(e -> Pair.of(e.getKey(), e.getValue().get(e.getValue().size() - 1)));
 
-        final int parallelism = Long.valueOf(setsOfExecutors.stream()
-          .mapToLong(hs -> taskIndexToExecutorID.get().filter(p -> hs.contains(p.right())).count())
-          .map(l -> l >= 2 ? l * 2 / 3 : l)
-          .sum()).intValue();
+        final HashSet<Pair<HashSet<String>, Pair<MutableInt, Integer>>> setsOfExecutorsAndParallelism = new HashSet<>();
+        setsOfExecutors.forEach(hs -> {
+          final int numOfExecutors = Long.valueOf(taskIndexToExecutorID.get()
+            .filter(p -> hs.contains(p.right())).count()).intValue();
+          final int requiredExecutors = numOfExecutors > 1 ? numOfExecutors * 2 / 3 : numOfExecutors;
+          setsOfExecutorsAndParallelism.add(Pair.of(hs, Pair.of(new MutableInt(requiredExecutors), requiredExecutors)));
+        });
+        final int parallelism = setsOfExecutorsAndParallelism.stream().mapToInt(p -> p.right().right()).sum();
 
         if (parallelism > targetVertex.getPropertyValue(ParallelismProperty.class).get()) {
           final CombineTransform<?, ?, ?> intermediateCombineStreamTransform =
@@ -153,7 +158,7 @@ public final class IntermediateAccumulatorInsertionPass extends RunTimePass<Map<
           final OperatorVertex intermediateAccumulatorVertex =
             new OperatorVertex(intermediateCombineStreamTransform);
           irdag.insert(intermediateAccumulatorVertex, incomingShuffleEdges);
-          intermediateAccumulatorVertex.setProperty(ShuffleExecutorSetProperty.of(setsOfExecutors));
+          intermediateAccumulatorVertex.setProperty(ShuffleExecutorSetProperty.of(setsOfExecutorsAndParallelism));
           intermediateAccumulatorVertex.setProperty(ParallelismProperty.of(parallelism));
 
           // re-annotate barrier property and runtime optimization message for recursive operation

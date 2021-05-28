@@ -110,7 +110,7 @@ public interface Partitioner<K extends Serializable> {
 
           // Get the hashset of executors that are close to the source task.
           final HashSet<String> hashSetOfExecutors = srcProperties.get(ShuffleExecutorSetProperty.class).get().stream()
-            .filter(hs -> hs.contains(sourceTaskExecutorID)).findFirst().get();
+            .filter(p -> p.left().contains(sourceTaskExecutorID)).findFirst().get().left();
 
           // Derive the number of the source tasks that belong to the hashset and do * 2 / 3
           final int numOfPartitionsCandidate = Long.valueOf(taskIndexToExecutorIDs.entrySet().stream().filter(entry -> {

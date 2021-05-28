@@ -19,31 +19,35 @@
 
 package org.apache.nemo.common.ir.vertex.executionproperty;
 
+import org.apache.commons.lang.mutable.MutableInt;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
 import java.util.HashSet;
 
 /**
- * List of set of node names to limit the scheduling of the tasks of the vertex to while shuffling.
+ * List of pair of set of node names and required number of executors
+ * to limit the scheduling of the tasks of the vertex to while shuffling.
  */
-public final class ShuffleExecutorSetProperty extends VertexExecutionProperty<HashSet<HashSet<String>>> {
+public final class ShuffleExecutorSetProperty
+  extends VertexExecutionProperty<HashSet<Pair<HashSet<String>, Pair<MutableInt, Integer>>>> {
 
   /**
    * Default constructor.
    * @param value value of the execution property.
    */
-  private ShuffleExecutorSetProperty(final HashSet<HashSet<String>> value) {
+  private ShuffleExecutorSetProperty(final HashSet<Pair<HashSet<String>, Pair<MutableInt, Integer>>> value) {
     super(value);
   }
 
   /**
    * Static method for constructing {@link ShuffleExecutorSetProperty}.
    *
-   * @param setsOfExecutors the list of executors to schedule the tasks of the vertex on.
+   * @param value the list of pair of executors and required number to schedule the tasks of the vertex on.
    *                        Leave empty to make it effectless.
    * @return the new execution property
    */
-  public static ShuffleExecutorSetProperty of(final HashSet<HashSet<String>> setsOfExecutors) {
-    return new ShuffleExecutorSetProperty(setsOfExecutors);
+  public static ShuffleExecutorSetProperty of(final HashSet<Pair<HashSet<String>, Pair<MutableInt, Integer>>> value) {
+    return new ShuffleExecutorSetProperty(value);
   }
 }

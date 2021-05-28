@@ -87,9 +87,9 @@ public final class PipeInputReader implements InputReader {
         final Integer srcTaskIndex = srcTaskIdx;
         // if destination hashset containing the destination task's node contains the source task's node.
         if (runtimeEdge.getDst().getExecutionProperties().get(ShuffleExecutorSetProperty.class).get().stream()
-          .filter(hs -> hs.contains(runtimeEdge.getDst().getExecutionProperties()
+          .filter(p -> p.left().contains(runtimeEdge.getDst().getExecutionProperties()
             .get(TaskIndexToExecutorIDProperty.class).get().get(dstTaskIndex)))
-          .anyMatch(hs -> hs.contains(runtimeEdge.getSrc().getExecutionProperties()
+          .anyMatch(p -> p.left().contains(runtimeEdge.getSrc().getExecutionProperties()
             .get(TaskIndexToExecutorIDProperty.class).get().get(srcTaskIndex)))) {
           // add the future to the source and task.
           futures.add(pipeManagerWorker.read(srcTaskIdx, runtimeEdge, dstTaskIndex));
