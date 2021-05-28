@@ -19,6 +19,7 @@
 package org.apache.nemo.common.ir;
 
 import org.apache.commons.lang.mutable.MutableObject;
+import org.apache.hadoop.mapreduce.task.reduce.Shuffle;
 import org.apache.nemo.common.KeyRange;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;
@@ -79,6 +80,7 @@ public final class IRDAGChecker {
     addLoopVertexCheckers();
     addScheduleGroupCheckers();
     addCacheCheckers();
+    addIntermediateAccumulatorVertexCheckers();
   }
 
   /**
@@ -491,6 +493,29 @@ public final class IRDAGChecker {
       return success();
     });
     singleEdgeCheckerList.add(compressAndDecompress);
+  }
+
+  void addIntermediateAccumulatorVertexCheckers() {
+    final NeighborChecker shuffleExecutorSetWithParallelism = ((v, inEdges, outEdges) -> {
+      if (v.getPropertyValue(ShuffleExecutorSetProperty.class).isPresent()) {
+        if (inEdges.size() != 1 || inEdges.stream().anyMatch(e ->
+          !e.getPropertyValue(CommunicationPatternProperty.class).get()
+            .equals(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE))) {
+          return failure("Only intermediate accumulator vertex can have shuffle executor set property", v);
+        } else if (!v.getPropertyValue(ParallelismProperty.class).get()
+            .equals(v.getPropertyValue(ShuffleExecutorSetProperty.class).get().stream()
+              .mapToInt(p -> p.right().right()).sum())) {
+            return failure("Parallelism must be equal to sum of required executor in each shuffle executor set", v);
+        }
+      } else {
+        if (inEdges.stream().anyMatch(e -> e.getPropertyValue(CommunicationPatternProperty.class).get()
+          .equals(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE))) {
+          return failure("Intermediate accumulator vertex must have shuffle executor set property", v);
+        }
+      }
+      return success();
+    });
+    neighborCheckerList.add(shuffleExecutorSetWithParallelism);
   }
 
   /**

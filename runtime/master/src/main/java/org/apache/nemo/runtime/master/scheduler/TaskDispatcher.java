@@ -208,11 +208,6 @@ final class TaskDispatcher {
         // Filter out the candidate executors that do not meet scheduling constraints.
         task.getExecutionProperties().forEachProperties(property -> {
           final Optional<SchedulingConstraint> constraint = schedulingConstraintRegistry.get(property.getClass());
-          // test for registering scheduling constraint, should be removed
-          if (property.getClass().equals(ShuffleExecutorSetProperty.class)
-           && !constraint.isPresent()) {
-            throw new RuntimeException("No Intermediate Accumulator Scheduling Constraint");
-          }
           if (constraint.isPresent() && !candidateExecutors.getValue().isEmpty()) {
             candidateExecutors.setValue(candidateExecutors.getValue().stream()
               .filter(e -> constraint.get().testSchedulability(e, task))
