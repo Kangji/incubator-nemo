@@ -91,6 +91,10 @@ public final class ExecutorRegistry {
     consumer.accept(getRunningExecutors());
   }
 
+  public synchronized int getNumberOfRunningExecutors() {
+    return getRunningExecutors().size();
+  }
+
   synchronized void updateExecutor(
     final String executorId,
     final BiFunction<ExecutorRepresenter, ExecutorState, Pair<ExecutorRepresenter, ExecutorState>> updater) {
