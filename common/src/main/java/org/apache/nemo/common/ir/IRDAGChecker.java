@@ -19,7 +19,6 @@
 package org.apache.nemo.common.ir;
 
 import org.apache.commons.lang.mutable.MutableObject;
-import org.apache.hadoop.mapreduce.task.reduce.Shuffle;
 import org.apache.nemo.common.KeyRange;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.Util;

@@ -83,14 +83,18 @@ public final class PipeInputReader implements InputReader {
     } else if (comValue.equals(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE)) {
       final int numSrcTasks = InputReader.getSourceParallelism(this);
       final List<CompletableFuture<DataUtil.IteratorWithNumBytes>> futures = new ArrayList<>();
+      final List<String> dstTaskExecutorIDList = runtimeEdge.getDst().getExecutionProperties()
+        .get(TaskIndexToExecutorIDProperty.class).get().get(dstTaskIndex);
+      final String dstTaskExecutorID = dstTaskExecutorIDList.get(dstTaskExecutorIDList.size() - 1);
       for (int srcTaskIdx = 0; srcTaskIdx < numSrcTasks; srcTaskIdx++) {
         final Integer srcTaskIndex = srcTaskIdx;
+        final List<String> srcTaskExecutorIDList = runtimeEdge.getSrc().getExecutionProperties()
+          .get(TaskIndexToExecutorIDProperty.class).get().get(srcTaskIndex);
+        final String srcTaskExecutorID = srcTaskExecutorIDList.get(srcTaskExecutorIDList.size() - 1);
         // if destination hashset containing the destination task's node contains the source task's node.
         if (runtimeEdge.getDst().getExecutionProperties().get(ShuffleExecutorSetProperty.class).get().stream()
-          .filter(p -> p.left().contains(runtimeEdge.getDst().getExecutionProperties()
-            .get(TaskIndexToExecutorIDProperty.class).get().get(dstTaskIndex)))
-          .anyMatch(p -> p.left().contains(runtimeEdge.getSrc().getExecutionProperties()
-            .get(TaskIndexToExecutorIDProperty.class).get().get(srcTaskIndex)))) {
+          .filter(p -> p.left().contains(dstTaskExecutorID))
+          .anyMatch(p -> p.left().contains(srcTaskExecutorID))) {
           // add the future to the source and task.
           futures.add(pipeManagerWorker.read(srcTaskIdx, runtimeEdge, dstTaskIndex));
         }

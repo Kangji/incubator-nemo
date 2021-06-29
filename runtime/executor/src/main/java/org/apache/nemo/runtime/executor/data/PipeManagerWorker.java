@@ -22,6 +22,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
+import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 import org.apache.nemo.conf.JobConf;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
 import org.apache.nemo.runtime.common.comm.ControlMessage;
@@ -105,7 +107,7 @@ public final class PipeManagerWorker {
       if (targetExecutorId.equals(executorId)) {
         // Read from the local executor
         final Pair<String, Long> pairKey = Pair.of(runtimeEdge.getId(), Long.valueOf(srcTaskIndex));
-        pipeContainer.putPipeListIfAbsent(pairKey, getNumOfPipeToWait(runtimeEdge));
+        pipeContainer.putPipeListIfAbsent(pairKey, getNumOfPipeToWait(srcTaskIndex, runtimeEdge));
 
         // initialize a local output context
         final LocalOutputContext outputContext =
@@ -124,7 +126,7 @@ public final class PipeManagerWorker {
             .setRuntimeEdgeId(runtimeEdge.getId())
             .setSrcTaskIndex(srcTaskIndex)
             .setDstTaskIndex(dstTaskIndex)
-            .setNumPipeToWait(getNumOfPipeToWait(runtimeEdge))
+            .setNumPipeToWait(getNumOfPipeToWait(srcTaskIndex, runtimeEdge))
             .build();
 
         return byteTransfer.newInputContext(targetExecutorId, descriptor.toByteArray(), true)
@@ -160,7 +162,7 @@ public final class PipeManagerWorker {
                                                final long srcTaskIndex) {
     // First, initialize the pair key
     final Pair<String, Long> pairKey = Pair.of(runtimeEdge.getId(), srcTaskIndex);
-    pipeContainer.putPipeListIfAbsent(pairKey, getNumOfPipeToWait(runtimeEdge));
+    pipeContainer.putPipeListIfAbsent(pairKey, getNumOfPipeToWait((int) srcTaskIndex, runtimeEdge));
 
     // Then, do stuff
     return pipeContainer.getPipes(pairKey); // blocking call
@@ -197,13 +199,25 @@ public final class PipeManagerWorker {
     throw new UnsupportedOperationException();
   }
 
-  private int getNumOfPipeToWait(final RuntimeEdge runtimeEdge) {
-    final int dstParallelism = ((StageEdge) runtimeEdge).getDstIRVertex().getPropertyValue(ParallelismProperty.class)
-      .orElseThrow(IllegalStateException::new);
+  private int getNumOfPipeToWait(final int srcTaskIndex, final RuntimeEdge runtimeEdge) {
     final CommunicationPatternProperty.Value commPattern = ((StageEdge) runtimeEdge)
       .getPropertyValue(CommunicationPatternProperty.class)
       .orElseThrow(IllegalStateException::new);
-
-    return commPattern.equals(CommunicationPatternProperty.Value.ONE_TO_ONE) ? 1 : dstParallelism;
+    if (commPattern.equals(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE)) {
+      final List<String> sourceTaskExecutorIDs = ((StageEdge) runtimeEdge).getSrcIRVertex()
+        .getPropertyValue(TaskIndexToExecutorIDProperty.class)
+        .orElseThrow(IllegalStateException::new)
+        .get(srcTaskIndex);
+      final int dstParallelism = ((StageEdge) runtimeEdge).getDstIRVertex()
+        .getPropertyValue(ShuffleExecutorSetProperty.class)
+        .orElseThrow(IllegalStateException::new).stream()
+        .filter(p -> p.left().contains(sourceTaskExecutorIDs.get(sourceTaskExecutorIDs.size() - 1)))
+        .mapToInt(p -> p.right().right()).sum();
+      return dstParallelism;
+    } else {
+      final int dstParallelism = ((StageEdge) runtimeEdge).getDstIRVertex().getPropertyValue(ParallelismProperty.class)
+        .orElseThrow(IllegalStateException::new);
+      return commPattern.equals(CommunicationPatternProperty.Value.ONE_TO_ONE) ? 1 : dstParallelism;
+    }
   }
 }
