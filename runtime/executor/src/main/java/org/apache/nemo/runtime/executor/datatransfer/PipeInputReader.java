@@ -24,7 +24,7 @@ import org.apache.nemo.common.ir.executionproperty.EdgeExecutionProperty;
 import org.apache.nemo.common.ir.executionproperty.ExecutionPropertyMap;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.runtime.common.RuntimeIdManager;
-import org.apache.nemo.runtime.common.plan.RuntimeEdge;
+import org.apache.nemo.runtime.common.plan.StageEdge;
 import org.apache.nemo.runtime.executor.MetricMessageSender;
 import org.apache.nemo.runtime.executor.data.DataUtil;
 import org.apache.nemo.runtime.executor.data.PipeManagerWorker;
@@ -48,11 +48,11 @@ public final class PipeInputReader implements InputReader {
    * Attributes that specify how we should read the input.
    */
   private final IRVertex srcVertex;
-  private final RuntimeEdge runtimeEdge;
+  private final StageEdge runtimeEdge;
 
   PipeInputReader(final String dstTaskId,
                   final IRVertex srcIRVertex,
-                  final RuntimeEdge runtimeEdge,
+                  final StageEdge runtimeEdge,
                   final PipeManagerWorker pipeManagerWorker,
                   final MetricMessageSender metricMessageSender) {
     this.dstTaskIndex = RuntimeIdManager.getIndexFromTaskId(dstTaskId);

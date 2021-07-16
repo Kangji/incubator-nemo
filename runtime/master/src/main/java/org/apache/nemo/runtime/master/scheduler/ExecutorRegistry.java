@@ -74,6 +74,14 @@ public final class ExecutorRegistry {
     }
   }
 
+  public String executorIdToNodeName(final String executorId) {
+    if (executors.containsKey(executorId)) {
+      return executors.get(executorId).left().getNodeName();
+    } else {
+      return executorId;
+    }
+  }
+
   public synchronized void viewExecutors(final Consumer<Set<ExecutorRepresenter>> consumer) {
     consumer.accept(getRunningExecutors());
   }

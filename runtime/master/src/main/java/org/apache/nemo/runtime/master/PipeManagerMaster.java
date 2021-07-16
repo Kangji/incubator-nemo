@@ -104,8 +104,6 @@ public final class PipeManagerMaster {
         default:
           throw new IllegalMessageException(new Exception(message.toString()));
       }
-
-
     }
 
     @Override

@@ -100,7 +100,7 @@ public final class StreamingScheduler implements Scheduler {
         submittedPhysicalPlan.getPlanId(),
         taskId,
         stageToSchedule.getExecutionProperties(),
-        stageToSchedule.getSerializedIRDAG(),
+        stageToSchedule.getSerializedInternalIRDAG(),
         stageIncomingEdges,
         stageOutgoingEdges,
         vertexIdToReadables.get(RuntimeIdManager.getIndexFromTaskId(taskId))));

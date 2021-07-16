@@ -32,4 +32,13 @@ public final class SchedulingException extends RuntimeException {
   public SchedulingException(final Throwable exception) {
     super(exception);
   }
+
+  /**
+   * SchedulingException.
+   *
+   * @param exception exception
+   */
+  public SchedulingException(final String exception) {
+    super(exception);
+  }
 }

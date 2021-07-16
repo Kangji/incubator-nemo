@@ -57,20 +57,19 @@ public final class PipeOutputWriter implements OutputWriter {
    * Constructor.
    *
    * @param srcTaskId         the id of the source task.
-   * @param runtimeEdge       the {@link RuntimeEdge}.
+   * @param stageEdge       the {@link RuntimeEdge}.
    * @param pipeManagerWorker the pipe manager.
    */
   PipeOutputWriter(final String srcTaskId,
-                   final RuntimeEdge runtimeEdge,
+                   final StageEdge stageEdge,
                    final PipeManagerWorker pipeManagerWorker) {
-    final StageEdge stageEdge = (StageEdge) runtimeEdge;
     this.initialized = false;
     this.srcTaskId = srcTaskId;
     this.pipeManagerWorker = pipeManagerWorker;
-    this.pipeManagerWorker.notifyMaster(runtimeEdge.getId(), RuntimeIdManager.getIndexFromTaskId(srcTaskId));
+    this.pipeManagerWorker.notifyMaster(stageEdge.getId(), RuntimeIdManager.getIndexFromTaskId(srcTaskId));
     this.partitioner = Partitioner
       .getPartitioner(stageEdge.getExecutionProperties(), stageEdge.getDstIRVertex().getExecutionProperties());
-    this.runtimeEdge = runtimeEdge;
+    this.runtimeEdge = stageEdge;
     this.srcTaskIndex = RuntimeIdManager.getIndexFromTaskId(srcTaskId);
   }
 

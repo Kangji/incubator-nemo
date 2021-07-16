@@ -46,7 +46,7 @@ public final class PhysicalPlan implements Serializable {
 
     idToIRVertex = new HashMap<>();
     for (final Stage stage : stageDAG.getVertices()) {
-      for (final IRVertex irVertex : stage.getIRDAG().getVertices()) {
+      for (final IRVertex irVertex : stage.getInternalIRDAG().getVertices()) {
         idToIRVertex.put(irVertex.getId(), irVertex);
       }
     }

@@ -99,7 +99,7 @@ public final class BatchSchedulerUtils {
         planStateManager.getPhysicalPlan().getPlanId(),
         taskId,
         stageToSchedule.getExecutionProperties(),
-        stageToSchedule.getSerializedIRDAG(),
+        stageToSchedule.getSerializedInternalIRDAG(),
         stageIncomingEdges,
         stageOutgoingEdges,
         vertexIdToReadables.get(taskIdx)));
@@ -150,7 +150,7 @@ public final class BatchSchedulerUtils {
 
     // Stage put on hold, i.e. stage with vertex containing MessageAggregatorTransform
     // should have a parent stage whose outgoing edges contain the target edge of dynamic optimization.
-    final List<Integer> messageIds = stagePutOnHold.getIRDAG()
+    final List<Integer> messageIds = stagePutOnHold.getInternalIRDAG()
       .getVertices()
       .stream()
       .filter(v -> v.getPropertyValue(MessageIdVertexProperty.class).isPresent())
