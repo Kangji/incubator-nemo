@@ -21,18 +21,19 @@ package org.apache.nemo.common.ir.vertex.executionproperty;
 
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 
 /**
  * List of set of node names to limit the scheduling of the tasks of the vertex to while shuffling.
  */
-public final class ShuffleExecutorSetProperty extends VertexExecutionProperty<HashSet<HashSet<String>>> {
+public final class ShuffleExecutorSetProperty extends VertexExecutionProperty<ArrayList<HashSet<String>>> {
 
   /**
    * Default constructor.
    * @param value value of the execution property.
    */
-  private ShuffleExecutorSetProperty(final HashSet<HashSet<String>> value) {
+  private ShuffleExecutorSetProperty(final ArrayList<HashSet<String>> value) {
     super(value);
   }
 
@@ -44,6 +45,6 @@ public final class ShuffleExecutorSetProperty extends VertexExecutionProperty<Ha
    * @return the new execution property
    */
   public static ShuffleExecutorSetProperty of(final HashSet<HashSet<String>> setsOfExecutors) {
-    return new ShuffleExecutorSetProperty(setsOfExecutors);
+    return new ShuffleExecutorSetProperty(new ArrayList<>(setsOfExecutors));
   }
 }
