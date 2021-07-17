@@ -28,7 +28,6 @@ import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 import org.apache.nemo.compiler.frontend.beam.transform.CombineTransform;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
 
@@ -109,7 +108,6 @@ public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
         final OperatorVertex accumulatorVertex = new OperatorVertex(intermediateCombineStreamTransform);
 
         dst.copyExecutionPropertiesTo(accumulatorVertex);
-        accumulatorVertex.setProperty(TaskIndexToExecutorIDProperty.of(new HashMap<>()));
         accumulatorVertex.setProperty(ParallelismProperty.of(setsOfExecutors.size()));
         accumulatorVertex.setProperty(ShuffleExecutorSetProperty.of(setsOfExecutors));
 

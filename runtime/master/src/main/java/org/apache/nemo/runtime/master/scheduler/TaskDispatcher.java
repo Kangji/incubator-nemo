@@ -19,6 +19,7 @@
 package org.apache.nemo.runtime.master.scheduler;
 
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.common.state.TaskState;
@@ -153,7 +154,7 @@ final class TaskDispatcher {
           LOG.info("{} scheduled to {}", task.getTaskId(), selectedExecutor.getExecutorId());
           task.getPropertyValue(TaskIndexToExecutorIDProperty.class).get()
             .computeIfAbsent(task.getTaskIdx(), i -> new ArrayList<>())
-            .add(task.getAttemptIdx(), selectedExecutor.getExecutorId());
+            .add(task.getAttemptIdx(), Pair.of(selectedExecutor.getExecutorId(), selectedExecutor.getNodeName()));
           // send the task
           selectedExecutor.onTaskScheduled(task);
         } else {

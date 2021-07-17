@@ -19,6 +19,7 @@
 
 package org.apache.nemo.common.ir.vertex.executionproperty;
 
+import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.ir.executionproperty.VertexExecutionProperty;
 
 import java.util.HashMap;
@@ -27,12 +28,13 @@ import java.util.List;
 /**
  * Keep track of where the tasks are located by its executor ID.
  */
-public final class TaskIndexToExecutorIDProperty extends VertexExecutionProperty<HashMap<Integer, List<String>>> {
+public final class TaskIndexToExecutorIDProperty
+  extends VertexExecutionProperty<HashMap<Integer, List<Pair<String, String>>>> {
   /**
    * Default constructor.
    * @param taskIDToExecutorIDsMap value of the execution property.
    */
-  private TaskIndexToExecutorIDProperty(final HashMap<Integer, List<String>> taskIDToExecutorIDsMap) {
+  private TaskIndexToExecutorIDProperty(final HashMap<Integer, List<Pair<String, String>>> taskIDToExecutorIDsMap) {
     super(taskIDToExecutorIDsMap);
   }
 
@@ -42,7 +44,8 @@ public final class TaskIndexToExecutorIDProperty extends VertexExecutionProperty
    * @param taskIndexToExecutorIDsMap the map indicating the executor IDs where the tasks are located on.
    * @return the new execution property
    */
-  public static TaskIndexToExecutorIDProperty of(final HashMap<Integer, List<String>> taskIndexToExecutorIDsMap) {
+  public static TaskIndexToExecutorIDProperty of(
+    final HashMap<Integer, List<Pair<String, String>>> taskIndexToExecutorIDsMap) {
     return new TaskIndexToExecutorIDProperty(taskIndexToExecutorIDsMap);
   }
 }
