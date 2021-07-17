@@ -29,7 +29,6 @@ import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.*;
 import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ResourcePriorityProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Serializable;
@@ -105,7 +104,6 @@ public final class ExecutionPropertyMap<T extends ExecutionProperty> implements 
   public static ExecutionPropertyMap<VertexExecutionProperty> of(final IRVertex irVertex) {
     final ExecutionPropertyMap<VertexExecutionProperty> map = new ExecutionPropertyMap<>(irVertex.getId());
     map.put(ResourcePriorityProperty.of(ResourcePriorityProperty.NONE));
-    map.put(TaskIndexToExecutorIDProperty.of(new HashMap<>()));
     return map;
   }
 
