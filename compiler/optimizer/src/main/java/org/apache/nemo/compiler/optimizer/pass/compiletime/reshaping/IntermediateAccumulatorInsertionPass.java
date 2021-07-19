@@ -19,7 +19,6 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.nemo.common.Util;
 import org.apache.nemo.common.exception.SchedulingException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
@@ -62,7 +61,7 @@ public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
     try {
       ObjectMapper mapper = new ObjectMapper();
       final Map<String, ArrayList<String>> map = mapper.readValue(
-        new File(Util.fetchProjectRootPath() + "/bin/labeldict.json"), Map.class);
+        new File("/home/ubuntu/jiho_workspace/incubator-nemo/bin/labeldict.json"), Map.class); // TODO!!
 
       irdag.topologicalDo(v -> {
         if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof CombineTransform) {
