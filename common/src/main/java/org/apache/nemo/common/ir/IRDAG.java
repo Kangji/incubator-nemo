@@ -800,7 +800,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
     modifiedDAG = builder.build();
   }
 
-  public void insert(final OperatorVertex accumulatorVertex, final List<IREdge> shuffleEdges) {
+  public void insert(final OperatorVertex accumulatorVertex, final IREdge targetEdge) {
     // Create a completely new DAG with the vertex inserted.
     final DAGBuilder<IRVertex, IREdge> builder = new DAGBuilder<>();
 
@@ -809,7 +809,7 @@ public final class IRDAG implements DAGInterface<IRVertex, IREdge> {
       builder.addVertex(v);
 
       modifiedDAG.getIncomingEdgesOf(v).forEach(e -> {
-        if (shuffleEdges.contains(e)) {
+        if (e == targetEdge) {
           // Edge to the accumulatorVertex
           final IREdge toAV = new IREdge(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE,
             e.getSrc(), accumulatorVertex);

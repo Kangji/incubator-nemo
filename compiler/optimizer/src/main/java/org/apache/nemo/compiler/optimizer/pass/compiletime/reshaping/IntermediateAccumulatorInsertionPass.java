@@ -24,12 +24,13 @@ import org.apache.nemo.common.exception.SchedulingException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
 import org.apache.nemo.common.ir.edge.executionproperty.CommunicationPatternProperty;
-import org.apache.nemo.common.ir.vertex.IRVertex;
 import org.apache.nemo.common.ir.vertex.OperatorVertex;
 import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
 import org.apache.nemo.compiler.frontend.beam.transform.CombineTransform;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
@@ -41,6 +42,8 @@ import java.util.stream.IntStream;
  */
 @Requires(ParallelismProperty.class)
 public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
+  private static final Logger LOG = LoggerFactory.getLogger(IntermediateAccumulatorInsertionPass.class.getName());
+
   /**
    * Default constructor.
    */
@@ -62,20 +65,20 @@ public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
         new File(Util.fetchProjectRootPath() + "/bin/labeldict.json"), Map.class);
 
       irdag.topologicalDo(v -> {
-        // For now, only handle beam combine transform with intermediate combine fn.
-        final List<IREdge> incomingShuffleEdges = irdag.getIncomingEdgesOf(v).stream()
-          .filter(e -> CommunicationPatternProperty.Value.SHUFFLE
-            .equals(e.getPropertyValue(CommunicationPatternProperty.class)
-              .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE)))
-          .collect(Collectors.toList());
-        if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof CombineTransform
-          && incomingShuffleEdges.size() == 1) { // redundant, but just in case
+        if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof CombineTransform) {
           final CombineTransform finalCombineStreamTransform = (CombineTransform) ((OperatorVertex) v).getTransform();
           if (finalCombineStreamTransform.getIntermediateCombine().isPresent()) {
-            handleDataTransferFor(irdag, map, finalCombineStreamTransform, incomingShuffleEdges, v, 10F);
+            irdag.getIncomingEdgesOf(v).forEach(e -> {
+              if (CommunicationPatternProperty.Value.SHUFFLE
+                .equals(e.getPropertyValue(CommunicationPatternProperty.class)
+                  .orElse(CommunicationPatternProperty.Value.ONE_TO_ONE))) {
+                handleDataTransferFor(irdag, map, finalCombineStreamTransform, e, 10F);
+              }
+            });
           }
         }
       });
+
       return irdag;
     } catch (final Exception e) {
       throw new SchedulingException(e);
@@ -85,21 +88,18 @@ public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
   private static void handleDataTransferFor(final IRDAG irdag,
                                             final Map<String, ArrayList<String>> map,
                                             final CombineTransform finalCombineStreamTransform,
-                                            final List<IREdge> incomingShuffleEdges,
-                                            final IRVertex dst,
+                                            final IREdge targetEdge,
                                             final Float threshold) {
-    int previousParallelism = incomingShuffleEdges.stream()
-      .mapToInt(e -> e.getSrc().getPropertyValue(ParallelismProperty.class).get()).sum();
-    final int minParallelism = dst.getPropertyValue(ParallelismProperty.class).get();
+    final int srcParallelism = targetEdge.getSrc().getPropertyValue(ParallelismProperty.class).get();
 
     final int mapSize = map.size();
-    final int indexToCheckFrom = mapSize - previousParallelism;
+    final int numOfNodes = (mapSize + 1) / 2;
     Float previousDistance = 0F;
 
-    for (int i = indexToCheckFrom; i < mapSize; i++) {
+    for (int i = numOfNodes; i < mapSize; i++) {
       final float currentDistance = Float.parseFloat(map.get(String.valueOf(i)).get(1));
       if (previousDistance != 0 && currentDistance > threshold * previousDistance
-        && previousParallelism * 2 / 3 >= mapSize - i + 1 && mapSize - i + 1 > minParallelism) {
+        && srcParallelism * 2 / 3 >= mapSize - i + 1) {
         final Integer targetNumberOfSets = mapSize - i;
         final HashSet<HashSet<String>> setsOfExecutors = getTargetNumberOfExecutorSetsFrom(map, targetNumberOfSets);
 
@@ -107,13 +107,13 @@ public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
           (CombineTransform) finalCombineStreamTransform.getIntermediateCombine().get();
         final OperatorVertex accumulatorVertex = new OperatorVertex(intermediateCombineStreamTransform);
 
-        dst.copyExecutionPropertiesTo(accumulatorVertex);
-        accumulatorVertex.setProperty(ParallelismProperty.of(setsOfExecutors.size()));
+        targetEdge.getDst().copyExecutionPropertiesTo(accumulatorVertex);
+        accumulatorVertex.setProperty(ParallelismProperty.of(srcParallelism * 2 / 3));
         accumulatorVertex.setProperty(ShuffleExecutorSetProperty.of(setsOfExecutors));
 
-        irdag.insert(accumulatorVertex, incomingShuffleEdges);
-
-        previousParallelism = setsOfExecutors.size();
+        LOG.info("IAV inserted on {}", targetEdge.getId());
+        irdag.insert(accumulatorVertex, targetEdge);
+        break;
       }
       previousDistance = currentDistance;
     }
