@@ -492,13 +492,13 @@ public final class IRDAGChecker {
   void addIntermediateAccumulatorVertexCheckers() {
     final NeighborChecker shuffleExecutorSet = ((v, inEdges, outEdges) -> {
       if (v.getPropertyValue(ShuffleExecutorSetProperty.class).isPresent()) {
-        if (inEdges.size() != 1 || inEdges.stream().anyMatch(e ->
+        if (inEdges.size() != 1 || outEdges.size() != 1 || inEdges.stream().anyMatch(e ->
           !e.getPropertyValue(CommunicationPatternProperty.class).get()
             .equals(CommunicationPatternProperty.Value.PARTIAL_SHUFFLE))) {
           return failure("Only intermediate accumulator vertex can have shuffle executor set property", v);
-        } else if (!v.getPropertyValue(ParallelismProperty.class).get()
-          .equals(v.getPropertyValue(ShuffleExecutorSetProperty.class).get().size())) {
-          return failure("Parallelism must be equal to the number of shuffle executor set", v);
+        } else if (v.getPropertyValue(ParallelismProperty.class).get()
+          < v.getPropertyValue(ShuffleExecutorSetProperty.class).get().size()) {
+          return failure("Parallelism must be greater or equal to the number of shuffle executor set", v);
         }
       } else {
         if (inEdges.stream().anyMatch(e -> e.getPropertyValue(CommunicationPatternProperty.class).get()
