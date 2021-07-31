@@ -77,6 +77,7 @@ public final class TaskExecutor {
   private long boundedSourceReadTime = 0;
   private long serializedReadBytes = 0;
   private long encodedReadBytes = 0;
+  private long numOfElements = 0;
   private long timeSinceLastExecution;
   private final MetricMessageSender metricMessageSender;
 
@@ -369,6 +370,7 @@ public final class TaskExecutor {
     if (idOfVertexPutOnHold == null) {
       taskStateManager.onTaskStateChanged(TaskState.State.COMPLETE, Optional.empty(), Optional.empty());
       LOG.info("{} completed", taskId);
+      LOG.info("numOfElements consumed in {} = {}", taskId, numOfElements);
     } else {
       taskStateManager.onTaskStateChanged(TaskState.State.ON_HOLD,
         Optional.of(idOfVertexPutOnHold),
@@ -408,6 +410,7 @@ public final class TaskExecutor {
     } else {
       // Process data element
       processElement(dataFetcher.getOutputCollector(), event);
+      numOfElements += 1;
     }
   }
 
