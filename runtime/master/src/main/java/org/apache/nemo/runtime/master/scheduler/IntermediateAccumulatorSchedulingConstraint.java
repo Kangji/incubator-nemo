@@ -18,19 +18,14 @@
  */
 package org.apache.nemo.runtime.master.scheduler;
 
-import org.apache.nemo.common.Pair;
 import org.apache.nemo.common.ir.executionproperty.AssociatedProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
-import org.apache.nemo.common.ir.vertex.executionproperty.TaskIndexToExecutorIDProperty;
 import org.apache.nemo.runtime.common.plan.Task;
 import org.apache.nemo.runtime.master.resource.ExecutorRepresenter;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Compare shuffle executor set and the executor.
@@ -48,17 +43,9 @@ public final class IntermediateAccumulatorSchedulingConstraint implements Schedu
       return true;
     }
 
-    final HashSet<String> dataLocationNodeNames = task.getTaskIncomingEdges().stream()
-      .flatMap(e -> {
-        final Collection<List<Pair<String, String>>> collection = e.getSrc()
-          .getPropertyValue(TaskIndexToExecutorIDProperty.class).get().values();
-        return collection.stream().map(lst -> lst.get(lst.size() - 1).right());
-      }).collect(Collectors.toCollection(HashSet::new));
     final ArrayList<HashSet<String>> setsOfExecutors = task.getPropertyValue(ShuffleExecutorSetProperty.class).get();
-    final List<HashSet<String>> usedSetsOfExecutors = setsOfExecutors.stream()
-      .filter(hs -> dataLocationNodeNames.stream().anyMatch(hs::contains)).collect(Collectors.toList());
-    final int numOfSets = usedSetsOfExecutors.size();
+    final int numOfSets = setsOfExecutors.size();
     final int idx = task.getTaskIdx();
-    return usedSetsOfExecutors.get(idx % numOfSets).contains(executor.getNodeName());
+    return setsOfExecutors.get(idx % numOfSets).contains(executor.getNodeName());
   }
 }

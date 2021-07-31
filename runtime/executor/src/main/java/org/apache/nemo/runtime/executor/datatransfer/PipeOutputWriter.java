@@ -154,18 +154,15 @@ public final class PipeOutputWriter implements OutputWriter {
         final List<Pair<String, String>> listOfSrcNodeNames = ((StageEdge) runtimeEdge).getSrc()
           .getPropertyValue(TaskIndexToExecutorIDProperty.class).get().get(srcTaskIndex);
         final String nodeName = listOfSrcNodeNames.get(listOfSrcNodeNames.size() - 1).right();
-        final HashSet<String> executorGroup =
-          ((StageEdge) runtimeEdge).getDst().getPropertyValue(ShuffleExecutorSetProperty.class).get()
-          .stream().filter(hs -> hs.contains(nodeName)).collect(Collectors.toList()).get(0);
 
-        final HashMap<Integer, List<Pair<String, String>>> dstTaskIdxToExecutorIds =
-          ((StageEdge) runtimeEdge).getDst().getPropertyValue(TaskIndexToExecutorIDProperty.class).get();
+        final ArrayList<HashSet<String>> setsOfExecutors = ((StageEdge) runtimeEdge).getDst()
+          .getPropertyValue(ShuffleExecutorSetProperty.class).get();
+        final int numOfSets = setsOfExecutors.size();
         final int dstParallelism = ((StageEdge) runtimeEdge).getDst().getParallelism();
         final List<Integer> listOfDstTaskIdx = IntStream.range(0, dstParallelism)
-          .filter(i -> {
-            List<Pair<String, String>> taskAttemptList = dstTaskIdxToExecutorIds.get(i);
-            return executorGroup.contains(taskAttemptList.get(taskAttemptList.size() - 1).right());
-          }).boxed().collect(Collectors.toList());
+          .filter(i -> setsOfExecutors.get(i % numOfSets).contains(nodeName))
+          .boxed().collect(Collectors.toList());
+
         final int numOfPartitions = listOfDstTaskIdx.size();
         final int pipeIndex = listOfDstTaskIdx.get(((HashPartitioner) partitioner).partition(element, numOfPartitions));
         return Collections.singletonList(pipes.get(pipeIndex));
