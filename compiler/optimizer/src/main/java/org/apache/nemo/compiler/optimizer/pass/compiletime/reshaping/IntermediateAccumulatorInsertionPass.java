@@ -28,8 +28,6 @@ import org.apache.nemo.common.ir.vertex.executionproperty.ParallelismProperty;
 import org.apache.nemo.common.ir.vertex.executionproperty.ShuffleExecutorSetProperty;
 import org.apache.nemo.compiler.frontend.beam.transform.CombineTransform;
 import org.apache.nemo.compiler.optimizer.pass.compiletime.Requires;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
@@ -41,13 +39,36 @@ import java.util.stream.IntStream;
  */
 @Requires(ParallelismProperty.class)
 public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
-  private static final Logger LOG = LoggerFactory.getLogger(IntermediateAccumulatorInsertionPass.class.getName());
+  private final String networkFilePath;
+  private boolean isUnitTest = false;
+  private static final Map<String, ArrayList<String>> UNIT_TEST_NETWORK_FILE = getUnitTestNetworkFile();
 
   /**
    * Default constructor.
    */
   public IntermediateAccumulatorInsertionPass() {
     super(IntermediateAccumulatorInsertionPass.class);
+    // this.networkFilePath = Util.fetchProjectRootPath() + "/bin/labeldict.json";
+    this.networkFilePath = "/home/ubuntu/jiho_workspace/incubator-nemo/bin/labeldict.json";
+  }
+
+  /**
+   * Constructor for unit test.
+   * @param isUnitTest indicates unit test.
+   */
+  public IntermediateAccumulatorInsertionPass(final boolean isUnitTest) {
+    this();
+    this.isUnitTest = isUnitTest;
+  }
+
+  private static Map<String, ArrayList<String>> getUnitTestNetworkFile() {
+    Map<String, ArrayList<String>> map = new HashMap<>();
+    map.put("0", new ArrayList<>(Arrays.asList("mulan-16.maas", "0")));
+    map.put("1", new ArrayList<>(Arrays.asList("mulan-23.maas", "0")));
+    map.put("2", new ArrayList<>(Arrays.asList("mulan-m", "0")));
+    map.put("3", new ArrayList<>(Arrays.asList("1+2", "0.00003721")));
+    map.put("4", new ArrayList<>(Arrays.asList("0+3", "2.19395143")));
+    return map;
   }
 
   /**
@@ -60,8 +81,12 @@ public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
   public IRDAG apply(final IRDAG irdag) {
     try {
       ObjectMapper mapper = new ObjectMapper();
-      final Map<String, ArrayList<String>> map = mapper.readValue(
-        new File("/home/ubuntu/jiho_workspace/incubator-nemo/bin/labeldict.json"), Map.class); // TODO!!
+      Map<String, ArrayList<String>> map;
+      if (isUnitTest) {
+        map = UNIT_TEST_NETWORK_FILE;
+      } else {
+        map = mapper.readValue(new File(networkFilePath), Map.class);
+      }
 
       irdag.topologicalDo(v -> {
         if (v instanceof OperatorVertex && ((OperatorVertex) v).getTransform() instanceof CombineTransform) {
@@ -110,7 +135,6 @@ public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
         accumulatorVertex.setProperty(ParallelismProperty.of(srcParallelism * 2 / 3));
         accumulatorVertex.setProperty(ShuffleExecutorSetProperty.of(setsOfExecutors));
 
-        LOG.info("IAV inserted on {}", targetEdge.getId());
         irdag.insert(accumulatorVertex, targetEdge);
         break;
       }
