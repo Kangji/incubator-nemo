@@ -32,6 +32,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -47,10 +48,10 @@ public final class AntiAffinitySchedulingConstraintTest {
   private final static int FIRST_ATTEMPT = 0;
   private final static String EXEc_MAP_ID = "ID";
 
-  private static Task mockTask(final int taskIdx, final ExecutionPropertyMap executionPropertyMap) {
+  private static Task mockTask(final int taskIdx, final HashSet<Integer> antiAffinityGroup) {
     final Task task = mock(Task.class);
     when(task.getTaskId()).thenReturn(RuntimeIdManager.generateTaskId("Stage0", taskIdx, FIRST_ATTEMPT));
-    when(task.getExecutionProperties()).thenReturn(executionPropertyMap);
+    when(task.getPropertyValue(ResourceAntiAffinityProperty.class)).thenReturn(Optional.of(antiAffinityGroup));
     return task;
   }
 
@@ -71,13 +72,11 @@ public final class AntiAffinitySchedulingConstraintTest {
 
     // Create a StageEdge where two out of three are skewed hash ranges.
     final HashSet<Integer> antiAffinityGroup = new HashSet<>(Arrays.asList(0, 1));
-    final ExecutionPropertyMap emap = new ExecutionPropertyMap(EXEc_MAP_ID);
-    emap.put(ResourceAntiAffinityProperty.of(antiAffinityGroup));
 
 
-    final Task task0 = mockTask(0, emap);  // anti-affinity task
-    final Task task1 = mockTask(1, emap);  // anti-affinity task
-    final Task task2 = mockTask(2, emap);  // normal task
+    final Task task0 = mockTask(0, antiAffinityGroup);  // anti-affinity task
+    final Task task1 = mockTask(1, antiAffinityGroup);  // anti-affinity task
+    final Task task2 = mockTask(2, antiAffinityGroup);  // normal task
     final ExecutorRepresenter e0 = mockExecutorRepresenter(task0);  // schedule task0 to e0
 
     assertEquals(false, schedulingConstraint.testSchedulability(e0, task1));
