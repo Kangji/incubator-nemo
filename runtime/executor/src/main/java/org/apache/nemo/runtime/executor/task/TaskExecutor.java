@@ -77,7 +77,8 @@ public final class TaskExecutor {
   private long boundedSourceReadTime = 0;
   private long serializedReadBytes = 0;
   private long encodedReadBytes = 0;
-  private long numOfElements = 0;
+  private long numOfElementsConsumed = 0;
+  private long numOfElementsEmitted = 0;
   private long timeSinceLastExecution;
   private final MetricMessageSender metricMessageSender;
 
@@ -370,7 +371,8 @@ public final class TaskExecutor {
     if (idOfVertexPutOnHold == null) {
       taskStateManager.onTaskStateChanged(TaskState.State.COMPLETE, Optional.empty(), Optional.empty());
       LOG.info("{} completed", taskId);
-      LOG.info("numOfElements consumed in {} = {}", taskId, numOfElements);
+      LOG.info("numOfElements consumed in {} = {}", taskId, numOfElementsConsumed);
+      LOG.info("numOfElements emitted in {} = {}", taskId, numOfElementsEmitted);
     } else {
       taskStateManager.onTaskStateChanged(TaskState.State.ON_HOLD,
         Optional.of(idOfVertexPutOnHold),
@@ -410,7 +412,7 @@ public final class TaskExecutor {
     } else {
       // Process data element
       processElement(dataFetcher.getOutputCollector(), event);
-      numOfElements += 1;
+      numOfElementsConsumed += 1;
     }
   }
 
@@ -691,12 +693,15 @@ public final class TaskExecutor {
    */
   private void finalizeOutputWriters(final VertexHarness vertexHarness) {
     final List<Long> writtenBytesList = new ArrayList<>();
+    final List<Long> writtenElementsCountList = new ArrayList<>();
 
     // finalize OutputWriters for main children
     vertexHarness.getWritersToMainChildrenTasks().forEach(outputWriter -> {
       outputWriter.close();
       final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
       writtenBytes.ifPresent(writtenBytesList::add);
+      final Optional<Long> writtenElementsCount = outputWriter.getNumOfElements();
+      writtenElementsCount.ifPresent(writtenElementsCountList::add);
     });
 
     // finalize OutputWriters for additional tagged children
@@ -705,12 +710,17 @@ public final class TaskExecutor {
         outputWriter.close();
         final Optional<Long> writtenBytes = outputWriter.getWrittenBytes();
         writtenBytes.ifPresent(writtenBytesList::add);
+        final Optional<Long> writtenElementsCount = outputWriter.getNumOfElements();
+        writtenElementsCount.ifPresent(writtenElementsCountList::add);
       })
     );
 
     long totalWrittenBytes = 0;
     for (final Long writtenBytes : writtenBytesList) {
       totalWrittenBytes += writtenBytes;
+    }
+    for (final Long writtenElementsCount : writtenElementsCountList) {
+      numOfElementsEmitted += writtenElementsCount;
     }
 
     // TODO #236: Decouple metric collection and sending logic
