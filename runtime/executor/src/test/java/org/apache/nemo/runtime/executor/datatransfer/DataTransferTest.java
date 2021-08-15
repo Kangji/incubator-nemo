@@ -327,7 +327,7 @@ public final class DataTransferTest {
     dummyIREdge.setProperty(EncoderProperty.of(ENCODER_FACTORY));
     dummyIREdge.setProperty(DecoderProperty.of(DECODER_FACTORY));
     final ExecutionPropertyMap edgeProperties = dummyIREdge.getExecutionProperties();
-    final RuntimeEdge dummyEdge;
+    final StageEdge dummyEdge;
 
     final Stage srcStage = setupStages("srcStage" + testIndex);
     final Stage dstStage = setupStages("dstStage" + testIndex);
@@ -405,7 +405,7 @@ public final class DataTransferTest {
     duplicateDataProperty.get().setGroupSize(2);
     dummyIREdge.setProperty(DataStoreProperty.of(store));
     dummyIREdge.setProperty(DataPersistenceProperty.of(DataPersistenceProperty.Value.KEEP));
-    final RuntimeEdge dummyEdge, dummyEdge2;
+    final StageEdge dummyEdge, dummyEdge2;
     final ExecutionPropertyMap edgeProperties = dummyIREdge.getExecutionProperties();
 
     final Stage srcStage = setupStages("srcStage" + testIndex);

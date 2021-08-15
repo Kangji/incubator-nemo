@@ -45,5 +45,10 @@ public interface OutputWriter {
    */
   Optional<Long> getWrittenBytes();
 
+  /**
+   * @return the total num of elements.
+   */
+  Optional<Long> getNumOfElements();
+
   void close();
 }
