@@ -19,7 +19,6 @@
 package org.apache.nemo.compiler.optimizer.pass.compiletime.reshaping;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.nemo.common.Util;
 import org.apache.nemo.common.exception.SchedulingException;
 import org.apache.nemo.common.ir.IRDAG;
 import org.apache.nemo.common.ir.edge.IREdge;
@@ -49,7 +48,8 @@ public class IntermediateAccumulatorInsertionPass extends ReshapingPass {
    */
   public IntermediateAccumulatorInsertionPass() {
     super(IntermediateAccumulatorInsertionPass.class);
-    this.networkFilePath = Util.fetchProjectRootPath() + "/bin/network_profiling/labeldict.json";
+    this.networkFilePath = "/home/ubuntu/jiho_workspace/incubator-nemo/bin/labeldict.json";
+    //this.networkFilePath = Util.fetchProjectRootPath() + "/bin/network_profiling/labeldict.json";
   }
 
   /**
