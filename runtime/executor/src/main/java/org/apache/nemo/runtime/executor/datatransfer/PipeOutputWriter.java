@@ -57,6 +57,8 @@ public final class PipeOutputWriter implements OutputWriter {
   private Serializer serializer;
   private List<OutputContext> pipes;
 
+  private long numOfElements = 0;
+
   /**
    * Constructor.
    *
@@ -100,6 +102,7 @@ public final class PipeOutputWriter implements OutputWriter {
     }
 
     writeData(element, getPipeToWrite(element));
+    numOfElements++;
   }
 
   @Override
@@ -115,6 +118,11 @@ public final class PipeOutputWriter implements OutputWriter {
   @Override
   public Optional<Long> getWrittenBytes() {
     return Optional.empty();
+  }
+
+  @Override
+  public Optional<Long> getNumOfElements() {
+    return Optional.of(numOfElements);
   }
 
   @Override

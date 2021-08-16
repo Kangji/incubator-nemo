@@ -131,6 +131,11 @@ public final class BlockOutputWriter implements OutputWriter {
     }
   }
 
+  @Override
+  public Optional<Long> getNumOfElements() {
+    return Optional.empty();
+  }
+
   /**
    * Get the expected number of data read according to the communication pattern of the edge and
    * the parallelism of destination vertex.
