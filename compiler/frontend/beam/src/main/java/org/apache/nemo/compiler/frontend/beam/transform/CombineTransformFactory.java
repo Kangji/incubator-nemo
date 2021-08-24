@@ -109,7 +109,7 @@ public class CombineTransformFactory<K, InputT, AccumT, OutputT> {
    * @return the intermediate combine transform for the combine transform.
    */
   public CombineTransform<K, AccumT, AccumT> getIntermediateCombineTransform() {
-    return new CombineTransform<>(accumulatorCoder,
+    final CombineTransform intermediateCombineTransform = new CombineTransform<>(accumulatorCoder,
       Collections.singletonMap(partialMainOutputTag, accumulatorCoder),
       partialMainOutputTag,
       windowingStrategy,
@@ -117,6 +117,8 @@ public class CombineTransformFactory<K, InputT, AccumT, OutputT> {
       intermediateCombineFn,
       doFnSchemaInformation,
       displayData, false);
+    intermediateCombineTransform.setIntermediateCombining();
+    return intermediateCombineTransform;
   }
 
   /**

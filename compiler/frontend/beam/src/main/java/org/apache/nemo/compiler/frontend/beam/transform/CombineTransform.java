@@ -57,7 +57,9 @@ public final class CombineTransform<K, InputT, OutputT>
   private boolean dataReceived = false;
   private transient OutputCollector originOc;
   private final boolean isPartialCombining;
+  private boolean isIntermediateCombining;
   private final CombineTransform intermediateCombine;
+  private long numElementConsumed = 0;
 
   public CombineTransform(final Coder<KV<K, InputT>> inputCoder,
                           final Map<TupleTag<?>, Coder<?>> outputCoders,
@@ -96,6 +98,10 @@ public final class CombineTransform<K, InputT, OutputT>
     this.reduceFn = reduceFn;
     this.isPartialCombining = isPartialCombining;
     this.intermediateCombine = intermediateCombine;
+  }
+
+  public void setIntermediateCombining() {
+    this.isIntermediateCombining = true;
   }
 
   /**
@@ -143,6 +149,7 @@ public final class CombineTransform<K, InputT, OutputT>
   @Override
   public void onData(final WindowedValue<KV<K, InputT>> element) {
     dataReceived = true;
+    numElementConsumed += 1;
     try {
       checkAndInvokeBundle();
       final KV<K, InputT> kv = element.getValue();
@@ -188,6 +195,17 @@ public final class CombineTransform<K, InputT, OutputT>
    */
   @Override
   protected void beforeClose() {
+    String combineType = null;
+    if (isPartialCombining) {
+      combineType = "partial";
+    } else if (isIntermediateCombining) {
+      combineType = "inter";
+    } else if (intermediateCombine != null) {
+      combineType = "final";
+    }
+    if (combineType != null) {
+      LOG.info("numOfElements Consumed in {} combine: {}", combineType, numElementConsumed);
+    }
     // Finish any pending windows by advancing the input watermark to timestamp max value.
     inputWatermark = new Watermark(BoundedWindow.TIMESTAMP_MAX_VALUE.getMillis());
     // Trigger all the remaining timers that have not been fired yet.
